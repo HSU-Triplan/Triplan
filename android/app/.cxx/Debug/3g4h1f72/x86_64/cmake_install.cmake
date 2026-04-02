@@ -44,6 +44,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
+  include("C:/Users/jason/AndroidStudioProjects/Triplan/android/app/.cxx/Debug/3g4h1f72/x86_64/RNGoogleSignInCGen_autolinked_build/cmake_install.cmake")
   include("C:/Users/jason/AndroidStudioProjects/Triplan/android/app/.cxx/Debug/3g4h1f72/x86_64/safeareacontext_autolinked_build/cmake_install.cmake")
   include("C:/Users/jason/AndroidStudioProjects/Triplan/android/app/.cxx/Debug/3g4h1f72/x86_64/rnscreens_autolinked_build/cmake_install.cmake")
   include("C:/Users/jason/AndroidStudioProjects/Triplan/android/app/.cxx/Debug/3g4h1f72/x86_64/RNVectorIconsSpec_autolinked_build/cmake_install.cmake")
