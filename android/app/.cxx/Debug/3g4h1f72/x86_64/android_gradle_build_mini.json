@@ -1,5 +1,6 @@
 {
   "buildFiles": [
+    "C:\\Users\\jason\\AndroidStudioProjects\\Triplan\\node_modules\\@react-native-async-storage\\async-storage\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\Users\\jason\\AndroidStudioProjects\\Triplan\\node_modules\\@react-native-google-signin\\google-signin\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\Users\\jason\\AndroidStudioProjects\\Triplan\\node_modules\\react-native-safe-area-context\\android\\src\\main\\jni\\CMakeLists.txt",
     "C:\\Users\\jason\\AndroidStudioProjects\\Triplan\\node_modules\\react-native-screens\\android\\src\\main\\jni\\CMakeLists.txt",
@@ -60,6 +61,11 @@
     },
     "react_codegen_RNGoogleSignInCGen::@337b7b353bd94a4215c0": {
       "artifactName": "react_codegen_RNGoogleSignInCGen",
+      "abi": "x86_64",
+      "runtimeFiles": []
+    },
+    "react_codegen_rnasyncstorage::@1596841e19ec5b9eeffe": {
+      "artifactName": "react_codegen_rnasyncstorage",
       "abi": "x86_64",
       "runtimeFiles": []
     }

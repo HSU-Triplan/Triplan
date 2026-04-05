@@ -1,5 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
   GoogleSignin,
   statusCodes,
@@ -9,37 +11,30 @@ GoogleSignin.configure({
   webClientId: '391196068887-pqdqp1l6c8m69po4s4as60i3pger5aip.apps.googleusercontent.com',
 });
 
-export default function LoginScreen({ navigation }) {
-const handleGoogleLogin = async () => {
-  try {
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    const { idToken } = userInfo.data;
+export default function LoginScreen({ setIsLoggedIn }) {
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.signOut();
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const { idToken } = userInfo.data;
 
-    // 백엔드로 토큰 전달
-    const response = await fetch('http://10.0.2.2:3000/auth/google', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ idToken }),
-    });
+      const response = await fetch('http://10.0.2.2:3000/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (result.success) {
-      console.log('서버 로그인 성공:', result.user);
-      // 메인 화면으로 이동
-      navigation.replace('Main');
-    } else {
-      console.log('서버 로그인 실패');
-    }
-  } catch (error) {
-    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-      console.log('로그인 취소');
-    } else {
+      if (result.success) {
+        await AsyncStorage.setItem('token', result.token);
+        setIsLoggedIn(true); // 바로 메인으로
+      }
+    } catch (error) {
       console.log('로그인 에러:', error);
     }
-  }
-};
+  };
 
   return (
     <View style={styles.container}>

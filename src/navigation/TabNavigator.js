@@ -7,7 +7,7 @@ import ProfileScreen from '../pages/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
-export default function TabNavigator() {
+export default function TabNavigator({ setIsLoggedIn }) {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -19,7 +19,9 @@ export default function TabNavigator() {
       <Tab.Screen name="홈" component={HomeScreen} />
       <Tab.Screen name="탐색" component={SearchScreen} />
       <Tab.Screen name="채팅" component={ChatScreen} />
-      <Tab.Screen name="프로필" component={ProfileScreen} />
+      <Tab.Screen name="프로필">
+        {() => <ProfileScreen setIsLoggedIn={setIsLoggedIn} />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }
