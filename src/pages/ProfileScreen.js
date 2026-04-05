@@ -1,42 +1,151 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 
-export default function ProfileScreen({ setIsLoggedIn }) {
+export default function ProfileScreen({setIsLoggedIn}) {
   const handleLogout = async () => {
     Alert.alert('로그아웃', '로그아웃 하시겠어요?', [
-      { text: '취소', style: 'cancel' },
+      {text: '취소', style: 'cancel'},
       {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
           await GoogleSignin.signOut();
           await AsyncStorage.removeItem('token');
-          setIsLoggedIn(false); // 바로 로그인 화면으로
+          setIsLoggedIn(false);
         },
       },
     ]);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>👤 프로필</Text>
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </TouchableOpacity>
-    </View>
+    <ScrollView style={styles.container}>
+      {/* 상단 프로필 영역 */}
+      <View style={styles.header}>
+        <Image
+          source={{uri: 'https://via.placeholder.com/100'}}
+          style={styles.profileImage}
+        />
+        <Text style={styles.name}>닉네임</Text>
+        <TouchableOpacity style={styles.editButton}>
+          <Text style={styles.editButtonText}>프로필 수정</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 정보 카드 */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>내 정보</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>닉네임</Text>
+          <Text style={styles.infoValue}>kim123</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>여행타입</Text>
+          <Text style={styles.infoValue}>타입</Text>
+        </View>
+      </View>
+
+      {/* 메뉴 카드 */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>설정</Text>
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuText}>계정 설정</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuText}>알림 설정</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+          <Text style={[styles.menuText, {color: '#FF3B30'}]}>로그아웃</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 최근에 올린 여행 계획 */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>최근 여행 계획</Text>
+        <ScrollView horizontal />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 40 },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 40,
-    paddingVertical: 14,
-    borderRadius: 12,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  logoutText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  header: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+    backgroundColor: '#ddd',
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  editButton: {
+    backgroundColor: '#555555',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 28,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  menuItem: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  menuText: {
+    fontSize: 16,
+  },
 });
