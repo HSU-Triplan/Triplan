@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Modal } from 'react-native';
 import WriteScreen from './WriteScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -21,6 +22,8 @@ export default function SearchScreen() {
   const [typeOpen, setTypeOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState('전체');
   const [selectedType, setSelectedType] = useState('전체');
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // 적용 버튼 누르기 전 임시 상태
   const [tempDestination, setTempDestination] = useState('전체');
@@ -42,6 +45,25 @@ export default function SearchScreen() {
 
   const isFiltered =
     selectedDestination !== '전체' || selectedType !== '전체';
+
+    const fetchPosts = useCallback(async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://10.0.2.2:3000/posts');
+        const result = await response.json();
+        if (result.success) {
+          setPosts(result.posts);
+        }
+      } catch (error) {
+        console.log('게시글 불러오기 에러:', error);
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+    useEffect(() => {
+      fetchPosts();
+    }, [fetchPosts]);
 
   return (
     <View style={styles.container}>
@@ -80,9 +102,46 @@ export default function SearchScreen() {
       )}
 
       {/* 피드 영역 */}
-      <View style={styles.feedArea}>
-        <Text style={styles.emptyText}>게시글이 없습니다.</Text>
-      </View>
+      <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent}>
+        {loading ? (
+          <Text style={styles.emptyText}>불러오는 중...</Text>
+        ) : posts.length === 0 ? (
+          <Text style={styles.emptyText}>게시글이 없습니다.</Text>
+        ) : (
+          posts.map(post => (
+            <View key={post.id} style={styles.card}>
+              {/* 작성자 정보 */}
+              <View style={styles.cardHeader}>
+                <View style={styles.avatar} />
+                <View>
+                  <Text style={styles.userName}>{post.users?.name}</Text>
+                  <Text style={styles.travelType}>{post.users?.travel_type ?? '성향 미설정'}</Text>
+                </View>
+              </View>
+
+              {/* 여행 정보 */}
+              <View style={styles.travelInfo}>
+                <Text style={styles.destination}>📍 {post.destination}</Text>
+                <Text style={styles.days}>📅 {post.days}</Text>
+                <Text style={styles.maxPeople}>👥 {post.max_people}명 모집</Text>
+              </View>
+
+              {/* 한 줄 소개 */}
+              <Text style={styles.bio}>{post.bio}</Text>
+
+              {/* 간단 계획 */}
+              {post.plan ? (
+                <Text style={styles.plan} numberOfLines={2}>{post.plan}</Text>
+              ) : null}
+
+              {/* 참여하기 버튼 */}
+              <TouchableOpacity style={styles.joinButton}>
+                <Text style={styles.joinButtonText}>참여하기</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       {/* + 버튼 */}
       <TouchableOpacity
@@ -91,13 +150,16 @@ export default function SearchScreen() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* 글 작성 모달 */}
-      <Modal
-        visible={writeVisible}
-        animationType="slide"
-        onRequestClose={() => setWriteVisible(false)}>
-        <WriteScreen onClose={() => setWriteVisible(false)} />
-      </Modal>
+        {/* 글 작성 모달 */}
+        <Modal
+          visible={writeVisible}
+          animationType="slide"
+          onRequestClose={() => setWriteVisible(false)}>
+          <WriteScreen onClose={() => {
+            setWriteVisible(false);
+            fetchPosts(); // 작성 후 피드 새로고침
+          }} />
+        </Modal>
 
       {/* 필터 모달 */}
       <Modal
@@ -308,6 +370,83 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     color: '#333',
+  },
+  feed: {
+    flex: 1,
+  },
+  feedContent: {
+    padding: 16,
+    gap: 16,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ddd',
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  travelType: {
+    fontSize: 12,
+    color: '#4A90E2',
+    marginTop: 2,
+  },
+  travelInfo: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  destination: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  days: {
+    fontSize: 14,
+    color: '#666',
+  },
+  maxPeople: {
+    fontSize: 14,
+    color: '#666',
+  },
+  bio: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 6,
+  },
+  plan: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  joinButton: {
+    backgroundColor: '#4A90E2',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  joinButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   dropdownHeader: {
     flexDirection: 'row',
