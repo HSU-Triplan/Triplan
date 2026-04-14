@@ -9,7 +9,6 @@ import TabNavigator from './src/navigation/TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
-// 1. [안전 확인] 로그인 직후 성향 검사 여부를 판단하는 라우터
 const AuthRouterScreen = ({ navigation }: any) => {
   useEffect(() => {
     const checkTravelStyle = async () => {
@@ -21,7 +20,6 @@ const AuthRouterScreen = ({ navigation }: any) => {
           navigation.replace('TestIntro');
         }
       } catch (e) {
-        // 혹시라도 기기 저장소 에러가 나면 안전하게 테스트 화면으로 보냅니다.
         navigation.replace('TestIntro');
       }
     };
@@ -31,7 +29,6 @@ const AuthRouterScreen = ({ navigation }: any) => {
   return <View style={{ flex: 1, backgroundColor: '#fff' }} />;
 };
 
-// 2. 안내 화면
 const TestIntroScreen = ({ navigation }: any) => (
   <SafeAreaView style={styles.centerContainer}>
     <Text style={styles.questionTitle}>환영합니다! 🎉</Text>
@@ -42,7 +39,6 @@ const TestIntroScreen = ({ navigation }: any) => (
   </SafeAreaView>
 );
 
-// 3. 설문조사 화면
 const TestScreen = ({ navigation }: any) => {
   const [step, setStep] = useState(0);
   const [scores, setScores] = useState({ T: 0, C: 0, U: 0, N: 0, A: 0, R: 0, J: 0, P: 0 });
@@ -71,7 +67,6 @@ const TestScreen = ({ navigation }: any) => {
   ];
 
   const handleSelect = async (type: string) => {
-    // @ts-ignore (TypeScript 에러 방지용 - 지우지 마세요!)
     const newScores = { ...scores, [type]: scores[type] + 1 };
     setScores(newScores);
 
@@ -102,9 +97,7 @@ const TestScreen = ({ navigation }: any) => {
   );
 };
 
-// 4. 결과 화면
 const ResultScreen = ({ route, navigation }: any) => {
-  // 에러 방지: 파라미터가 혹시라도 없을 경우를 대비한 안전 장치
   const result = route?.params?.result || '분석 중';
 
   return (
@@ -120,7 +113,6 @@ const ResultScreen = ({ route, navigation }: any) => {
   );
 };
 
-// 5. 메인 App
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
