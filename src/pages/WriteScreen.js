@@ -53,7 +53,7 @@ const handleSubmit = async () => {
     }
   } catch (error) {
     console.log('게시글 작성 에러:', error);
-    alert('네트워크 오류가 발생했습니다.');
+    alert('게시글 작성 에러');
   }
 };
 
