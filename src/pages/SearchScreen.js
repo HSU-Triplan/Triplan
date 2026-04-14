@@ -14,6 +14,7 @@ const TYPE_OPTIONS = ['전체', 'TUAJ', 'TUAP', 'TURJ', 'TURP', 'TNAJ', 'TNAP', 
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
+  const [writeVisible, setWriteVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [destOpen, setDestOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
@@ -81,6 +82,14 @@ export default function SearchScreen() {
       <View style={styles.feedArea}>
         <Text style={styles.emptyText}>게시글이 없습니다.</Text>
       </View>
+
+      {/* + 버튼 */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setWriteVisible(true)}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
 
       {/* 필터 모달 */}
       <Modal
@@ -255,6 +264,24 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#aaa',
     fontSize: 15,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+    lineHeight: 32,
   },
   modalOverlay: {
     flex: 1,
