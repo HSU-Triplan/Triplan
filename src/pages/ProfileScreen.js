@@ -10,13 +10,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
-// 🌟 1. useNavigation(만능 리모컨)을 추가로 가져옵니다.
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 export default function ProfileScreen({setIsLoggedIn}) {
   const [travelStyle, setTravelStyle] = useState('분석 중...');
 
-  // 🌟 2. 여기서 만능 리모컨을 장착합니다! 이제 버튼이 작동합니다.
   const navigation = useNavigation();
 
   useFocusEffect(
