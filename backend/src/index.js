@@ -14,6 +14,9 @@ app.get('/', (req, res) => {
   res.send('Triplan 서버 정상 작동 중');
 });
 
+const postsRouter = require('./routes/posts');
+app.use('/posts', postsRouter);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);

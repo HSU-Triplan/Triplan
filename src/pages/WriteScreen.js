@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -18,15 +19,43 @@ export default function WriteScreen({ onClose }) {
   const [bio, setBio] = useState('');
   const [plan, setPlan] = useState('');
 
-  const handleSubmit = async () => {
-    if (!destination || !days || !maxPeople || !bio) {
-      alert('여행지, 일수, 모집 인원, 한 줄 소개는 필수입니다.');
-      return;
+const handleSubmit = async () => {
+  if (!destination || !days || !maxPeople || !bio) {
+    alert('여행지, 일수, 모집 인원, 한 줄 소개는 필수입니다.');
+    return;
+  }
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await fetch('http://10.0.2.2:3000/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        destination,
+        days,
+        max_people: parseInt(maxPeople, 10),
+        bio,
+        plan,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('게시글이 작성되었습니다!');
+      onClose();
+    } else {
+      alert('작성 실패: ' + result.message);
     }
-    // TODO: 백엔드 API 연동
-    console.log({ destination, days, maxPeople, bio, plan });
-    onClose();
-  };
+  } catch (error) {
+    console.log('게시글 작성 에러:', error);
+    alert('네트워크 오류가 발생했습니다.');
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
