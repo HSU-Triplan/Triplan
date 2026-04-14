@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { Modal } from 'react-native';
+import WriteScreen from './WriteScreen';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Modal,
   StyleSheet,
 } from 'react-native';
 
@@ -90,6 +91,13 @@ export default function SearchScreen() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
+      {/* 글 작성 모달 */}
+      <Modal
+        visible={writeVisible}
+        animationType="slide"
+        onRequestClose={() => setWriteVisible(false)}>
+        <WriteScreen onClose={() => setWriteVisible(false)} />
+      </Modal>
 
       {/* 필터 모달 */}
       <Modal
