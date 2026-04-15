@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,27 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 export default function ProfileScreen({setIsLoggedIn}) {
+  const [travelStyle, setTravelStyle] = useState('분석 중...');
+
+  const navigation = useNavigation();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadTravelStyle = async () => {
+        try {
+          const saved = await AsyncStorage.getItem('travelStyle');
+          setTravelStyle(saved || '테스트 미진행');
+        } catch (e) {
+          setTravelStyle('불러오기 실패');
+        }
+      };
+      loadTravelStyle();
+    }, [])
+  );
+
   const handleLogout = async () => {
     Alert.alert('로그아웃', '로그아웃 하시겠어요?', [
       {text: '취소', style: 'cancel'},
@@ -50,7 +69,19 @@ export default function ProfileScreen({setIsLoggedIn}) {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>여행타입</Text>
-          <Text style={styles.infoValue}>타입</Text>
+
+          <View style={styles.typeContainer}>
+            <Text style={[styles.infoValue, { color: '#4A90E2', fontWeight: 'bold' }]}>
+              {travelStyle}
+            </Text>
+            <TouchableOpacity
+              style={styles.retakeButton}
+              onPress={() => navigation.navigate('TestIntro')}
+            >
+              <Text style={styles.retakeButtonText}>다시하기</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </View>
 
@@ -147,5 +178,21 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  retakeButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginLeft: 10,
+  },
+  retakeButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
