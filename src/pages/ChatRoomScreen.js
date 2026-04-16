@@ -33,37 +33,37 @@ const [selectedSchedule, setSelectedSchedule] = useState(null);
     setTimeout(scrollToBottom, 100);
   };
 
-  const generateAI = () => {
+const generateAI = () => {
 
-const aiMsg = {
-  id: Date.now().toString(),
-  type: "ai",
-  data: {
-    schedules: [
-      {
-        id: "s1",
-        title: "부산 1일차",
-        description: "해운대, 동백섬",
-        locations: [
-          { name: "해운대", lat: 35.1587, lng: 129.1604 },
-          { name: "동백섬", lat: 35.1532, lng: 129.1466 }
-        ]
-      },
-      {
-        id: "s2",
-        title: "부산 2일차",
-        description: "광안리, 감천문화마을",
-        locations: [
-          { name: "광안리", lat: 35.1531, lng: 129.1187 },
-          { name: "감천문화마을", lat: 35.0975, lng: 129.0106 }
-        ]
-      }
-    ]
-  }
-};
-    setMessages(prev => [...prev, aiMsg]);
-    setTimeout(scrollToBottom, 100);
+  const aiMsg = {
+    id: Date.now().toString(),
+    type: "ai",
+    data: {
+      schedules: [
+        {
+          id: "s1",
+          title: "부산 1일차",
+          description: "해운대, 동백섬",
+          locations: [
+            { name: "해운대", lat: 35.1587, lng: 129.1604 },
+            { name: "동백섬", lat: 35.1532, lng: 129.1466 }
+          ]
+        },
+        {
+          id: "s2",
+          title: "부산 2일차",
+          description: "광안리, 감천문화마을",
+          locations: [
+            { name: "광안리", lat: 35.1531, lng: 129.1187 },
+            { name: "감천문화마을", lat: 35.0975, lng: 129.0106 }
+          ]
+        }
+      ]
+    }
   };
+
+  setMessages(prev => [...prev, aiMsg]);
+};
 
   const scrollToBottom = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
@@ -107,7 +107,7 @@ export default ChatRoomScreen;
 const MessageItem = ({ message, myId,onSelectSchedule }) => {
 
   if (message.type === "ai") {
-          <AIMessageCard
+        return <AIMessageCard
         data={message.data}
         onSelectSchedule={onSelectSchedule} // 전달
       />
