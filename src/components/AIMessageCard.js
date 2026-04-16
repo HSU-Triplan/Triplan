@@ -1,17 +1,34 @@
-import { View,Text} from 'react-native';
-const AIMessageCard = ({ data }) => (
-  <View style={{
-    backgroundColor: '#eee',
-    padding: 10,
-    borderRadius: 10,
-    margin: 5
-  }}>
-    <Text>📍 추천 여행지</Text>
-    {data.locations.map((l, i) => <Text key={i}>• {l}</Text>)}
+import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 
-    <Text>🗓 일정</Text>
-    {data.schedule.map((s, i) => <Text key={i}>{s}</Text>)}
-  </View>
-);
+const AIMessageCard = ({ data, onSelectSchedule }) => {
+
+  return (
+    <View style={{ padding: 10 }}>
+      <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>
+        추천 일정
+      </Text>
+
+      {data.schedules.map((schedule) => (
+        <TouchableOpacity
+          key={schedule.id}
+          onPress={() => onSelectSchedule(schedule)}
+          style={{
+            backgroundColor: '#fff',
+            padding: 15,
+            borderRadius: 10,
+            marginBottom: 10
+          }}
+        >
+          <Text style={{ fontWeight: 'bold' }}>
+            {schedule.title}
+          </Text>
+          <Text>{schedule.description}</Text>
+        </TouchableOpacity>
+      ))}
+
+    </View>
+  );
+};
 
 export default AIMessageCard;
