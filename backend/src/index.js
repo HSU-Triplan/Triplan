@@ -17,6 +17,9 @@ app.get('/', (req, res) => {
 const postsRouter = require('./routes/posts');
 app.use('/posts', postsRouter);
 
+const usersRouter = require('./routes/users');
+app.use('/users', usersRouter);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);
