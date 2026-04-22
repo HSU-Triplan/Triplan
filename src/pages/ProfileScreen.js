@@ -11,6 +11,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
+
 
 export default function ProfileScreen({setIsLoggedIn}) {
   const [travelStyle, setTravelStyle] = useState('분석 중...');
@@ -89,13 +91,13 @@ export default function ProfileScreen({setIsLoggedIn}) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>설정</Text>
         <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuText}>계정 설정</Text>
+          <Icon name="person-outline" size={24}/><Text style={styles.menuText}>계정 설정</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuText}>알림 설정</Text>
+         <Icon name="settings" size={28} /><Text style={styles.menuText}>알림 설정</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Text style={[styles.menuText, {color: '#FF3B30'}]}>로그아웃</Text>
+          <Icon name="log-out-outline" size={24}/><Text style={[styles.menuText, {color: '#FF3B30'}]}>로그아웃</Text>
         </TouchableOpacity>
       </View>
 
@@ -172,6 +174,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   menuItem: {
+    flexDirection : 'row',
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
