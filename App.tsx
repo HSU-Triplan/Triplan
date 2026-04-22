@@ -79,7 +79,6 @@ const TestScreen = ({ navigation }: any) => {
       const r4 = newScores.J >= newScores.P ? 'J' : 'P';
       const finalResult = `${r1}${r2}${r3}${r4}`;
 
-      await AsyncStorage.setItem('travelStyle', finalResult);
       navigation.replace('Result', { result: finalResult });
     }
   };
@@ -118,9 +117,6 @@ const ResultScreen = ({ route, navigation }: any) => {
       const data = await response.json();
       console.log('서버 응답:', data);
 
-      if (data.success) {
-        await AsyncStorage.setItem('travelStyle', result);
-      }
     } catch (error) {
       console.log('성향 저장 에러:', error);
     } finally {
