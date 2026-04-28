@@ -123,7 +123,10 @@ export default function SearchScreen() {
               <View style={styles.travelInfo}>
                 <Text style={styles.destination}>📍 {post.destination}</Text>
                 <Text style={styles.days}>📅 {post.days}</Text>
-                <Text style={styles.maxPeople}>👥 {post.max_people}명 모집</Text>
+                <Text style={styles.maxPeople}>👥 {post.current_people}/{post.max_people}명</Text>
+                {post.departure_date ? (
+                  <Text style={styles.departureDate}>🛫 {post.departure_date}</Text>
+                ) : null}
               </View>
 
               {/* 한 줄 소개 */}
@@ -503,5 +506,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  departureDate: {
+    fontSize: 14,
+    color: '#666',
   },
 });

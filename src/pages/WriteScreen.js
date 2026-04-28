@@ -40,6 +40,7 @@ const handleSubmit = async () => {
         max_people: parseInt(maxPeople, 10),
         bio,
         plan,
+        departure_date: departureDate || null,
       }),
     });
 
@@ -104,6 +105,16 @@ const handleSubmit = async () => {
             value={maxPeople}
             onChangeText={setMaxPeople}
             keyboardType="numeric"
+            placeholderTextColor="#aaa"
+          />
+
+          {/* 출발 날짜 */}
+          <Text style={styles.label}>📅 출발 날짜</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="예) 2026-06-01"
+            value={departureDate}
+            onChangeText={setDepartureDate}
             placeholderTextColor="#aaa"
           />
 
