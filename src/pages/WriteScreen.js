@@ -18,6 +18,7 @@ export default function WriteScreen({ onClose }) {
   const [maxPeople, setMaxPeople] = useState('');
   const [bio, setBio] = useState('');
   const [plan, setPlan] = useState('');
+  const [departureDate, setDepartureDate] = useState('');
 
 const handleSubmit = async () => {
   if (!destination || !days || !maxPeople || !bio) {
