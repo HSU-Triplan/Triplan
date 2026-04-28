@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Modal } from 'react-native';
 import WriteScreen from './WriteScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -8,7 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Modal,
   StyleSheet,
+  Alert,
 } from 'react-native';
 
 const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
@@ -64,6 +65,33 @@ export default function SearchScreen() {
     useEffect(() => {
       fetchPosts();
     }, [fetchPosts]);
+
+    const handleJoin = async (postId) => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+
+        const response = await fetch(`http://10.0.2.2:3000/posts/${postId}/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          console.log('채팅방 ID:', result.chat_room_id);
+          Alert.alert('참여 완료', '채팅방에 참여했습니다!');
+          fetchPosts(); // 인원 수 새로고침
+        } else {
+          Alert.alert('오류', result.message);
+        }
+      } catch (error) {
+        console.log('참여하기 에러:', error);
+        Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+      }
+    };
 
   return (
     <View style={styles.container}>
@@ -123,7 +151,10 @@ export default function SearchScreen() {
               <View style={styles.travelInfo}>
                 <Text style={styles.destination}>📍 {post.destination}</Text>
                 <Text style={styles.days}>📅 {post.days}</Text>
-                <Text style={styles.maxPeople}>👥 {post.max_people}명 모집</Text>
+                <Text style={styles.maxPeople}>👥 {post.current_people}/{post.max_people}명</Text>
+                {post.departure_date ? (
+                  <Text style={styles.departureDate}>🛫 {post.departure_date}</Text>
+                ) : null}
               </View>
 
               {/* 한 줄 소개 */}
@@ -135,9 +166,11 @@ export default function SearchScreen() {
               ) : null}
 
               {/* 참여하기 버튼 */}
-              <TouchableOpacity style={styles.joinButton}>
-                <Text style={styles.joinButtonText}>참여하기</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.joinButton}
+                  onPress={() => handleJoin(post.id)}>
+                  <Text style={styles.joinButtonText}>참여하기</Text>
+                </TouchableOpacity>
             </View>
           ))
         )}
@@ -503,5 +536,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  departureDate: {
+    fontSize: 14,
+    color: '#666',
   },
 });
