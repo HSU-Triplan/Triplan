@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
   Text,
@@ -18,7 +19,15 @@ export default function WriteScreen({ onClose }) {
   const [maxPeople, setMaxPeople] = useState('');
   const [bio, setBio] = useState('');
   const [plan, setPlan] = useState('');
-  const [departureDate, setDepartureDate] = useState('');
+  const [departureDate, setDepartureDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+    const formatDate = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
 
 const handleSubmit = async () => {
   if (!destination || !days || !maxPeople || !bio) {
@@ -41,7 +50,7 @@ const handleSubmit = async () => {
         max_people: parseInt(maxPeople, 10),
         bio,
         plan,
-        departure_date: departureDate || null,
+        departure_date: formatDate(departureDate),
       }),
     });
 
@@ -109,15 +118,26 @@ const handleSubmit = async () => {
             placeholderTextColor="#aaa"
           />
 
-          {/* 출발 날짜 */}
-          <Text style={styles.label}>📅 출발 날짜</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="예) 2026-06-01"
-            value={departureDate}
-            onChangeText={setDepartureDate}
-            placeholderTextColor="#aaa"
-          />
+            {/* 출발 날짜 */}
+            <Text style={styles.label}>🛫 출발 날짜</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateButtonText}>{formatDate(departureDate)}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={departureDate}
+                mode="date"
+                display="default"
+                minimumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setDepartureDate(selectedDate);
+                }}
+              />
+            )}
+
 
           {/* 한 줄 소개 */}
           <Text style={styles.label}>✏️ 한 줄 소개 <Text style={styles.required}>*</Text></Text>
@@ -203,5 +223,15 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 120,
+  },
+  dateButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateButtonText: {
+    fontSize: 15,
+    color: '#333',
   },
 });
