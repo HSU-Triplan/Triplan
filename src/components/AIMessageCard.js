@@ -1,40 +1,32 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
-const AIMessageCard = ({ data, selectedSchedule, setSelectedSchedule }) => {
-
-  const schedules = data?.schedules ?? [];
+const AIMessageCard = ({ data, onSelectSchedule }) => {
 
   return (
     <View style={{ padding: 10 }}>
-      {schedules.map(s => {
+      <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>
+        추천 일정
+      </Text>
 
-        const isSelected = selectedSchedule?.id === s.id;
+      {data.schedules.map((schedule) => (
+        <TouchableOpacity
+          key={schedule.id}
+          onPress={() => onSelectSchedule(schedule)}
+          style={{
+            backgroundColor: '#fff',
+            padding: 15,
+            borderRadius: 10,
+            marginBottom: 10
+          }}
+        >
+          <Text style={{ fontWeight: 'bold' }}>
+            {schedule.title}
+          </Text>
+          <Text>{schedule.description}</Text>
+        </TouchableOpacity>
+      ))}
 
-        return (
-          <TouchableOpacity
-            key={s.id}
-            onPress={() => setSelectedSchedule(s)}
-          >
-            <View style={{
-              marginBottom: 10,
-              borderWidth: isSelected ? 2 : 0,
-              borderColor: isSelected ? '#6C5CE7' : 'transparent',
-              borderRadius: 10,
-              padding: 5
-            }}>
-
-              {/* 🔥 제목 안에 포함 */}
-              <Text style={{ fontWeight: 'bold' }}>
-                {isSelected ? `AI 추천 ${s.title}` : s.title}
-              </Text>
-
-              <Text>{s.description}</Text>
-
-            </View>
-          </TouchableOpacity>
-        );
-      })}
     </View>
   );
 };
