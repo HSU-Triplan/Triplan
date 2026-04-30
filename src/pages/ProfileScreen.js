@@ -8,16 +8,19 @@ import {
   ScrollView,
   Alert,
   Clipboard,
+  TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 
 export default function ProfileScreen({ setIsLoggedIn }) {
   const navigation = useNavigation();
-
+   const [isEditing, setIsEditing] = useState(false);
+    const [dateShow,setDateShow] = useState(false);
   // 임시 더미 데이터 (나중에 DB 연동)
   const [userInfo, setUserInfo] = useState({
     name: '구글이름',
@@ -25,8 +28,8 @@ export default function ProfileScreen({ setIsLoggedIn }) {
     profile_image: 'https://via.placeholder.com/100',
     travel_type: '테스트 미진행',
     friend_code: 'ABC123',
-    birth_year: '',
-    gender: '',
+    birth_year: '2000',
+    gender: '여자',
     bio: '',
   });
 
@@ -68,6 +71,116 @@ export default function ProfileScreen({ setIsLoggedIn }) {
     ]);
   };
 
+//정보 수정 화면
+  if(isEditing){
+    return (
+            <ScrollView>
+                 <View style={styles.editContainer}>
+
+                       {/* 뒤로가기 */}
+                       <TouchableOpacity onPress={()=>setIsEditing(false)}>
+                         <Text style={styles.editBarButton}>←</Text>
+                       </TouchableOpacity>
+
+                       {/* 가운데 타이틀 */}
+                       <Text style={styles.editTitle}>프로필 수정</Text>
+
+                       {/* 완료 버튼 */}
+                       <TouchableOpacity onPress={()=>setIsEditing(false)} >
+                         <Text style={styles.editDone}>완료</Text>
+                       </TouchableOpacity>
+
+                 </View>
+
+                 {/* 상단 영역 */}
+                 <View style={styles.header}>
+                   <Image
+                     source={{ uri: userInfo.profile_image }}
+                     style={styles.profileImage}
+                   />
+                    <Icon name="images" size={24}/>
+                 </View>
+
+                 {/* 내 정보 카드 */}
+                 <View style={styles.card}>
+                   <Text style={styles.cardTitle}>내 정보</Text>
+
+                   {/* 닉네임 */}
+                   <View style={styles.infoRow}>
+                     <Text style={styles.infoLabel}>닉네임</Text>
+                      <TextInput style={styles.textInput}
+                        value={userInfo.name}
+                        onChangeText = {(newText)=>setUserInfo({...userInfo, name:newText})}
+                      />
+                   </View>
+
+                   {/* 생년월일 */}
+                   <View style={styles.infoRow}>
+                     <Text style={styles.infoLabel}>생년월일</Text>
+                     <Text style={styles.infoLabel}>{userInfo.birth_year}</Text>
+                     <Icon name="calendar-outline" size={24}
+                        onPress={()=>setDateShow(true)}
+                     />
+                     {dateShow && (
+                        <DateTimePicker
+                        value={new Date()}
+                        mode="date"
+                        onChange={(event,selectedDate)=>{
+                            if(event.type === 'set' && selectedDate){
+                                setUserInfo({...userInfo, birth_year:selectedDate.toISOString().split('T')[0]});
+
+                                setDateShow(false);
+                            }
+                        }}
+                        />
+                     )}
+
+                   </View>
+
+                   {/* 성별 */}
+                   <View style={styles.infoRow}>
+                     <Text style={styles.infoLabel}>성별</Text>
+                     <View style={{ flexDirection: 'row', gap: 20 }}>
+
+                           {/* 남자 */}
+                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '여자')
+                                setUserInfo({...userInfo, gender : '남자'})
+                            }
+                           }
+                                style={{ flexDirection: 'row', alignItems: 'center' }}>
+                             <Text style={{ fontSize: 20 }}>
+                               {userInfo.gender==='남자' ? '🔘' : '⚪️'}
+                             </Text>
+                             <Text> 남자</Text>
+                           </TouchableOpacity>
+
+                           {/* 여자 */}
+                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '남자')
+                              setUserInfo({...userInfo, gender : '여자'})
+                              }
+                           }
+                                style={{ flexDirection: 'row', alignItems: 'center' }}>
+                             <Text style={{ fontSize: 20 }}>
+                               {userInfo.gender === '여자' ? '🔘' : '⚪️'}
+                             </Text>
+                             <Text> 여자</Text>
+                           </TouchableOpacity>
+
+                         </View>
+                   </View>
+
+                   {/* 소개 */}
+                   <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                     <Text style={styles.infoLabel}>소개</Text>
+                    <TextInput style={styles.textInput}
+                        value={userInfo.bio}
+                        onChangeText = {(newText)=>setUserInfo({...userInfo, bio:newText})}
+                    />
+                   </View>
+                 </View>
+            </ScrollView>
+    );
+  }
   return (
     <ScrollView style={styles.container}>
       {/* 상단 프로필 영역 */}
@@ -82,7 +195,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
         ) : null}
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => navigation.navigate('EditProfile')}>
+          onPress={() => setIsEditing(true)}>
           <Text style={styles.editButtonText}>프로필 수정</Text>
         </TouchableOpacity>
       </View>
@@ -307,4 +420,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 12,
   },
+    editContainer: {
+      height: 60,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+      backgroundColor: '#fff',
+    },
+    editBarButton: {
+      fontSize: 18,
+    },
+    editTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    editDone: {
+      fontSize: 16,
+      color: '#4A90E2',
+      fontWeight: 'bold',
+    },
+    textInput : {
+       borderWidth : 1,
+        fontSize: 15,
+        height : 40,
+        width : 250
+    }
 });
