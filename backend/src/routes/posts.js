@@ -168,4 +168,25 @@ router.post('/:postId/join', authMiddleware, async (req, res) => {
   }
 });
 
+// 채팅방 나가기
+router.delete('/chat-rooms/:roomId/leave', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.userId;
+
+    const { error } = await supabase
+      .from('chat_members')
+      .delete()
+      .eq('chat_room_id', roomId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('채팅방 나가기 에러:', error);
+    res.status(500).json({ success: false, message: '채팅방 나가기 실패' });
+  }
+});
+
 module.exports = router;
