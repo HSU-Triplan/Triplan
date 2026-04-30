@@ -25,6 +25,7 @@ export default function SearchScreen() {
   const [selectedType, setSelectedType] = useState('전체');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [joinedRooms, setJoinedRooms] = useState({}); // { postId: chatRoomId }
 
   // 적용 버튼 누르기 전 임시 상태
   const [tempDestination, setTempDestination] = useState('전체');
@@ -62,9 +63,31 @@ export default function SearchScreen() {
       }
     }, []);
 
+    const fetchJoinedRooms = useCallback(async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch('http://10.0.2.2:3000/posts/my-chats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await response.json();
+        if (result.success) {
+          const map = {};
+          result.chats.forEach(chat => {
+            const postId = chat.chat_rooms?.post_id;
+            const roomId = chat.chat_rooms?.id;
+            if (postId && roomId) map[postId] = roomId;
+          });
+          setJoinedRooms(map);
+        }
+      } catch (error) {
+        console.log('참여 목록 에러:', error);
+      }
+    }, []);
+
     useEffect(() => {
       fetchPosts();
-    }, [fetchPosts]);
+      fetchJoinedRooms();
+    }, [fetchPosts, fetchJoinedRooms]);
 
     const handleJoin = async (postId) => {
       try {
@@ -84,6 +107,7 @@ export default function SearchScreen() {
           console.log('채팅방 ID:', result.chat_room_id);
           Alert.alert('참여 완료', '채팅방에 참여했습니다!');
           fetchPosts(); // 인원 수 새로고침
+          fetchJoinedRooms();
         } else {
           Alert.alert('오류', result.message);
         }
@@ -165,12 +189,23 @@ export default function SearchScreen() {
                 <Text style={styles.plan} numberOfLines={2}>{post.plan}</Text>
               ) : null}
 
-              {/* 참여하기 버튼 */}
-                <TouchableOpacity
-                  style={styles.joinButton}
-                  onPress={() => handleJoin(post.id)}>
-                  <Text style={styles.joinButtonText}>참여하기</Text>
-                </TouchableOpacity>
+            {joinedRooms[post.id] ? (
+              <TouchableOpacity
+                style={[styles.joinButton, { backgroundColor: '#34C759' }]}
+                onPress={() => {
+                  // 나중에 채팅방으로 이동
+                  console.log('채팅방 이동:', joinedRooms[post.id]);
+                }}>
+                <Text style={styles.joinButtonText}>채팅방으로 이동 →</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.joinButton}
+                onPress={() => handleJoin(post.id)}>
+                <Text style={styles.joinButtonText}>참여하기</Text>
+              </TouchableOpacity>
+            )}
+
             </View>
           ))
         )}
