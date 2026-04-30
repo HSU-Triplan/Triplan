@@ -1,55 +1,76 @@
-// components/InputBar.js
 import React, { useState } from 'react';
-import { View, Text, TextInput,  TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text } from 'react-native';
 
-const InputBar = ({ onSend }) => {
+const InputBar = ({ onSend, isAIMode, setIsAIMode }) => {
 
   const [text, setText] = useState("");
-  const [inputKey, setInputKey] = useState(0);
+
+  // 🔥 @ 버튼 = 토글
+  const onPressAt = () => {
+    setIsAIMode(prev => !prev);
+  };
 
   const handleSend = () => {
     if (!text.trim()) return;
 
-    onSend(text);
-    setText("");
+    // 🔥 AI 모드면 그냥 AI 실행
+    if (isAIMode) {
+      onSend("@ " + text); // 필요하면 prefix 붙이기
+    } else {
+      onSend(text);
+    }
 
-     setInputKey(prev => prev + 1); 
+    setText("");
   };
 
   return (
-    <View style={{ flexDirection: 'row' }}>
-      <TouchableOpacity style={styles.button} onPress={() => setText(prev => "@" + prev)}>
-        <Text style={styles.buttonText}>@</Text>
+    <View style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      backgroundColor: isAIMode ? '#EEE8FF' : '#fff'
+    }}>
+
+      {/* @ 버튼 */}
+      <TouchableOpacity onPress={onPressAt}>
+        <Text style={{
+          fontSize: 20,
+          marginRight: 10,
+          color: isAIMode ? '#6C5CE7' : '#000'
+        }}>
+          @
+        </Text>
       </TouchableOpacity>
+
+      {/* 🔥 고정 @ 표시 (텍스트 아님) */}
+      {isAIMode && (
+        <Text style={{
+          fontSize: 16,
+          marginRight: 4,
+          color: '#6C5CE7'
+        }}>
+          @
+        </Text>
+      )}
 
       <TextInput
-        key={inputKey}
         value={text}
         onChangeText={setText}
-        style={{ flex: 1, padding: 10, backgroundColor: '#ffffff', borderRadius: 20, marginHorizontal: 10 }}
+        style={{ flex: 1 }}
+        placeholder={isAIMode ? "AI에게 요청..." : "메시지 입력"}
       />
 
-      <TouchableOpacity style={styles.button} onPress={() => onSend(text)}>
-        <Text style={styles.buttonText}>전송</Text>
+      <TouchableOpacity onPress={handleSend}>
+        <Text style={{
+          fontWeight: 'bold',
+          color: isAIMode ? '#6C5CE7' : '#000'
+        }}>
+          {isAIMode ? 'AI' : '전송'}
+        </Text>
       </TouchableOpacity>
+
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#555555',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20, // 🔥 이게 핵심
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-
-  buttonText: {
-    fontWeight: 'bold',
-    color: '#fff'
-  }
-});
 
 export default InputBar;
