@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import WriteScreen from './WriteScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -84,10 +85,12 @@ export default function SearchScreen() {
       }
     }, []);
 
-    useEffect(() => {
-      fetchPosts();
-      fetchJoinedRooms();
-    }, [fetchPosts, fetchJoinedRooms]);
+    useFocusEffect(
+      useCallback(() => {
+        fetchPosts();
+        fetchJoinedRooms();
+      }, [fetchPosts, fetchJoinedRooms])
+    );
 
     const handleJoin = async (postId) => {
       try {
