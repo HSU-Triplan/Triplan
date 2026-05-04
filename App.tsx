@@ -79,7 +79,6 @@ const TestScreen = ({ navigation }: any) => {
       const r4 = newScores.J >= newScores.P ? 'J' : 'P';
       const finalResult = `${r1}${r2}${r3}${r4}`;
 
-      await AsyncStorage.setItem('travelStyle', finalResult);
       navigation.replace('Result', { result: finalResult });
     }
   };
@@ -100,13 +99,38 @@ const TestScreen = ({ navigation }: any) => {
 const ResultScreen = ({ route, navigation }: any) => {
   const result = route?.params?.result || '분석 중';
 
+  const handleConfirm = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      console.log('성향 저장 시작:', result);
+
+      const response = await fetch('http://10.0.2.2:3000/users/travel-type', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ travelType: result }),
+      });
+
+      console.log('응답 status:', response.status);
+      const data = await response.json();
+      console.log('서버 응답:', data);
+
+    } catch (error) {
+      console.log('성향 저장 에러:', error);
+    } finally {
+      navigation.replace('Main');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.centerContainer}>
       <Text style={styles.subtitle}>성향 분석 완료!</Text>
       <Text style={styles.questionTitle}>당신의 여행 스타일은</Text>
       <Text style={styles.resultText}>{result}</Text>
       <Text style={styles.subtitle}>스타일입니다 ✈️</Text>
-      <TouchableOpacity style={styles.confirmButton} onPress={() => navigation.replace('Main')}>
+      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
         <Text style={styles.buttonText}>여행 시작하기</Text>
       </TouchableOpacity>
     </SafeAreaView>
