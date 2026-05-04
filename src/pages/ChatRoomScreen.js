@@ -1,11 +1,7 @@
 import React, { useState, useLayoutEffect, useRef} from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
-<<<<<<< Updated upstream
-  Modal, TextInput, Platform, ScrollView
-=======
-  Modal, TextInput, Platform, ScrollView 
->>>>>>> Stashed changes
+  Modal, TextInput, ScrollView
 } from 'react-native';
 
 import InputBar from '../components/InputBar';
