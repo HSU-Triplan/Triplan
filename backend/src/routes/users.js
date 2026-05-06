@@ -46,4 +46,49 @@ router.post('/travel-type', authMiddleware, async (req, res) => {
   }
 });
 
+
+// 내 정보 조회
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, user: data });
+  } catch (error) {
+    console.error('유저 정보 조회 에러:', error);
+    res.status(500).json({ success: false, message: '유저 정보 조회 실패' });
+  }
+});
+
+
+// 프로필 수정
+router.patch('/me', authMiddleware, async (req, res) => {
+  try {
+    const { nickname, birth_year, gender, bio } = req.body;
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        nickname: nickname || null,
+        birth_year: birth_year || null,
+        gender: gender || null,
+        bio: bio || null,
+        updated_at: new Date(),
+      })
+      .eq('id', req.user.userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('프로필 수정 에러:', error);
+    res.status(500).json({ success: false, message: '프로필 수정 실패' });
+  }
+});
+
 module.exports = router;

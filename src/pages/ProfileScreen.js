@@ -35,19 +35,39 @@ export default function ProfileScreen({ setIsLoggedIn }) {
 
   const [travelStyle, setTravelStyle] = useState('테스트 미진행');
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadTravelStyle = async () => {
-        try {
-          const saved = await AsyncStorage.getItem('travelStyle');
-          setTravelStyle(saved || '테스트 미진행');
-        } catch (e) {
-          setTravelStyle('불러오기 실패');
+useFocusEffect(
+  React.useCallback(() => {
+    const loadUserInfo = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+
+        const response = await fetch('http://10.0.2.2:3000/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          const user = result.user;
+          setUserInfo({
+            name: user.name || '',
+            nickname: user.nickname || '',
+            profile_image: user.profile_image || 'https://via.placeholder.com/100',
+            travel_type: user.travel_type || '미설정',
+            friend_code: user.friend_code || '없음',
+            birth_year: user.birth_year ? String(user.birth_year) : '',
+            gender: user.gender || '',
+            bio: user.bio || '',
+          });
+          setTravelStyle(user.travel_type || '테스트 미진행');
         }
-      };
-      loadTravelStyle();
-    }, [])
-  );
+      } catch (e) {
+        console.log('유저 정보 불러오기 실패:', e);
+      }
+    };
+    loadUserInfo();
+  }, [])
+);
 
   const displayName = userInfo.nickname || userInfo.name;
 
@@ -86,9 +106,39 @@ export default function ProfileScreen({ setIsLoggedIn }) {
                        <Text style={styles.editTitle}>프로필 수정</Text>
 
                        {/* 완료 버튼 */}
-                       <TouchableOpacity onPress={()=>setIsEditing(false)} >
-                         <Text style={styles.editDone}>완료</Text>
-                       </TouchableOpacity>
+                        <TouchableOpacity onPress={async () => {
+                          try {
+                            const token = await AsyncStorage.getItem('token');
+
+                            const response = await fetch('http://10.0.2.2:3000/users/me', {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                nickname: userInfo.nickname || userInfo.name,
+                                birth_year: userInfo.birth_year || null,
+                                gender: userInfo.gender || null,
+                                bio: userInfo.bio || null,
+                              }),
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                              Alert.alert('완료', '프로필이 수정되었습니다!');
+                              setIsEditing(false);
+                            } else {
+                              Alert.alert('오류', result.message);
+                            }
+                          } catch (error) {
+                            console.log('프로필 수정 에러:', error);
+                            Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+                          }
+                        }}>
+                          <Text style={styles.editDone}>완료</Text>
+                        </TouchableOpacity>
 
                  </View>
 
@@ -223,14 +273,6 @@ export default function ProfileScreen({ setIsLoggedIn }) {
               <Text style={styles.retakeButtonText}>다시하기</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* 성향 코드 */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>성향 코드</Text>
-          <Text style={[styles.infoValue, { color: '#4A90E2' }]}>
-            {userInfo.travel_type || '미설정'}
-          </Text>
         </View>
 
         {/* 친구 코드 */}
