@@ -214,7 +214,7 @@ const pickImage = () => {
                      <View style={{ flexDirection: 'row', gap: 20 }}>
 
                            {/* 남자 */}
-                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '여자')
+                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '여자' || userInfo.gender == '')
                                 setUserInfo({...userInfo, gender : '남자'})
                             }
                            }
@@ -226,7 +226,7 @@ const pickImage = () => {
                            </TouchableOpacity>
 
                            {/* 여자 */}
-                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '남자')
+                           <TouchableOpacity onPress={()=>{ if(userInfo.gender === '남자' || userInfo.gender == '')
                               setUserInfo({...userInfo, gender : '여자'})
                               }
                            }
