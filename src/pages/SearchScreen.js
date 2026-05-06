@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import EditPostScreen from './EditPostScreen';
 import { useFocusEffect } from '@react-navigation/native';
 import WriteScreen from './WriteScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +32,7 @@ export default function SearchScreen() {
   const [myUserId, setMyUserId] = useState(null);
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
+  const [editPost, setEditPost] = useState(null);
 
   const openModal = () => {
     setTempDestination(selectedDestination);
@@ -124,7 +126,34 @@ export default function SearchScreen() {
         Alert.alert('오류', '네트워크 오류가 발생했습니다.');
       }
     };
-
+        const handleDelete = async (postId) => {
+          Alert.alert('게시글 삭제', '정말 삭제하시겠어요?', [
+            { text: '취소', style: 'cancel' },
+            {
+              text: '삭제',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const token = await AsyncStorage.getItem('token');
+                  const response = await fetch(`http://10.0.2.2:3000/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  const result = await response.json();
+                  if (result.success) {
+                    setSelectedPost(null);
+                    fetchPosts();
+                    fetchJoinedRooms();
+                  } else {
+                    Alert.alert('오류', result.message);
+                  }
+                } catch (error) {
+                  console.log('삭제 에러:', error);
+                }
+              },
+            },
+          ]);
+        };
   return (
     <View style={styles.container}>
       {/* 검색바 + 필터 버튼 */}
@@ -234,6 +263,20 @@ export default function SearchScreen() {
           }} />
         </Modal>
 
+        {/* 게시글 수정 모달 */}
+        <Modal
+          visible={!!editPost}
+          animationType="slide"
+          onRequestClose={() => setEditPost(null)}>
+          <EditPostScreen
+            post={editPost}
+            onClose={() => {
+              setEditPost(null);
+              fetchPosts();
+            }}
+          />
+        </Modal>
+
         {/* 게시글 상세 모달 */}
         <Modal
           visible={!!selectedPost}
@@ -260,11 +303,24 @@ export default function SearchScreen() {
                     {selectedPost?.users?.travel_type ?? '성향 미설정'}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={{ marginLeft: 'auto' }}
-                  onPress={() => setSelectedPost(null)}>
-                  <Text style={{ fontSize: 18, color: '#aaa' }}>✕</Text>
-                </TouchableOpacity>
+                <View style={{ marginLeft: 'auto', flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  {selectedPost?.user_id === myUserId && (
+                    <>
+                      <TouchableOpacity onPress={() => {
+                        setEditPost(selectedPost);
+                        setSelectedPost(null);
+                      }}>
+                        <Text style={{ fontSize: 14, color: '#4A90E2', fontWeight: 'bold' }}>수정</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(selectedPost?.id)}>
+                        <Text style={{ fontSize: 14, color: '#FF3B30', fontWeight: 'bold' }}>삭제</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity onPress={() => setSelectedPost(null)}>
+                    <Text style={{ fontSize: 18, color: '#aaa' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* 한 줄 소개 */}
