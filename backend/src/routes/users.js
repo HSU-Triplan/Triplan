@@ -91,4 +91,22 @@ router.patch('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// 홈 화면용 — 내가 작성한 게시글 조회
+router.get('/my-posts', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, destination, days, departure_date, bio, max_people, created_at')
+      .eq('user_id', req.user.userId)
+      .order('departure_date', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ success: true, posts: data });
+  } catch (error) {
+    console.error('내 게시글 조회 에러:', error);
+    res.status(500).json({ success: false, message: '내 게시글 조회 실패' });
+  }
+});
+
 module.exports = router;
