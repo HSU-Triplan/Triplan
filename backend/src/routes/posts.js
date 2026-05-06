@@ -32,7 +32,8 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: '필수 항목 누락' });
     }
 
-    const { data, error } = await supabase
+    // 게시글 생성
+    const { data: post, error: postError } = await supabase
       .from('posts')
       .insert({
         user_id: req.user.userId,
@@ -46,9 +47,25 @@ router.post('/', authMiddleware, async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (postError) throw postError;
 
-    res.json({ success: true, post: data });
+    // 채팅방 자동 생성
+    const { data: chatRoom, error: roomError } = await supabase
+      .from('chat_rooms')
+      .insert({ post_id: post.id })
+      .select()
+      .single();
+
+    if (roomError) throw roomError;
+
+    // 작성자 자동 참여
+    const { error: memberError } = await supabase
+      .from('chat_members')
+      .insert({ chat_room_id: chatRoom.id, user_id: req.user.userId });
+
+    if (memberError) throw memberError;
+
+    res.json({ success: true, post, chat_room_id: chatRoom.id });
   } catch (error) {
     console.error('게시글 작성 에러:', error);
     res.status(500).json({ success: false, message: '게시글 작성 실패' });
