@@ -26,8 +26,8 @@ export default function SearchScreen() {
   const [selectedType, setSelectedType] = useState('전체');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [joinedRooms, setJoinedRooms] = useState({}); // { postId: chatRoomId }
-
+  const [joinedRooms, setJoinedRooms] = useState({});
+  const [selectedPost, setSelectedPost] = useState(null);
   // 적용 버튼 누르기 전 임시 상태
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
@@ -163,54 +163,38 @@ export default function SearchScreen() {
         ) : posts.length === 0 ? (
           <Text style={styles.emptyText}>게시글이 없습니다.</Text>
         ) : (
-          posts.map(post => (
-            <View key={post.id} style={styles.card}>
-              {/* 작성자 정보 */}
-              <View style={styles.cardHeader}>
-                <View style={styles.avatar} />
-                <View>
-                  <Text style={styles.userName}>{post.users?.name}</Text>
-                  <Text style={styles.travelType}>{post.users?.travel_type ?? '성향 미설정'}</Text>
+            posts.map(post => (
+              <TouchableOpacity
+                key={post.id}
+                style={styles.card}
+                onPress={() => setSelectedPost(post)}>
+
+                {/* 한 줄 소개 */}
+                <Text style={styles.bio}>{post.bio}</Text>
+
+                {/* 닉네임 + 여행 성향 */}
+                <View style={styles.cardMeta}>
+                  <Text style={styles.metaText}>
+                    {post.users?.nickname || post.users?.name}
+                  </Text>
+                  <Text style={styles.metaDot}>·</Text>
+                  <Text style={styles.metaType}>
+                    {post.users?.travel_type ?? '성향 미설정'}
+                  </Text>
                 </View>
-              </View>
 
-              {/* 여행 정보 */}
-              <View style={styles.travelInfo}>
-                <Text style={styles.destination}>📍 {post.destination}</Text>
-                <Text style={styles.days}>📅 {post.days}</Text>
-                <Text style={styles.maxPeople}>👥 {post.current_people}/{post.max_people}명</Text>
-                {post.departure_date ? (
-                  <Text style={styles.departureDate}>🛫 {post.departure_date}</Text>
-                ) : null}
-              </View>
+                {/* 여행지 + 출발날짜 + 일수 + 참가인원 */}
+                <View style={styles.travelInfo}>
+                  <Text style={styles.travelTag}>📍 {post.destination}</Text>
+                  {post.departure_date ? (
+                    <Text style={styles.travelTag}>🛫 {post.departure_date}</Text>
+                  ) : null}
+                  <Text style={styles.travelTag}>🗓 {post.days}</Text>
+                  <Text style={styles.travelTag}>👥 {post.current_people}/{post.max_people}명</Text>
+                </View>
 
-              {/* 한 줄 소개 */}
-              <Text style={styles.bio}>{post.bio}</Text>
-
-              {/* 간단 계획 */}
-              {post.plan ? (
-                <Text style={styles.plan} numberOfLines={2}>{post.plan}</Text>
-              ) : null}
-
-            {joinedRooms[post.id] ? (
-              <TouchableOpacity
-                style={[styles.joinButton, { backgroundColor: '#34C759' }]}
-                onPress={() => {
-                  // 나중에 채팅방으로 이동
-                  console.log('채팅방 이동:', joinedRooms[post.id]);
-                }}>
-                <Text style={styles.joinButtonText}>채팅방으로 이동 →</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.joinButton}
-                onPress={() => handleJoin(post.id)}>
-                <Text style={styles.joinButtonText}>참여하기</Text>
-              </TouchableOpacity>
-            )}
-
-            </View>
-          ))
+            ))
         )}
       </ScrollView>
 
@@ -230,6 +214,87 @@ export default function SearchScreen() {
             setWriteVisible(false);
             fetchPosts(); // 작성 후 피드 새로고침
           }} />
+        </Modal>
+
+        {/* 게시글 상세 모달 */}
+        <Modal
+          visible={!!selectedPost}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedPost(null)}>
+          <TouchableOpacity
+            style={styles.detailOverlay}
+            activeOpacity={1}
+            onPress={() => setSelectedPost(null)}>
+            <TouchableOpacity
+              style={styles.detailBox}
+              activeOpacity={1}
+              onPress={() => {}}>
+
+              {/* 헤더 */}
+              <View style={styles.detailHeader}>
+                <View style={styles.avatar} />
+                <View>
+                  <Text style={styles.userName}>
+                    {selectedPost?.users?.nickname || selectedPost?.users?.name}
+                  </Text>
+                  <Text style={styles.travelType}>
+                    {selectedPost?.users?.travel_type ?? '성향 미설정'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{ marginLeft: 'auto' }}
+                  onPress={() => setSelectedPost(null)}>
+                  <Text style={{ fontSize: 18, color: '#aaa' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 한 줄 소개 */}
+              <Text style={styles.detailBio}>{selectedPost?.bio}</Text>
+
+              {/* 여행 정보 */}
+              <View style={styles.travelInfo}>
+                <Text style={styles.travelTag}>📍 {selectedPost?.destination}</Text>
+                {selectedPost?.departure_date ? (
+                  <Text style={styles.travelTag}>🛫 {selectedPost?.departure_date}</Text>
+                ) : null}
+                <Text style={styles.travelTag}>🗓 {selectedPost?.days}</Text>
+                <Text style={styles.travelTag}>
+                  👥 {selectedPost?.current_people}/{selectedPost?.max_people}명
+                </Text>
+              </View>
+
+              {/* 간단 계획 */}
+              {selectedPost?.plan ? (
+                <View style={styles.detailPlanBox}>
+                  <Text style={styles.detailPlanTitle}>📋 간단 계획</Text>
+                  <Text style={styles.detailPlan}>{selectedPost?.plan}</Text>
+                </View>
+              ) : null}
+
+              {/* 참여하기 / 채팅방으로 이동 버튼 */}
+              {joinedRooms[selectedPost?.id] ? (
+                <TouchableOpacity
+                  style={[styles.joinButton, { backgroundColor: '#34C759' }]}
+                  onPress={() => {
+                    setSelectedPost(null);
+                    console.log('채팅방 이동:', joinedRooms[selectedPost?.id]);
+                  }}>
+                  <Text style={styles.joinButtonText}>채팅방으로 이동 →</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.joinButton}
+                  onPress={async () => {
+                    await handleJoin(selectedPost?.id);
+                    setSelectedPost(null);
+                  }}>
+                  <Text style={styles.joinButtonText}>참여하기</Text>
+                </TouchableOpacity>
+              )}
+
+            </TouchableOpacity>
+          </TouchableOpacity>
         </Modal>
 
       {/* 필터 모달 */}
@@ -578,5 +643,73 @@ const styles = StyleSheet.create({
   departureDate: {
     fontSize: 14,
     color: '#666',
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#888',
+  },
+  metaDot: {
+    fontSize: 12,
+    color: '#bbb',
+  },
+  metaType: {
+    fontSize: 12,
+    color: '#4A90E2',
+  },
+  travelTag: {
+    fontSize: 13,
+    color: '#555',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  detailOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  detailBox: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  detailBio: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  detailPlanBox: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  detailPlanTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 6,
+  },
+  detailPlan: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
 });
