@@ -28,7 +28,7 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   const [joinedRooms, setJoinedRooms] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
-  // 적용 버튼 누르기 전 임시 상태
+  const [myUserId, setMyUserId] = useState(null);
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
 
@@ -67,6 +67,11 @@ export default function SearchScreen() {
     const fetchJoinedRooms = useCallback(async () => {
       try {
         const token = await AsyncStorage.getItem('token');
+        const meRes = await fetch('http://10.0.2.2:3000/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const meData = await meRes.json();
+        if (meData.success) setMyUserId(meData.user.id);
         const response = await fetch('http://10.0.2.2:3000/posts/my-chats', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -169,6 +174,19 @@ export default function SearchScreen() {
                 style={styles.card}
                 onPress={() => setSelectedPost(post)}>
 
+                {/* 내 글 / 참여 중 배지 */}
+                <View style={styles.badgeRow}>
+                  {post.user_id === myUserId && (
+                    <View style={[styles.badge, { backgroundColor: '#FF9500' }]}>
+                      <Text style={styles.badgeText}>내 글</Text>
+                    </View>
+                  )}
+                  {joinedRooms[post.id] && (
+                    <View style={[styles.badge, { backgroundColor: '#34C759' }]}>
+                      <Text style={styles.badgeText}>참여 중</Text>
+                    </View>
+                  )}
+                </View>
                 {/* 한 줄 소개 */}
                 <Text style={styles.bio}>{post.bio}</Text>
 
@@ -711,5 +729,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 6,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  badgeText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
