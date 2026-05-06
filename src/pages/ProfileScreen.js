@@ -15,6 +15,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 
 export default function ProfileScreen({ setIsLoggedIn }) {
@@ -91,6 +92,26 @@ useFocusEffect(
     ]);
   };
 
+//사용자 기기에서 이미지 선택해서 프로필 이미지로 설정하는 코드
+const pickImage = () => {
+    launchImageLibrary(
+        {
+            mediaType : 'phone',
+            selectionLimit : 1,
+        },
+        (response) => {
+            if (response.didCancel) return;
+            if (response.errorCode){
+                console.log("에러",response.errorMessage);
+                return;
+            }
+
+            const uri = response.assets[0].uri;
+            setUserInfo({...userInfo,profile_image:uri})
+        }
+    )
+}
+
 //정보 수정 화면
   if(isEditing){
     return (
@@ -148,7 +169,7 @@ useFocusEffect(
                      source={{ uri: userInfo.profile_image }}
                      style={styles.profileImage}
                    />
-                    <Icon name="images" size={24}/>
+                    <Icon name="images" size={24} onPress={pickImage} />
                  </View>
 
                  {/* 내 정보 카드 */}
