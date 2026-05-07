@@ -8,7 +8,8 @@ import {
   ScrollView,
   Alert,
   Clipboard,
-  TextInput
+  TextInput,
+  Switch
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -22,6 +23,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
   const navigation = useNavigation();
    const [isEditing, setIsEditing] = useState(false);
     const [dateShow,setDateShow] = useState(false);
+    const [enabled,setEnabled] = useState(false);
   // 임시 더미 데이터 (나중에 DB 연동)
   const [userInfo, setUserInfo] = useState({
     name: '구글이름',
@@ -340,9 +342,14 @@ const pickImage = () => {
         <TouchableOpacity style={styles.menuItem}>
           <Icon name="person-outline" size={24}/><Text style={styles.menuText}>계정 설정</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        <View style={{...styles.menuItem, flexDirection:'row', justifyContent : 'space-between'}}>
+        <View>
          <Icon name="settings" size={28} /><Text style={styles.menuText}>알림 설정</Text>
-        </TouchableOpacity>
+        </View>
+         <Switch
+            value={enabled} onValueChange={(value) => setEnabled(value)}
+         />
+        </View>
         <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <Icon name="log-out-outline" size={24}/><Text style={[styles.menuText, {color: '#FF3B30'}]}>로그아웃</Text>
         </TouchableOpacity>
