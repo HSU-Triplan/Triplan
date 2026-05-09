@@ -337,4 +337,30 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: '게시글 삭제 실패' });
   }
 });
+
+// 채팅방 멤버 조회
+router.get('/chat-rooms/:roomId/members', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const { data, error } = await supabase
+      .from('chat_members')
+      .select(`
+        user_id,
+        joined_at,
+        users (
+          id, name, nickname, profile_image, travel_type, friend_code
+        )
+      `)
+      .eq('chat_room_id', roomId);
+
+    if (error) throw error;
+
+    res.json({ success: true, members: data });
+  } catch (error) {
+    console.error('멤버 조회 에러:', error);
+    res.status(500).json({ success: false, message: '멤버 조회 실패' });
+  }
+});
+
 module.exports = router;

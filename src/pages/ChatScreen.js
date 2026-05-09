@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-
-export default function ChatScreen() {
+export default function ChatScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -82,27 +81,37 @@ export default function ChatScreen() {
             const author = post?.users;
 
             return (
-              <TouchableOpacity key={room?.id} style={styles.chatItem}>
-                <Image
-                  source={{ uri: author?.profile_image || 'https://via.placeholder.com/50' }}
-                  style={styles.avatar}
-                />
-                <View style={styles.chatInfo}>
-                    <Text style={styles.chatTitle}>
-                      {post?.destination} {post?.days} 여행
-                    </Text>
-                    <Text style={styles.chatSub}>
-                    {post?.days} {post?.departure_date ? `· 🛫 ${post.departure_date}` : ''}
-                  </Text>
-                  <Text style={styles.chatBio} numberOfLines={1}>{post?.bio}</Text>
-                </View>
-                  {/* 나가기 버튼 */}
-                  <TouchableOpacity
-                    style={styles.leaveButton}
-                    onPress={() => handleLeave(room?.id)}>
-                    <Text style={styles.leaveButtonText}>✕</Text>
-                  </TouchableOpacity>
+            <TouchableOpacity
+              key={room?.id}
+              style={styles.chatItem}
+              onPress={() => navigation.navigate('ChatRoom', {
+                roomId: room?.id,
+                title: `${post?.destination} ${post?.days} 여행`,
+                destination: post?.destination,
+                days: post?.days,
+                departure_date: post?.departure_date,
+                bio: post?.bio,
+                max_people: post?.max_people,
+              })}>
+              <Image
+                source={{ uri: author?.profile_image || 'https://via.placeholder.com/50' }}
+                style={styles.avatar}
+              />
+              <View style={styles.chatInfo}>
+                <Text style={styles.chatTitle}>
+                  {post?.destination} {post?.days} 여행
+                </Text>
+                <Text style={styles.chatSub}>
+                  {post?.days} {post?.departure_date ? `· 🛫 ${post.departure_date}` : ''}
+                </Text>
+                <Text style={styles.chatBio} numberOfLines={1}>{post?.bio}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.leaveButton}
+                onPress={() => handleLeave(room?.id)}>
+                <Text style={styles.leaveButtonText}>✕</Text>
               </TouchableOpacity>
+            </TouchableOpacity>
             );
           })
         )}
