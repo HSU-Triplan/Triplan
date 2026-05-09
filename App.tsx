@@ -3,7 +3,6 @@ import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet } from 'react-na
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import LoginScreen from './src/pages/LoginScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 
@@ -166,7 +165,7 @@ export default function App() {
             <Stack.Screen name="Main">
               {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
             </Stack.Screen>
-          </>
+            </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

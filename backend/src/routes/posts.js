@@ -337,4 +337,92 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: '게시글 삭제 실패' });
   }
 });
+
+// 채팅방 멤버 조회
+router.get('/chat-rooms/:roomId/members', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const { data, error } = await supabase
+      .from('chat_members')
+      .select(`
+        user_id,
+        joined_at,
+        users (
+          id, name, nickname, profile_image, travel_type, friend_code
+        )
+      `)
+      .eq('chat_room_id', roomId);
+
+    if (error) throw error;
+
+    res.json({ success: true, members: data });
+  } catch (error) {
+    console.error('멤버 조회 에러:', error);
+    res.status(500).json({ success: false, message: '멤버 조회 실패' });
+  }
+});
+
+
+// 메시지 목록 조회
+router.get('/chat-rooms/:roomId/messages', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        users (
+          id, name, nickname, profile_image
+        )
+      `)
+      .eq('chat_room_id', roomId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ success: true, messages: data });
+  } catch (error) {
+    console.error('메시지 조회 에러:', error);
+    res.status(500).json({ success: false, message: '메시지 조회 실패' });
+  }
+});
+
+// 메시지 전송
+router.post('/chat-rooms/:roomId/messages', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { content, type = 'text' } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ success: false, message: '내용 없음' });
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content,
+        type,
+      })
+      .select(`
+        *,
+        users (
+          id, name, nickname, profile_image
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: data });
+  } catch (error) {
+    console.error('메시지 전송 에러:', error);
+    res.status(500).json({ success: false, message: '메시지 전송 실패' });
+  }
+});
+
+
 module.exports = router;

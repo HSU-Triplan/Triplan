@@ -139,7 +139,7 @@ useFocusEffect(
       {
         text: '로그아웃',
         style: 'destructive',
-        onPress: async () => {ㄹ
+        onPress: async () => {
           await GoogleSignin.signOut();
           await AsyncStorage.removeItem('token');
           setIsLoggedIn(false);
