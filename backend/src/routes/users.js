@@ -67,6 +67,26 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+//다른 사용자 프로필 조회
+router.get('/others',authMiddleware, async (req, res) => {
+  try {
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
+      .eq('id',req.query.id)
+      .single();
+
+    console.log(data);
+    if (error) throw error;
+
+    res.json({ success: true, user: data });
+    console.log("요청옴");
+  } catch (error) {
+    console.error('유저 정보 조회 에러:', error);
+    res.status(500).json({ success: false, message: '유저 정보 조회 실패' });
+  }
+});
 
 // 프로필 수정
 router.patch('/me', authMiddleware, async (req, res) => {

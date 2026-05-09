@@ -12,6 +12,8 @@ import {
   Modal,
   StyleSheet,
   Alert,
+  Image,
+  Clipboard
 } from 'react-native';
 
 const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
@@ -33,6 +35,8 @@ export default function SearchScreen() {
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
   const [editPost, setEditPost] = useState(null);
+  const [profileVisible,setProfileVisible] = useState(false);
+  const [otherUser,setOtherUser] = useState(null);
 
   const openModal = () => {
     setTempDestination(selectedDestination);
@@ -91,6 +95,31 @@ export default function SearchScreen() {
         console.log('참여 목록 에러:', error);
       }
     }, []);
+
+    //다른 사용자 프로필 정보 가져오는 함수
+     const fetchProfile = async () => {
+          setLoading(true);
+
+          try {
+
+           const token = await AsyncStorage.getItem('token');
+            const response = await fetch('http://10.0.2.2:3000/users/others?id='+selectedPost.user_id, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log(result)
+              setSelectedPost(null)
+              setProfileVisible(true)
+              setOtherUser(result.user)
+            }
+          } catch (error) {
+            console.log('다른 사용자 프로필 정보 불러오기 에러:', error);
+          } finally {
+            setLoading(false);
+          }
+        }
 
     useFocusEffect(
       useCallback(() => {
@@ -154,6 +183,12 @@ export default function SearchScreen() {
             },
           ]);
         };
+
+ //친구 코드 복사하는 함수
+ const handleCopyFriendCode = () => {
+    Clipboard.setString(otherUser?.friend_code);
+    Alert.alert('복사 완료', '친구 코드가 복사되었습니다!');
+  };
   return (
     <View style={styles.container}>
       {/* 검색바 + 필터 버튼 */}
@@ -294,7 +329,9 @@ export default function SearchScreen() {
 
               {/* 헤더 */}
               <View style={styles.detailHeader}>
-                <View style={styles.avatar} />
+                <TouchableOpacity style={styles.avatar} onPress={()=>{
+                    fetchProfile()
+                }}/>
                 <View>
                   <Text style={styles.userName}>
                     {selectedPost?.users?.nickname || selectedPost?.users?.name}
@@ -369,6 +406,96 @@ export default function SearchScreen() {
 
             </TouchableOpacity>
           </TouchableOpacity>
+        </Modal>
+
+        {/* 사용자 프로필 화면 모달 */}
+        <Modal
+          visible={profileVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setProfileVisible(false)}>
+
+           <TouchableOpacity
+              style={styles.detailOverlay}
+              activeOpacity={1}
+              onPress={() => setProfileVisible(false)}>
+               <View>
+                     {/* 상단 프로필 영역 */}
+                          <View style={styles.header} >
+                            <Image
+                              source={{ uri: otherUser?.profile_image }}
+                              style={styles.profileImage}
+                            />
+                            <Text style={styles.name}>{otherUser?.name || otherUser?.nickname}</Text>
+                            {otherUser?.bio ? (
+                              <Text style={styles.bioPreview}>{otherUser?.bio}</Text>
+                            ) : null}
+
+                          </View>
+
+                          {/* 내 정보 카드 */}
+                          <View style={styles.card}>
+                            <Text style={styles.cardTitle}>내 정보</Text>
+
+                            {/* 닉네임 */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>닉네임</Text>
+                              <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
+                            </View>
+
+                            {/* 여행 타입 */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>여행 타입</Text>
+                              <View style={styles.typeContainer}>
+                                <Text style={[styles.infoValue, { color: '#4A90E2', fontWeight: 'bold' }]}>
+                                  {otherUser?.travel_type}
+                                </Text>
+
+                              </View>
+                            </View>
+
+                            {/* 친구 코드 */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>친구 코드</Text>
+                              <View style={styles.friendCodeContainer}>
+                                <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
+                                <TouchableOpacity
+                                  style={styles.copyButton}
+                                  onPress={handleCopyFriendCode}
+                                  >
+                                  <Text style={styles.copyButtonText}>복사</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            {/* 생년월일 */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>생년월일</Text>
+                              <Text style={styles.infoValue}>
+                                {otherUser?.birth_year || '미설정'}
+                              </Text>
+                            </View>
+
+                            {/* 성별 */}
+                            <View style={styles.infoRow}>
+                              <Text style={styles.infoLabel}>성별</Text>
+                              <Text style={styles.infoValue}>
+                                {otherUser?.gender || '미설정'}
+                              </Text>
+                            </View>
+
+                            {/* 소개 */}
+                            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                              <Text style={styles.infoLabel}>소개</Text>
+                              <Text style={[styles.infoValue, { flex: 1, textAlign: 'right' }]}>
+                                {otherUser?.bio || '미설정'}
+                              </Text>
+                            </View>
+                          </View>
+               </View>
+            </TouchableOpacity>
+
+
         </Modal>
 
       {/* 필터 모달 */}
@@ -801,4 +928,86 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  header: {
+      alignItems: 'center',
+      backgroundColor: '#f5f5f5',
+      paddingVertical: 30,
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    profileImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      marginBottom: 12,
+      backgroundColor: '#ddd',
+    },
+    name: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 4,
+    },
+    bioPreview: {
+      fontSize: 14,
+      color: '#888',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    editButton: {
+      backgroundColor: '#555',
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 28,
+      marginTop: 8,
+    },
+    editButtonText: {
+      color: '#fff',
+      fontWeight: 'bold',
+    },
+    card: {
+      backgroundColor: '#fff',
+      marginHorizontal: 16,
+      marginBottom: 16,
+      borderRadius: 12,
+      padding: 16,
+      elevation: 3,
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 12,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+      paddingBottom: 8,
+    },
+    infoLabel: {
+      fontSize: 15,
+      color: '#666',
+    },
+    infoValue: {
+      fontSize: 15,
+      fontWeight: '500',
+    },
+    menuItem: {
+      flexDirection : 'row',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+    },
+    menuText: {
+      fontSize: 16,
+    },
+    copyButton: {
+        backgroundColor: '#f0f0f0',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        marginLeft: 8,
+      },
 });
