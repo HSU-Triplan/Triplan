@@ -19,7 +19,7 @@ import {
 const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
 const TYPE_OPTIONS = ['전체', 'TUAJ', 'TUAP', 'TURJ', 'TURP', 'TNAJ', 'TNAP', 'TNRJ', 'TNRP', 'CUAJ', 'CUAP', 'CURJ', 'CURP', 'CNAJ', 'CNAP', 'CNRJ', 'CNRP'];
 
-export default function SearchScreen() {
+export default function SearchScreen({navigation }) {
   const [searchText, setSearchText] = useState('');
   const [writeVisible, setWriteVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -129,6 +129,12 @@ export default function SearchScreen() {
     );
 
     const handleJoin = async (postId) => {
+
+    const post = posts.find(p => p.id === postId);
+      if (post && post.current_people >= post.max_people) {
+        Alert.alert('참여 불가', '모집 인원이 가득 찼습니다!');
+        return;
+      }
       try {
         const token = await AsyncStorage.getItem('token');
 
@@ -384,15 +390,27 @@ export default function SearchScreen() {
               ) : null}
 
               {/* 참여하기 / 채팅방으로 이동 버튼 */}
-              {joinedRooms[selectedPost?.id] ? (
-                <TouchableOpacity
-                  style={[styles.joinButton, { backgroundColor: '#34C759' }]}
-                  onPress={() => {
-                    setSelectedPost(null);
-                    console.log('채팅방 이동:', joinedRooms[selectedPost?.id]);
-                  }}>
-                  <Text style={styles.joinButtonText}>채팅방으로 이동 →</Text>
-                </TouchableOpacity>
+                {joinedRooms[selectedPost?.id] ? (
+                  <TouchableOpacity
+                    style={[styles.joinButton, { backgroundColor: '#34C759' }]}
+                    onPress={() => {
+                      const roomId = joinedRooms[selectedPost?.id];
+                      setSelectedPost(null);
+                      navigation.navigate('채팅', {
+                        screen: 'ChatRoom',
+                        params: {
+                          roomId,
+                          title: `${selectedPost?.destination} ${selectedPost?.days} 여행`,
+                          destination: selectedPost?.destination,
+                          days: selectedPost?.days,
+                          departure_date: selectedPost?.departure_date,
+                          bio: selectedPost?.bio,
+                          max_people: selectedPost?.max_people,
+                        }
+                      });
+                    }}>
+                    <Text style={styles.joinButtonText}>채팅방으로 이동 →</Text>
+                  </TouchableOpacity>
               ) : (
                 <TouchableOpacity
                   style={styles.joinButton}
