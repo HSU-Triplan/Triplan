@@ -363,4 +363,66 @@ router.get('/chat-rooms/:roomId/members', authMiddleware, async (req, res) => {
   }
 });
 
+
+// 메시지 목록 조회
+router.get('/chat-rooms/:roomId/messages', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        users (
+          id, name, nickname, profile_image
+        )
+      `)
+      .eq('chat_room_id', roomId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ success: true, messages: data });
+  } catch (error) {
+    console.error('메시지 조회 에러:', error);
+    res.status(500).json({ success: false, message: '메시지 조회 실패' });
+  }
+});
+
+// 메시지 전송
+router.post('/chat-rooms/:roomId/messages', authMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { content, type = 'text' } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ success: false, message: '내용 없음' });
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content,
+        type,
+      })
+      .select(`
+        *,
+        users (
+          id, name, nickname, profile_image
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: data });
+  } catch (error) {
+    console.error('메시지 전송 에러:', error);
+    res.status(500).json({ success: false, message: '메시지 전송 실패' });
+  }
+});
+
+
 module.exports = router;

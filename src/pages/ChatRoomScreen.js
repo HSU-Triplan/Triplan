@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InputBar from '../components/InputBar';
 import AIMessageCard from '../components/AIMessageCard';
+import { io } from 'socket.io-client';
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
@@ -25,7 +26,8 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editingId, setEditingId] = useState(null);
-
+  const socketRef = useRef(null);
+  const [myUserId, setMyUserId] = useState(null);
   const flatListRef = useRef(null);
   const myId = 'me';
 
@@ -43,9 +45,60 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  useEffect(() => {
-    fetchMembers();
-  }, []);
+    useEffect(() => {
+      const init = async () => {
+        const token = await AsyncStorage.getItem('token');
+
+        // 내 userId 불러오기
+        const meRes = await fetch('http://10.0.2.2:3000/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const meData = await meRes.json();
+        if (meData.success) setMyUserId(meData.user.id);
+
+        // 기존 메시지 불러오기
+        const msgRes = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const msgData = await msgRes.json();
+        if (msgData.success && msgData.messages.length > 0) {
+          const loaded = msgData.messages.map(m => ({
+            id: String(m.id),
+            type: m.type || 'text',
+            text: m.content,
+            senderId: m.user_id,
+            senderName: m.users?.nickname || m.users?.name,
+            senderImage: m.users?.profile_image,
+          }));
+          setMessages(loaded);
+        }
+
+        // 소켓 연결
+        const socket = io('http://10.0.2.2:3000');
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
+          console.log('소켓 연결됨');
+          socket.emit('join_room', String(roomId));
+        });
+
+        socket.on('receive_message', (data) => {
+          if (data.senderId === myUserId) return;
+          setMessages(prev => [...prev, data]);
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          });
+        });
+
+        fetchMembers();
+      };
+
+      init();
+
+      return () => {
+        socketRef.current?.disconnect();
+      };
+    }, []);
 
 
   const generateAI = () => {
@@ -116,23 +169,45 @@ export default function ChatRoomScreen({ route, navigation }) {
     setIsModalVisible(true);
   };
 
-  const sendMessage = (text) => {
-    if (isAIMode) {
-      generateAI();
-      setIsAIMode(false);
-      return;
-    }
-    const msg = {
-      id: Date.now().toString(),
-      type: 'text',
-      text,
-      senderId: myId,
+    const sendMessage = async (text) => {
+      if (isAIMode) {
+        generateAI();
+        setIsAIMode(false);
+        return;
+      }
+
+      try {
+        const token = await AsyncStorage.getItem('token');
+
+        // DB에 저장
+        const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: text }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          const msg = {
+            id: String(result.message.id),
+            type: 'text',
+            text,
+            senderId: myUserId,
+            senderName: result.message.users?.nickname || result.message.users?.name,
+            senderImage: result.message.users?.profile_image,
+          };
+
+          // 소켓으로 브로드캐스트
+          socketRef.current?.emit('send_message', { ...msg, roomId: String(roomId) });
+        }
+      } catch (error) {
+        console.log('메시지 전송 에러:', error);
+      }
     };
-    setMessages(prev => [...prev, msg]);
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    });
-  };
 
   const saveEdit = () => {
     setSelectedSchedule({
@@ -167,7 +242,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         renderItem={({ item }) => (
           <MessageItem
             message={item}
-            myId={myId}
+            myUserId={myUserId}
             selectedSchedule={selectedSchedule}
             setSelectedSchedule={setSelectedSchedule}
           />
@@ -319,7 +394,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   );
 }
 
-const MessageItem = ({ message, myId, selectedSchedule, setSelectedSchedule }) => {
+const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule }) => {
   if (message.type === 'ai') {
     return (
       <View style={{ marginVertical: 10 }}>
@@ -334,19 +409,53 @@ const MessageItem = ({ message, myId, selectedSchedule, setSelectedSchedule }) =
       </View>
     );
   }
+
   if (message.type === 'system') {
-    return <Text style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginVertical: 8 }}>{message.text}</Text>;
+    return (
+      <Text style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginVertical: 8 }}>
+        {message.text}
+      </Text>
+    );
   }
+
+  const isMe = message.senderId === myUserId;
+
   return (
     <View style={{
-      alignSelf: message.senderId === myId ? 'flex-end' : 'flex-start',
-      backgroundColor: message.senderId === myId ? '#FEE500' : '#fff',
-      padding: 10,
-      borderRadius: 10,
-      margin: 5,
-      elevation: 1,
+      alignItems: isMe ? 'flex-end' : 'flex-start',
+      marginHorizontal: 12,
+      marginVertical: 4,
     }}>
-      <Text>{message.text}</Text>
+      {!isMe && (
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+          <Image
+            source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
+            style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#ddd' }}
+          />
+          <View>
+            <Text style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{message.senderName}</Text>
+            <View style={{
+              backgroundColor: '#fff',
+              padding: 10,
+              borderRadius: 12,
+              maxWidth: 220,
+              elevation: 1,
+            }}>
+              <Text>{message.text}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+      {isMe && (
+        <View style={{
+          backgroundColor: '#FEE500',
+          padding: 10,
+          borderRadius: 12,
+          maxWidth: 220,
+        }}>
+          <Text>{message.text}</Text>
+        </View>
+      )}
     </View>
   );
 };
