@@ -276,10 +276,17 @@ export default function ChatRoomScreen({ route, navigation }) {
                   source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }}
                   style={styles.memberAvatar}
                 />
-                <View>
-                  <Text style={styles.memberName}>
-                    {m.users?.nickname || m.users?.name}
-                  </Text>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.memberName}>
+                      {m.users?.nickname || m.users?.name}
+                    </Text>
+                    {m.users?.id === myUserId && (
+                      <View style={{ backgroundColor: '#4A90E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>나</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.memberType}>
                     {m.users?.travel_type ?? '성향 미설정'}
                   </Text>
