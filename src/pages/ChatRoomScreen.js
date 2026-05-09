@@ -45,6 +45,39 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
+  // 채팅방 나가기 (영구)
+  const handleLeaveRoom = () => {
+    Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '나가기',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/leave`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const result = await response.json();
+            if (result.success) {
+              navigation.goBack();
+            } else {
+              Alert.alert('오류', result.message);
+            }
+          } catch (error) {
+            console.log('나가기 에러:', error);
+          }
+        },
+      },
+    ]);
+  };
+
+  // 목록으로 돌아가기
+  const handleBackToList = () => {
+    navigation.goBack();
+  };
+
     useEffect(() => {
       const init = async () => {
         const token = await AsyncStorage.getItem('token');
@@ -156,6 +189,10 @@ export default function ChatRoomScreen({ route, navigation }) {
           <TouchableOpacity onPress={openEditModal}>
             <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>일정</Text>
           </TouchableOpacity>
+          {/* 채팅방 나가기 버튼 */}
+          <TouchableOpacity onPress={handleLeaveRoom}>
+            <Text style={{ color: '#FF3B30', fontWeight: 'bold' }}>나가기</Text>
+          </TouchableOpacity>
         </View>
       ),
     });
@@ -249,6 +286,12 @@ export default function ChatRoomScreen({ route, navigation }) {
         )}
       />
 
+      {/* 목록으로 버튼 */}
+      <TouchableOpacity
+        style={styles.backToListButton}
+        onPress={handleBackToList}>
+        <Text style={styles.backToListText}>← 목록으로</Text>
+      </TouchableOpacity>
       <InputBar
         onSend={sendMessage}
         isAIMode={isAIMode}
@@ -539,4 +582,16 @@ const styles = StyleSheet.create({
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
   cancelButton: { fontSize: 15, color: '#aaa' },
   saveButton: { fontSize: 15, color: '#007AFF', fontWeight: 'bold' },
+  backToListButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#f5f5f5',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  backToListText: {
+    fontSize: 14,
+    color: '#4A90E2',
+    fontWeight: 'bold',
+  },
 });

@@ -32,33 +32,33 @@ export default function ChatScreen({ navigation }) {
     }
   }, []);
 
-
-  const handleLeave = async (roomId) => {
-    Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '나가기',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/leave`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            const result = await response.json();
-            if (result.success) {
-              fetchChats();
-            } else {
-              Alert.alert('오류', result.message);
-            }
-          } catch (error) {
-            console.log('나가기 에러:', error);
-          }
-        },
-      },
-    ]);
-  };
+// 일단 비활성화
+//  const handleLeave = async (roomId) => {
+//    Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?', [
+//      { text: '취소', style: 'cancel' },
+//      {
+//        text: '나가기',
+//        style: 'destructive',
+//        onPress: async () => {
+//          try {
+//            const token = await AsyncStorage.getItem('token');
+//            const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/leave`, {
+//              method: 'DELETE',
+//              headers: { Authorization: `Bearer ${token}` },
+//            });
+//            const result = await response.json();
+//            if (result.success) {
+//              fetchChats();
+//            } else {
+//              Alert.alert('오류', result.message);
+//            }
+//          } catch (error) {
+//            console.log('나가기 에러:', error);
+//          }
+//        },
+//      },
+//    ]);
+//  };
 
   useFocusEffect(
     useCallback(() => {
@@ -106,11 +106,6 @@ export default function ChatScreen({ navigation }) {
                 </Text>
                 <Text style={styles.chatBio} numberOfLines={1}>{post?.bio}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.leaveButton}
-                onPress={() => handleLeave(room?.id)}>
-                <Text style={styles.leaveButtonText}>✕</Text>
-              </TouchableOpacity>
             </TouchableOpacity>
             );
           })
