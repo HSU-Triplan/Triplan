@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -106,6 +108,48 @@ router.get('/my-posts', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('내 게시글 조회 에러:', error);
     res.status(500).json({ success: false, message: '내 게시글 조회 실패' });
+  }
+});
+
+// 프로필 이미지 업로드
+router.post('/upload-avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: '이미지 없음' });
+    }
+
+    const fileName = `${req.user.userId}.jpg`;
+
+    // Supabase Storage에 업로드
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    // 공개 URL 가져오기
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    console.log('publicUrl:', publicUrl);
+
+    // DB에 저장
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ profile_image: publicUrl })
+      .eq('id', req.user.userId);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, profile_image: publicUrl });
+  } catch (error) {
+    console.error('이미지 업로드 에러:', error);
+    res.status(500).json({ success: false, message: '이미지 업로드 실패' });
   }
 });
 
