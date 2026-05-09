@@ -24,6 +24,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
    const [isEditing, setIsEditing] = useState(false);
     const [dateShow,setDateShow] = useState(false);
     const [enabled,setEnabled] = useState(false);
+    const [myTrips,setMyTrips] = useState([]);
   // 임시 더미 데이터 (나중에 DB 연동)
   const [userInfo, setUserInfo] = useState({
     name: '구글이름',
@@ -64,6 +65,16 @@ useFocusEffect(
           });
           setTravelStyle(user.travel_type || '테스트 미진행');
         }
+
+      // 최근 여행 계획 데이터 가져오기
+
+      // 내가 참여한 채팅방
+      const chatsRes = await fetch('http://10.0.2.2:3000/posts/my-recent-plans', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const chatsData = await chatsRes.json();
+      if (chatsData.success) setMyTrips(chatsData.chats);
+
       } catch (e) {
         console.log('유저 정보 불러오기 실패:', e);
       }
@@ -71,6 +82,33 @@ useFocusEffect(
     loadUserInfo();
   }, [])
 );
+
+// 모든 여행
+  const allTrips = [
+    ...myTrips.map(c => ({
+      id: `chat-${c.chat_rooms?.id}`,
+      destination: c.chat_rooms?.posts?.destination,
+      days: c.chat_rooms?.posts?.days,
+      departure_date: c.chat_rooms?.posts?.departure_date,
+      bio: c.chat_rooms?.posts?.bio,
+      isMyPost: false,
+    })),
+  ]
+    .filter(t => t.destination);
+//  // D-Day 계산
+//  const calcDDay = (dateStr) => {
+//    if (!dateStr) return null;
+//    const today = new Date();
+//    today.setHours(0, 0, 0, 0);
+//    const target = new Date(dateStr);
+//    target.setHours(0, 0, 0, 0);
+//    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+//    if (diff === 0) return 'D-Day';
+//    if (diff > 0) return `D-${diff}`;
+//    return `D+${Math.abs(diff)}`;
+//  };
+
+
 
   const displayName = userInfo.nickname || userInfo.name;
 
@@ -356,10 +394,38 @@ const pickImage = () => {
       </View>
 
       {/* 최근 여행 계획 */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>최근 여행 계획</Text>
-        <Text style={styles.emptyText}>등록된 여행 계획이 없습니다.</Text>
-      </View>
+
+      <ScrollView style={styles.card} >
+      <Text style={styles.cardTitle}>최근 여행 계획</Text>
+        <ScrollView horizontal>
+          {allTrips.length === 0 ? (
+          <View>
+            <Text style={styles.emptyText}>등록된 여행 계획이 없습니다.</Text>
+          </View>
+          ): (
+
+             allTrips.map(trip => (
+              <View  key={trip.id} style={styles.tripCard}>
+                 <View style={styles.tripRight}>
+                     <View style={styles.tripTitleRow}>
+                       <Text style={styles.tripDestination}>{trip.destination}</Text>
+                       {trip.isMyPost && (
+                         <View  style={styles.myPostBadge}>
+                           <Text style={styles.myPostBadgeText}>내 글</Text>
+                         </View>
+                       )}
+                     </View>
+                     <Text style={styles.tripInfo}>
+                       {trip.days} {trip.departure_date ? `· 🛫 ${trip.departure_date}` : ''}
+                     </Text>
+                     <Text  style={styles.tripBio} numberOfLines={1}>{trip.bio}</Text>
+                 </View>
+             </View>
+             ))
+
+          )}
+       </ScrollView>
+      </ScrollView>
     </ScrollView>
   );
 }
@@ -488,7 +554,7 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
     textAlign: 'center',
-    paddingVertical: 12,
+
   },
     editContainer: {
       height: 60,
@@ -517,5 +583,48 @@ const styles = StyleSheet.create({
         fontSize: 15,
         height : 40,
         width : 250
-    }
+    },
+    tripCard: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 10,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        elevation: 2,
+        gap: 14,
+        width : 100
+      },
+      tripLeft: {
+        width: 60,
+        alignItems: 'center',
+      },
+      tripDDay: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+      },
+      tripRight: {
+        flex: 1,
+      },
+      tripTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 4,
+      },
+      tripDestination: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+      },
+      tripInfo: {
+        fontSize: 13,
+        color: '#888',
+        marginBottom: 2,
+      },
+      tripBio: {
+        fontSize: 12,
+        color: '#aaa',
+      },
 });
