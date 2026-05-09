@@ -129,6 +129,12 @@ export default function SearchScreen() {
     );
 
     const handleJoin = async (postId) => {
+
+    const post = posts.find(p => p.id === postId);
+      if (post && post.current_people >= post.max_people) {
+        Alert.alert('참여 불가', '모집 인원이 가득 찼습니다!');
+        return;
+      }
       try {
         const token = await AsyncStorage.getItem('token');
 
