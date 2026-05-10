@@ -37,6 +37,7 @@ export default function SearchScreen({navigation }) {
   const [editPost, setEditPost] = useState(null);
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState(null);
+  const [profileImage,setProfileImage] = useState(null);
 
   const openModal = () => {
     setTempDestination(selectedDestination);
@@ -120,6 +121,29 @@ export default function SearchScreen({navigation }) {
             setLoading(false);
           }
         }
+
+    //다른 사용자 프로필 이미지 가져오는 함수
+         const fetchProfileImage = async (post) => {
+              setLoading(true);
+
+              try {
+
+               const token = await AsyncStorage.getItem('token');
+                const response = await fetch('http://10.0.2.2:3000/users/others?id='+post.user_id, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                const result = await response.json();
+                if (result.success) {
+
+                    setProfileImage(result.user.profile_image)
+                }
+              } catch (error) {
+                console.log('다른 사용자 프로필 이미지 불러오기 에러:', error);
+              } finally {
+                setLoading(false);
+              }
+            }
 
     useFocusEffect(
       useCallback(() => {
@@ -242,7 +266,12 @@ export default function SearchScreen({navigation }) {
               <TouchableOpacity
                 key={post.id}
                 style={styles.card}
-                onPress={() => setSelectedPost(post)}>
+                onPress={() => {
+                    setSelectedPost(post)
+
+                    fetchProfileImage(post)
+                    }
+                }>
 
                 {/* 내 글 / 참여 중 배지 */}
                 <View style={styles.badgeRow}>
@@ -327,7 +356,8 @@ export default function SearchScreen({navigation }) {
           <TouchableOpacity
             style={styles.detailOverlay}
             activeOpacity={1}
-            onPress={() => setSelectedPost(null)}>
+            onPress={() => setSelectedPost(null)}
+          >
             <TouchableOpacity
               style={styles.detailBox}
               activeOpacity={1}
@@ -335,9 +365,12 @@ export default function SearchScreen({navigation }) {
 
               {/* 헤더 */}
               <View style={styles.detailHeader}>
-                <TouchableOpacity style={styles.avatar} onPress={()=>{
-                    fetchProfile()
-                }}/>
+                 <TouchableOpacity onPress={()=>{fetchProfile()}}>
+                    {
+                      (profileImage === null) ? <Image style={styles.avatar}/> :
+                      <Image style={styles.avatar} source={{uri : profileImage}} />
+                    }
+                </TouchableOpacity>
                 <View>
                   <Text style={styles.userName}>
                     {selectedPost?.users?.nickname || selectedPost?.users?.name}
