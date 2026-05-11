@@ -14,6 +14,8 @@ const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+app.set('io', io); // ← 이 줄 추가
+
 app.use(cors());
 app.use(express.json());
 
