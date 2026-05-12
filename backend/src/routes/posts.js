@@ -515,6 +515,34 @@ router.get('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res)
   }
 });
 
+// ── 선호사항 삭제 ────────────────────────────────────────────
+router.delete('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { text } = req.body;
+
+  try {
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw error;
+
+    const updated = (room.ai_preferences || []).filter(p => p.text !== text);
+
+    await supabase
+      .from('chat_rooms')
+      .update({ ai_preferences: updated })
+      .eq('id', roomId);
+
+    res.json({ success: true, preferences: updated });
+  } catch (error) {
+    console.log('선호사항 삭제 에러:', error.message);
+    res.status(500).json({ success: false, message: '삭제 실패' });
+  }
+});
+
 // ── 3. 여행지 추천 ───────────────────────────────────────────
 router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res) => {
   const { roomId } = req.params;

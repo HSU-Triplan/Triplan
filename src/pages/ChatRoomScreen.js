@@ -60,6 +60,42 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
+
+  // 1. 태그 삭제 함수
+  const handleDeletePreference = (pref) => {
+    Alert.alert(
+      '선호사항 삭제',
+      `"${pref.text}" 를 삭제할까요?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const res = await fetch(
+                `http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ text: pref.text }),
+                }
+              );
+              const data = await res.json();
+              if (data.success) setAiPreferences(data.preferences);
+            } catch (error) {
+              console.log('선호사항 삭제 에러:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleLeaveRoom = () => {
     Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?', [
       { text: '취소', style: 'cancel' },
@@ -376,6 +412,11 @@ export default function ChatRoomScreen({ route, navigation }) {
               {aiPreferences.map((pref, idx) => (
                 <View key={idx} style={styles.aiTag}>
                   <Text style={styles.aiTagText}>@ {pref.text}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeletePreference(pref)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={styles.aiTagDelete}>✕</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -657,6 +698,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDE9FF', borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: '#C9B8FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiTagDelete: {
+    fontSize: 10,
+    color: '#9B8FCC',
+    fontWeight: 'bold',
   },
   aiTagText: { fontSize: 11, color: '#6C5CE7', fontWeight: '600' },
 
