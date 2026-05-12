@@ -603,29 +603,6 @@ export default function ChatRoomScreen({ route, navigation }) {
 
         <InputBar onSend={sendMessage} />
 
-        <Modal
-          visible={isMemberVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsMemberVisible(false)}>
-
-        <TouchableOpacity
-          style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
-          onPress={handleAiRecommend}
-          disabled={isAILoading}>
-          {isAILoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
-          )}
-        </TouchableOpacity>
-
-        <InputBar
-          onSend={sendMessage}
-          isAIMode={isAIMode}
-          setIsAIMode={setIsAIMode}
-        />
-
         {/* 🌟 4. 멤버 모달 둥글고 예쁘게 */}
         <Modal
           visible={isMemberVisible}
@@ -731,6 +708,13 @@ export default function ChatRoomScreen({ route, navigation }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      <SummaryModal
+                visible={isSummaryVisible}
+                summary={summaryData}
+                onApprove={handleSummaryApprove}
+                onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
+                onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
+              />
     </SafeAreaView>
     </ImageBackground>
   );
