@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
   Modal, TextInput, ScrollView, StyleSheet,
-  Image, Alert, ActivityIndicator,
+  Image, Alert, ActivityIndicator, ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,9 @@ import AIMessageCard from '../components/AIMessageCard';
 import { io } from 'socket.io-client';
 import SummaryModal from '../components/SummaryModal';
 import AISummaryCard from '../components/AISummaryCard';
+
+// 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
+const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
@@ -31,8 +34,8 @@ export default function ChatRoomScreen({ route, navigation }) {
   const socketRef = useRef(null);
   const [myUserId, setMyUserId] = useState(null);
   const flatListRef = useRef(null);
-  const [aiPreferences, setAiPreferences] = useState([]); // [{text, category, addedAt}]
-  const [isAILoading, setIsAILoading] = useState(false);  // AI 처리 중 로딩
+  const [aiPreferences, setAiPreferences] = useState([]);
+  const [isAILoading, setIsAILoading] = useState(false);
   const [pendingSpots, setPendingSpots] = useState([]);
   const [isAddMemoVisible, setIsAddMemoVisible] = useState(false);
   const [manualMemoInput, setManualMemoInput] = useState('');
@@ -67,7 +70,6 @@ export default function ChatRoomScreen({ route, navigation }) {
       console.log('선호사항 조회 에러:', error);
     }
   };
-
 
   // 1. 태그 삭제 함수
   const handleDeletePreference = (pref) => {
@@ -330,7 +332,6 @@ export default function ChatRoomScreen({ route, navigation }) {
         setMessages(loaded);
       }
 
-      // AI 선호사항
       fetchAiPreferences();
 
       // 소켓 연결
@@ -345,9 +346,9 @@ export default function ChatRoomScreen({ route, navigation }) {
         console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
           setMessages(prev => {
-            if (prev.some(m => m.id === data.id)) return prev; // 중복 id 방지
+            if (prev.some(m => m.id === data.id)) return prev;
             return [...prev, data];
-          });        // AI 선호사항 태그도 실시간 업데이트
+          });
         if (data.type === 'ai_preference' || data.type === 'ai_recommend') {
           fetchAiPreferences();
         }
@@ -366,11 +367,9 @@ export default function ChatRoomScreen({ route, navigation }) {
     return () => socketRef.current?.disconnect();
   }, []);
 
-  // ── 여행지 추천받기 ─────────────────────────────────────────
   const handleAiRecommend = async () => {
     if (isAILoading) return;
 
-    // ── 필수 요소 체크 ──────────────────────────────────────────
     const missing = [];
     if (!destination) missing.push('여행지(@ 또는 게시글 설정)');
     if (!days) missing.push('여행 일수(몇박몇일)');
@@ -391,7 +390,6 @@ export default function ChatRoomScreen({ route, navigation }) {
       return;
     }
 
-    // ── 추천 시작 ───────────────────────────────────────────────
     Alert.alert(
       '✈️ 여행지 추천받기',
       `현재 선호사항: ${aiPreferences.map(p => p.text).join(', ')}\n\nAI가 여행지 3곳을 추천해드릴까요?`,
@@ -442,7 +440,6 @@ export default function ChatRoomScreen({ route, navigation }) {
     );
   };
 
-  // ── 메시지 전송 ─────────────────────────────────────────────
   const sendMessage = async (text) => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -477,21 +474,23 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  // ── 헤더 ────────────────────────────────────────────────────
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
       headerTitle: title,
+      // 🌟 헤더도 투명하게 만들어 배경이 보이도록 (안드로이드/iOS 공통)
+      headerTransparent: true,
+      headerTintColor: '#333',
       headerRight: () => (
         <View style={{ flexDirection: 'row', marginRight: 10, gap: 16 }}>
           <TouchableOpacity onPress={() => { fetchMembers(); setIsMemberVisible(true); }}>
-            <Text style={{ color: '#4A90E2', fontWeight: 'bold' }}>멤버</Text>
+            <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>멤버</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={openEditModal}>
-            <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>일정</Text>
+            <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>일정</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLeaveRoom}>
-            <Text style={{ color: '#FF3B30', fontWeight: 'bold' }}>나가기</Text>
+            <Text style={{ color: '#aaa', fontWeight: 'bold' }}>나가기</Text>
           </TouchableOpacity>
         </View>
       ),
@@ -518,181 +517,193 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    
+<ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
+      <View style={styles.overlay} />
 
-      {/* 여행 정보 헤더 */}
-      <View style={styles.tripInfo}>
-        <Text style={styles.tripBio}>{bio}</Text>
-        <View style={styles.tripTags}>
-          <Text style={styles.tag}>📍 {destination}</Text>
-          <Text style={styles.tag}>
-            🗓 {String(days).includes('박') ? days : `${days}박${Number(days)+1}일`}
-          </Text>
-          {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
-          {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
-        </View>
-      </View>
+      <SafeAreaView style={styles.container}>
 
-      {/* ── AI 선호사항 태그 영역 ── */}
-      {(aiPreferences.length > 0 || true) && (
-        <View style={styles.aiTagsContainer}>
-          <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-            <View style={styles.aiTagsRow}>
-              {aiPreferences.map((pref, idx) => (
-                <View key={idx} style={styles.aiTag}>
-                  <Text style={styles.aiTagText}>@ {pref.text}</Text>
-                  <TouchableOpacity
-                    onPress={() => handleDeletePreference(pref)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={styles.aiTagDelete}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-          {/* + 버튼 */}
-          <TouchableOpacity
-            style={styles.aiTagAddBtn}
-            onPress={() => setIsAddMemoVisible(true)}>
-            <Text style={styles.aiTagAddBtnText}>＋</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        <View style={{ height: 40 }} />
 
-      {/* 메시지 목록 */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        style={styles.messageList}
-        renderItem={({ item }) => (
-          <MessageItem
-            message={item}
-            myUserId={myUserId}
-            selectedSchedule={selectedSchedule}
-            setSelectedSchedule={setSelectedSchedule}
-            onAddSpotToSchedule={addSpotToSchedule}
-//            onApproveAutoMemo={handleApproveAutoMemo}
-//            onRejectAutoMemo={handleRejectAutoMemo}
-          />
-        )}
-      />
-
-      {/* 여행지 추천받기 버튼 */}
-      <TouchableOpacity
-        style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
-        onPress={handleAiRecommend}
-        disabled={isAILoading}>
-        {isAILoading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
-        )}
-      </TouchableOpacity>
-
-      {/* 목록으로 버튼 */}
-      <TouchableOpacity
-        style={[styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
-        onPress={handleSummarize}
-        disabled={isSummaryLoading}>
-        {isSummaryLoading ? (
-          <ActivityIndicator size="small" color="#6C5CE7" />
-        ) : (
-          <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
-        )}
-      </TouchableOpacity>
-
-      // ── [6] SummaryModal 추가 (기존 Modal들 아래에) ───────────────
-      <SummaryModal
-        visible={isSummaryVisible}
-        summary={summaryData}
-        onApprove={handleSummaryApprove}
-        onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
-        onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
-      />
-
-      <InputBar
-        onSend={sendMessage}
-      />
-
-      {/* 멤버 모달 */}
-      <Modal
-        visible={isMemberVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsMemberVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsMemberVisible(false)}>
-          <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
-            <Text style={styles.modalTitle}>참여 중인 멤버 ({members.length})</Text>
-            {members.map((m, idx) => (
-              <View key={idx} style={styles.memberItem}>
-                <Image
-                  source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }}
-                  style={styles.memberAvatar}
-                />
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.memberName}>{m.users?.nickname || m.users?.name}</Text>
-                    {m.users?.id === myUserId && (
-                      <View style={{ backgroundColor: '#4A90E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>나</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.memberType}>{m.users?.travel_type ?? '성향 미설정'}</Text>
-                </View>
-              </View>
-            ))}
-            <TouchableOpacity style={styles.closeButton} onPress={() => setIsMemberVisible(false)}>
-              <Text style={styles.closeButtonText}>닫기</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* 일정 수정 모달 */}
-      <Modal visible={isModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.editBox}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={styles.modalTitle}>일정 수정</Text>
-              <TextInput value={editTitle} onChangeText={setEditTitle} placeholder="제목" style={styles.editInput} />
-              <TextInput value={editDescription} onChangeText={setEditDescription} placeholder="전체 설명" style={styles.editInput} />
-              <Text style={styles.editSectionTitle}>일정 추가</Text>
-              <TextInput value={newPlanItem.time} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, time: t }))} placeholder="시간" style={styles.editInput} />
-              <TextInput value={newPlanItem.place} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, place: t }))} placeholder="장소" style={styles.editInput} />
-              <TextInput value={newPlanItem.detail} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, detail: t }))} placeholder="상세 내용" style={styles.editInput} />
-              <TouchableOpacity onPress={() => {
-                if (!newPlanItem.time && !newPlanItem.place) return;
-                setEditPlan(prev => [...prev, { ...newPlanItem }]);
-                setNewPlanItem({ time: '', place: '', detail: '' });
-              }}>
-                <Text style={styles.addButton}>+ 추가하기</Text>
-              </TouchableOpacity>
-              {editPlan.map((p, idx) => (
-                <View key={idx} style={styles.planItem}>
-                  <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
-                  <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
-                  <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
-                </View>
-              ))}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity onPress={() => setIsModalVisible(false)}>
-                  <Text style={styles.cancelButton}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={saveEdit}>
-                  <Text style={styles.saveButton}>저장</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+        <View style={styles.tripInfo}>
+          <Text style={styles.tripBio}>{bio}</Text>
+          <View style={styles.tripTags}>
+            <Text style={styles.tag}>📍 {destination}</Text>
+            <Text style={styles.tag}>
+              🗓 {String(days).includes('박') ? days : `${days}박${Number(days)+1}일`}
+            </Text>
+            {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
+            {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
           </View>
         </View>
-      </Modal>
 
+        {(aiPreferences.length > 0 || true) && (
+          <View style={styles.aiTagsContainer}>
+            <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+              <View style={styles.aiTagsRow}>
+                {aiPreferences.map((pref, idx) => (
+                  <View key={idx} style={styles.aiTag}>
+                    <Text style={styles.aiTagText}>@ {pref.text}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleDeletePreference(pref)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      <Text style={styles.aiTagDelete}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.aiTagAddBtn}
+              onPress={() => setIsAddMemoVisible(true)}>
+              <Text style={styles.aiTagAddBtnText}>＋</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+     <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          style={styles.messageList}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          renderItem={({ item }) => (
+            <MessageItem
+              message={item}
+              myUserId={myUserId}
+              selectedSchedule={selectedSchedule}
+              setSelectedSchedule={setSelectedSchedule}
+              onAddSpotToSchedule={addSpotToSchedule}
+            />
+          )}
+        />
+
+        <TouchableOpacity
+          style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
+          onPress={handleAiRecommend}
+          disabled={isAILoading}>
+          {isAILoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
+          onPress={handleSummarize}
+          disabled={isSummaryLoading}>
+          {isSummaryLoading ? (
+            <ActivityIndicator size="small" color="#6C5CE7" />
+          ) : (
+            <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
+          )}
+        </TouchableOpacity>
+
+        <InputBar onSend={sendMessage} />
+
+        <Modal
+          visible={isMemberVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsMemberVisible(false)}>
+
+        <TouchableOpacity
+          style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
+          onPress={handleAiRecommend}
+          disabled={isAILoading}>
+          {isAILoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
+          )}
+        </TouchableOpacity>
+
+        <InputBar
+          onSend={sendMessage}
+          isAIMode={isAIMode}
+          setIsAIMode={setIsAIMode}
+        />
+
+        {/* 🌟 4. 멤버 모달 둥글고 예쁘게 */}
+        <Modal
+          visible={isMemberVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsMemberVisible(false)}>
+          <TouchableOpacity
+            style={styles.modalOverlayDark}
+            activeOpacity={1}
+            onPress={() => setIsMemberVisible(false)}>
+            <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
+              <Text style={styles.modalTitle}>참여 중인 멤버 ({members.length})</Text>
+              {members.map((m, idx) => (
+                <View key={idx} style={styles.memberItem}>
+                  <Image
+                    source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }}
+                    style={styles.memberAvatar}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.memberName}>{m.users?.nickname || m.users?.name}</Text>
+                      {m.users?.id === myUserId && (
+                        <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>나</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.memberType}>{m.users?.travel_type ?? '성향 미설정'}</Text>
+                  </View>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.closeButton} onPress={() => setIsMemberVisible(false)}>
+                <Text style={styles.closeButtonText}>닫기</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* 🌟 5. 일정 수정 모달 */}
+        <Modal visible={isModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlayDark}>
+            <View style={styles.editBox}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalTitle}>일정 수정</Text>
+                <TextInput value={editTitle} onChangeText={setEditTitle} placeholder="제목" style={styles.editInput} />
+                <TextInput value={editDescription} onChangeText={setEditDescription} placeholder="전체 설명" style={styles.editInput} />
+                <Text style={styles.editSectionTitle}>일정 추가</Text>
+                <TextInput value={newPlanItem.time} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, time: t }))} placeholder="시간" style={styles.editInput} />
+                <TextInput value={newPlanItem.place} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, place: t }))} placeholder="장소" style={styles.editInput} />
+                <TextInput value={newPlanItem.detail} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, detail: t }))} placeholder="상세 내용" style={styles.editInput} />
+                <TouchableOpacity onPress={() => {
+                  if (!newPlanItem.time && !newPlanItem.place) return;
+                  setEditPlan(prev => [...prev, { ...newPlanItem }]);
+                  setNewPlanItem({ time: '', place: '', detail: '' });
+                }}>
+                  <Text style={styles.addButton}>+ 추가하기</Text>
+                </TouchableOpacity>
+                {editPlan.map((p, idx) => (
+                  <View key={idx} style={styles.planItem}>
+                    <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
+                    <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
+                    <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
+                  </View>
+                ))}
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
+                    <Text style={styles.cancelButton}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={saveEdit} style={styles.modalBtnSave}>
+                    <Text style={styles.saveButton}>저장</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+////////////////////////////
       <Modal visible={isAddMemoVisible} transparent animationType="fade">
         <TouchableOpacity
           style={styles.memoModalOverlay}
@@ -720,9 +731,8 @@ export default function ChatRoomScreen({ route, navigation }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-
     </SafeAreaView>
+    </ImageBackground>
   );
 }
 
@@ -754,18 +764,19 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
 //    }
 
   // AI 로딩
+  ////////////////////////////
+  
   if (message.type === 'ai_loading') {
     return (
       <View style={aiStyles.loadingWrap}>
         <View style={aiStyles.loadingBubble}>
-          <ActivityIndicator size="small" color="#6C5CE7" style={{ marginRight: 8 }} />
+          <ActivityIndicator size="small" color="#FF6B6B" style={{ marginRight: 8 }} />
           <Text style={aiStyles.loadingText}>{message.text}</Text>
         </View>
       </View>
     );
   }
 
-  // AI 선호사항 확인 메시지
   if (message.type === 'ai_preference') {
     return (
       <View style={aiStyles.prefWrap}>
@@ -777,12 +788,10 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
     );
   }
 
-  // AI 여행지 추천 결과
-    if (message.type === 'ai_recommend') {
-      // 백엔드에서 data(JSON)로 오는 경우 / 이전 저장된 text(JSON문자열)로 오는 경우 둘 다 처리
-      const recData = message.data
-        ? message.data
-        : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+  if (message.type === 'ai_recommend') {
+    const recData = message.data
+      ? message.data
+      : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
 
     if (!recData) {
       return (
@@ -793,229 +802,191 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
         </View>
       );
     }
+    return <AIMessageCard data={recData} onAddSpotToSchedule={onAddSpotToSchedule} />;
+  }
 
-    return (
-      <AIMessageCard
-        data={recData}
-        onAddSpotToSchedule={onAddSpotToSchedule}
-      />
-    );
-}
-
-  // 기존 AI 카드 (더미)
   if (message.type === 'ai') {
     return (
       <View style={{ marginVertical: 10 }}>
-        <Text style={{ alignSelf: 'center', fontSize: 12, color: '#6C5CE7', marginBottom: 5 }}>AI 추천</Text>
-        <AIMessageCard
-          data={message.data}
-          selectedSchedule={selectedSchedule}
-          setSelectedSchedule={setSelectedSchedule}
-        />
+        <Text style={{ alignSelf: 'center', fontSize: 12, color: '#FF6B6B', marginBottom: 5 }}>AI 추천</Text>
+        <AIMessageCard data={message.data} selectedSchedule={selectedSchedule} setSelectedSchedule={setSelectedSchedule} />
       </View>
     );
   }
 
   if (message.type === 'system') {
-    return (
-      <Text style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginVertical: 8 }}>
-        {message.text}
-      </Text>
-    );
+    return <Text style={{ textAlign: 'center', color: '#888', fontSize: 12, marginVertical: 8 }}>{message.text}</Text>;
   }
 
   const isMe = message.senderId === myUserId;
 
   return (
-    <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginHorizontal: 12, marginVertical: 4 }}>
+    <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginHorizontal: 12, marginVertical: 6 }}>
       {!isMe && (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
           <Image
             source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
-            style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#ddd' }}
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
           />
           <View>
-            <Text style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{message.senderName}</Text>
-            <View style={{ backgroundColor: '#fff', padding: 10, borderRadius: 12, maxWidth: 220, elevation: 1 }}>
-              <Text>{message.text}</Text>
+            <Text style={{ fontSize: 11, color: '#666', marginBottom: 4, marginLeft: 2 }}>{message.senderName}</Text>
+            {/* 🌟 다른 사람 말풍선: 하얀색 둥근 글래스 스타일 */}
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: 220, elevation: 2 }}>
+              <Text style={{ color: '#333' }}>{message.text}</Text>
             </View>
           </View>
         </View>
       )}
       {isMe && (
-        <View style={{ backgroundColor: '#FEE500', padding: 10, borderRadius: 12, maxWidth: 220 }}>
-          <Text>{message.text}</Text>
+        // 🌟 내 말풍선: 산호색(#FF6B6B)으로 트렌디하게 변경
+        <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopRightRadius: 4, maxWidth: 220, elevation: 2 }}>
+          <Text style={{ color: '#fff' }}>{message.text}</Text>
         </View>
       )}
     </View>
   );
 };
 
-// ── AI 메시지 스타일 ──────────────────────────────────────────
 const aiStyles = StyleSheet.create({
   loadingWrap: { alignItems: 'flex-start', marginHorizontal: 12, marginVertical: 6 },
   loadingBubble: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F0EEFF', paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 16, borderWidth: 1, borderColor: '#C9B8FF',
+    backgroundColor: 'rgba(255, 240, 240, 0.9)', paddingHorizontal: 16, paddingVertical: 12,
+    borderRadius: 20, borderWidth: 1, borderColor: '#FFD1D1',
   },
-  loadingText: { fontSize: 13, color: '#6C5CE7' },
+  loadingText: { fontSize: 13, color: '#FF6B6B', fontWeight: 'bold' },
 
   prefWrap: { alignItems: 'flex-start', marginHorizontal: 12, marginVertical: 4 },
   prefBubble: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#F0EEFF', paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 16, maxWidth: 260,
+    backgroundColor: 'rgba(255, 240, 240, 0.9)', paddingHorizontal: 16, paddingVertical: 12,
+    borderRadius: 20, maxWidth: 260,
   },
   prefIcon: { fontSize: 16 },
-  prefText: { fontSize: 13, color: '#5A4FCF', fontWeight: '600', flexShrink: 1 },
+  prefText: { fontSize: 13, color: '#FF6B6B', fontWeight: 'bold', flexShrink: 1 },
 
   recommendWrap: { marginHorizontal: 12, marginVertical: 8 },
   recommendBubble: {
-    backgroundColor: '#F0EEFF',
-    padding: 16, borderRadius: 16,
-    borderWidth: 1, borderColor: '#C9B8FF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 18, borderRadius: 20,
+    borderWidth: 1, borderColor: '#eee', elevation: 3
   },
   recommendText: { fontSize: 14, color: '#333', lineHeight: 22 },
 });
 
-// ── 메인 스타일 ───────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  backgroundImage: { flex: 1, width: '100%', height: '100%' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(240, 244, 248, 0.5)' }, // 살짝 밝은 필터
+  container: { flex: 1 },
 
   tripInfo: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', // 반투명 유리 스타일
+    marginHorizontal: 16, marginTop: 10, marginBottom: 15,
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderRadius: 20, elevation: 5,
   },
-  tripBio: { fontSize: 15, fontWeight: 'bold', color: '#333', marginBottom: 6 },
-  tripTags: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
+  tripBio: { fontSize: 16, fontWeight: '900', color: '#333', marginBottom: 8 },
+  tripTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: {
-    fontSize: 12, color: '#555', backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    marginRight: 6, marginTop: 4,
+    fontSize: 12, color: '#444', backgroundColor: '#fff',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    borderWidth: 1, borderColor: '#eee', overflow: 'hidden'
   },
 
-  // AI 태그 영역
   aiTagsContainer: {
-    backgroundColor: '#FAF8FF',
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#E8E0FF',
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingBottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  aiTagsLabel: { fontSize: 11, color: '#8B7CF6', fontWeight: 'bold', flexShrink: 0 },
-  aiTagsRow: { flexDirection: 'row', gap: 6 },
+  aiTagsLabel: { fontSize: 12, color: '#FF6B6B', fontWeight: '900', flexShrink: 0 },
+  aiTagsRow: { flexDirection: 'row', gap: 8 },
   aiTag: {
-    backgroundColor: '#EDE9FF', borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: '#C9B8FF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', borderRadius: 15,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: '#FF6B6B',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  aiTagDelete: {
-    fontSize: 10,
-    color: '#9B8FCC',
-    fontWeight: 'bold',
-  },
-  aiTagText: { fontSize: 11, color: '#6C5CE7', fontWeight: '600' },
+  aiTagDelete: { fontSize: 12, color: '#FF6B6B', fontWeight: 'bold' },
+  aiTagText: { fontSize: 12, color: '#FF6B6B', fontWeight: 'bold' },
 
   messageList: { flex: 1 },
 
-  // 여행지 추천 버튼
   recommendButton: {
-    marginHorizontal: 12, marginVertical: 6,
-    backgroundColor: '#6C5CE7',
-    borderRadius: 12, paddingVertical: 11,
+    marginHorizontal: 16, marginVertical: 10,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 25, paddingVertical: 14,
     alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row',
+    flexDirection: 'row', elevation: 4,
   },
-  recommendButtonDisabled: { backgroundColor: '#B0A8D9' },
-  recommendButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  recommendButtonDisabled: { backgroundColor: '#FFB5B5' },
+  recommendButtonText: { color: '#fff', fontSize: 15, fontWeight: '900' },
 
-  backToListButton: {
-    paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: '#f5f5f5',
-    borderTopWidth: 1, borderTopColor: '#eee',
-  },
-  backToListText: { fontSize: 14, color: '#4A90E2', fontWeight: 'bold' },
-
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
-  },
+  modalOverlayDark: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   memberBox: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30,
     padding: 24, paddingBottom: 40,
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: '#333', marginBottom: 20 },
   memberItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee',
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
   },
-  memberAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#ddd' },
-  memberName: { fontSize: 15, fontWeight: 'bold', color: '#333' },
-  memberType: { fontSize: 12, color: '#4A90E2', marginTop: 2 },
+  memberAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#eee' },
+  memberName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  memberType: { fontSize: 13, color: '#FF6B6B', marginTop: 4, fontWeight: '600' },
   closeButton: {
-    backgroundColor: '#4A90E2', borderRadius: 10,
-    paddingVertical: 12, alignItems: 'center', marginTop: 16,
+    backgroundColor: '#FF6B6B', borderRadius: 15,
+    paddingVertical: 14, alignItems: 'center', marginTop: 24,
   },
-  closeButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  closeButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
   editBox: {
-    backgroundColor: '#fff', borderRadius: 12,
-    margin: 20, padding: 20, maxHeight: '85%',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: 25,
+    margin: 20, padding: 24, maxHeight: '85%', marginBottom: 40
   },
   editInput: {
-    borderBottomWidth: 1, borderBottomColor: '#eee',
-    marginBottom: 12, fontSize: 15, paddingVertical: 6,
+    borderBottomWidth: 1, borderBottomColor: '#ddd',
+    marginBottom: 16, fontSize: 15, paddingVertical: 8, color: '#333'
   },
-  editSectionTitle: { fontWeight: 'bold', fontSize: 15, marginBottom: 8, marginTop: 8 },
-  planItem: { marginBottom: 12, backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8 },
-  addButton: { color: '#007AFF', fontWeight: 'bold', marginBottom: 16 },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  cancelButton: { fontSize: 15, color: '#aaa' },
-  saveButton: { fontSize: 15, color: '#007AFF', fontWeight: 'bold' },
+  
+editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBottom: 12, marginTop: 10 },
+  planItem: { marginBottom: 12, backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eee' },
+  addButton: { color: '#FF6B6B', fontWeight: 'bold', marginBottom: 20, fontSize: 15 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, gap: 10 },
+  modalBtnCancel: { flex: 1, backgroundColor: '#f0f0f0', padding: 14, borderRadius: 15, alignItems: 'center' },
+  modalBtnSave: { flex: 1, backgroundColor: '#FF6B6B', padding: 14, borderRadius: 15, alignItems: 'center' },
+  cancelButton: { fontSize: 15, color: '#666', fontWeight: 'bold' },
+  saveButton: { fontSize: 15, color: '#fff', fontWeight: 'bold' },
   aiTagAddBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#FF6B6B',
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 6, flexShrink: 0,
   },
   aiTagAddBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold', lineHeight: 22 },
-
-  // 수동 추가 모달
   memoModalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center', alignItems: 'center',
   },
-  memoModalBox: {
-    backgroundColor: '#fff', borderRadius: 16,
-    padding: 24, width: '80%',
-  },
+  memoModalBox: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '80%' },
   memoModalTitle: { fontSize: 17, fontWeight: 'bold', color: '#333', marginBottom: 6 },
   memoModalSub: { fontSize: 12, color: '#888', marginBottom: 16 },
   memoModalInput: {
-    borderWidth: 1, borderColor: '#C9B8FF', borderRadius: 10,
+    borderWidth: 1, borderColor: '#FFD1D1', borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 10,
     fontSize: 15, color: '#333', marginBottom: 16,
   },
   memoModalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16 },
   memoModalCancel: { fontSize: 15, color: '#aaa', paddingVertical: 8 },
-  memoModalConfirm: {
-    backgroundColor: '#6C5CE7', borderRadius: 10,
-    paddingHorizontal: 20, paddingVertical: 8,
-  },
+  memoModalConfirm: { backgroundColor: '#FF6B6B', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 },
   memoModalConfirmText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-
-  // aiTag X 버튼
-  aiTagDelete: { fontSize: 10, color: '#9B8FCC', fontWeight: 'bold' },
   summarizeButton: {
-    marginHorizontal: 12, marginVertical: 6,
-    borderRadius: 12, paddingVertical: 10,
+    marginHorizontal: 16, marginVertical: 6,
+    borderRadius: 20, paddingVertical: 12,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#6C5CE7',
-    backgroundColor: '#FAF8FF',
-    flexDirection: 'row',
+    borderWidth: 1.5, borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255,107,107,0.08)',
+    flexDirection: 'row', elevation: 2,
   },
   summarizeButtonDisabled: { opacity: 0.5 },
-  summarizeButtonText: { color: '#6C5CE7', fontSize: 14, fontWeight: 'bold' },
+  summarizeButtonText: { color: '#FF6B6B', fontSize: 14, fontWeight: '900' },
 });
