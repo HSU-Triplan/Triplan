@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   editButton: {
-    backgroundColor: '#555',
+    backgroundColor: '#5296F5',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 28,

@@ -147,7 +147,9 @@ return (
                       <Text style={styles.scoreText}>⭐ {user?.score}점</Text>
                     </View>
                     <Text style={styles.cardName}>{user?.nickname || user?.name}</Text>
-                    <Text style={styles.cardType}>{user?.travel_type ?? '성향 미설정'}</Text>
+                    <View style={[styles.badge, { backgroundColor: '#5296F5' }]}>
+                        <Text style={styles.badgeText}>{user?.travel_type ?? '성향 미설정'}</Text>
+                    </View>
                     {user?.bio ? <Text style={styles.cardBio}>{user?.bio}</Text> : null}
                     <View style={styles.cardInfo}>
                       {user?.gender ? <Text style={styles.cardInfoTag}>{user.gender}</Text> : null}
@@ -366,4 +368,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  badge: {
+        width : 50,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 20,
+    },
+    badgeText: {
+      fontSize: 11,
+      color: '#fff',
+      fontWeight: 'bold',
+      textAlign : 'center',
+    },
 });

@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#7EC8FF',
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 24,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dDayBadge: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5296F5',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   },
   dDayTitle: {
     fontSize: 13,
-    color: '#888',
+    color: '#2563EB',
     marginBottom: 4,
   },
   dDayDestination: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   tripDDay: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#4A90E2',
+    color: '#7EC8FF',
   },
   tripRight: {
     flex: 1,
