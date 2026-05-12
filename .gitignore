@@ -29,7 +29,7 @@ ios/build/
 *.xcuserstate
 
 # Environment
-.env
+backend/.env
 .env.*
 !.env.example
 
