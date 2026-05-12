@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
-const { processPreference, recommendDestinations } = require('../utils/gemini');
+const { processPreference, recommendDestinations,extractMemoFromConversation,summarizeConversation  } = require('../utils/gemini');
 const router = express.Router();
 const { searchGooglePlace } = require('../utils/googleMaps');
 const { searchKakaoPlace } = require('../utils/kakaoMap');
@@ -616,6 +616,225 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
   } catch (error) {
     console.log('AI 추천 에러:', error.message);
     res.status(500).json({ success: false, message: 'AI 추천 중 오류가 발생했습니다.' });
+  }
+});
+// ── 전체 대화 정리 ────────────────────────────────────────────
+
+router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    // 채팅방 전체 메시지 조회
+    const { data: messages, error } = await supabase
+      .from('messages')
+      .select('content, type, users(nickname, name)')
+      .eq('chat_room_id', roomId)
+      .eq('type', 'text')  // 일반 텍스트 메시지만
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    if (!messages || messages.length === 0) {
+      return res.json({ success: false, message: '분석할 대화가 없어요.' });
+    }
+
+    const formatted = messages.map(m => ({
+      senderName: m.users?.nickname || m.users?.name || '멤버',
+      text: m.content,
+      type: m.type,
+    }));
+
+    // Gemini 분석
+    const summary = await summarizeConversation(formatted);
+
+    res.json({ success: true, summary });
+  } catch (error) {
+    console.log('대화 정리 에러:', error.message);
+    res.status(500).json({ success: false, message: '정리 중 오류가 발생했습니다.' });
+  }
+});
+
+// ── 정리 결과 승인 → 브로드캐스트 + AI 메모 갱신 ─────────────
+router.post('/chat-rooms/:roomId/ai-summarize-approve', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { summary } = req.body; // { who, when, where, how, what }
+
+  try {
+    // 1. messages 테이블에 저장
+    const { data: savedMsg } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content: JSON.stringify(summary),
+        type: 'ai_summary',
+      })
+      .select()
+      .single();
+
+    // 2. AI 메모 갱신 — where, when, how, what에서 추출
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    const overlapKeywords = {
+    who: ['명', '인원', '사람', '명이서'],
+    when: ['박', '일', '날짜', '출발', '월', '주', '기간'],
+    where: ['여행지', '장소'],
+    how: ['렌트', '드라이브', '도보', '버스', '기차', '비행기', '이동'],
+    what: ['예산', '만원', '맛집', '카페', '관광', '드라이브', '활동', '코스'],
+    };
+
+    const fieldCategories = {
+    who: '인원',
+    when: '기간/날짜',
+    where: '여행지',
+    how: '이동수단',
+    what: '활동', };
+    let preferences = [...(room.ai_preferences || [])];
+    for (const [field, newItems] of Object.entries(summary)) {
+        if (!newItems || newItems.length === 0) continue;
+
+    const keywords = overlapKeywords[field] || [];
+    const newText = newItems.join(', ');
+
+    // 1. 같은 카테고리 제거
+    preferences = preferences.filter(
+        p => p.category !== fieldCategories[field]
+    );
+    // 2. 키워드 겹치는 기존 메모 제거
+    preferences = preferences.filter(p => {
+        const pText = p.text.toLowerCase();
+        return !keywords.some(kw => pText.includes(kw)); });
+
+    // 3. 새 메모 추가
+    preferences.push({
+            text: newText, category: fieldCategories[field],
+            addedAt: new Date().toISOString(),
+        });
+    }
+
+    await supabase
+      .from('chat_rooms')
+      .update({ ai_preferences: preferences })
+      .eq('id', roomId);
+
+    // 3. 소켓 브로드캐스트
+    const aiMsg = {
+      id: String(savedMsg.id),
+      type: 'ai_summary',
+      data: summary,
+    };
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', aiMsg);
+    if (io) io.to(String(roomId)).emit('ai_memo_updated', preferences);
+
+    res.json({ success: true, message: aiMsg, preferences });
+  } catch (error) {
+    console.log('정리 승인 에러:', error.message);
+    res.status(500).json({ success: false, message: '승인 처리 중 오류가 발생했습니다.' });
+  }
+});
+
+// ── 대화 맥락 자동 메모 추출 ──────────────────────────────────
+//router.post('/chat-rooms/:roomId/ai-auto-memo', authMiddleware, async (req, res) => {
+//  const { roomId } = req.params;
+//  const { messages } = req.body; // [{senderName, text}] 배열
+//
+//  if (!messages || messages.length === 0) {
+//    return res.status(400).json({ success: false, message: '메시지가 없습니다.' });
+//  }
+//
+//  try {
+//    // 기존 선호사항 조회
+//    const { data: room, error } = await supabase
+//      .from('chat_rooms')
+//      .select('ai_preferences')
+//      .eq('id', roomId)
+//      .single();
+//
+//    if (error) throw error;
+//
+//    const existing = room.ai_preferences || [];
+//
+//    // Gemini 분석
+//    const result = await extractMemoFromConversation(messages, existing);
+//
+//    // 새로 추출된 게 없으면 바로 종료
+//    if (!result.hasNew || result.extracted.length === 0) {
+//      return res.json({ success: true, hasNew: false });
+//    }
+//
+//    // 승인 대기 메시지를 messages 테이블에 저장
+//    const { data: savedMsg } = await supabase
+//      .from('messages')
+//      .insert({
+//        chat_room_id: roomId,
+//        user_id: req.user.userId,
+//        content: JSON.stringify(result.extracted),
+//        type: 'ai_memo_pending',  // 승인 대기 타입
+//      })
+//      .select()
+//      .single();
+//
+//    const pendingMsg = {
+//      id: String(savedMsg.id),
+//      type: 'ai_memo_pending',
+//      extracted: result.extracted,  // [{text, category, replaces}]
+//    };
+//
+//    // 소켓으로 채팅방 전체에 브로드캐스트
+//    const io = req.app.get('io');
+//    if (io) io.to(String(roomId)).emit('receive_message', pendingMsg);
+//
+//    res.json({ success: true, hasNew: true, message: pendingMsg });
+//  } catch (error) {
+//    console.log('자동 메모 추출 에러:', error.message);
+//    res.status(500).json({ success: false, message: '메모 추출 중 오류가 발생했습니다.' });
+//  }
+//});
+
+// ── 승인된 메모 저장 ──────────────────────────────────────────
+router.post('/chat-rooms/:roomId/ai-memo-approve', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { extracted } = req.body; // [{text, category, replaces}]
+
+  try {
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    let updated = [...(room.ai_preferences || [])];
+
+    for (const item of extracted) {
+      // 교체할 항목 제거
+      if (item.replaces) {
+        updated = updated.filter(p => p.text !== item.replaces);
+      }
+      // 새 항목 추가
+      updated.push({
+        text: item.text,
+        category: item.category,
+        addedAt: new Date().toISOString(),
+      });
+    }
+
+    await supabase
+      .from('chat_rooms')
+      .update({ ai_preferences: updated })
+      .eq('id', roomId);
+
+    // 소켓으로 태그 업데이트 알림
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('ai_memo_updated', updated);
+
+    res.json({ success: true, preferences: updated });
+  } catch (error) {
+    console.log('메모 승인 에러:', error.message);
+    res.status(500).json({ success: false, message: '승인 처리 중 오류가 발생했습니다.' });
   }
 });
 

@@ -1,76 +1,65 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text } from 'react-native';
+import {
+  View, TextInput, TouchableOpacity, Text, StyleSheet,
+} from 'react-native';
 
-const InputBar = ({ onSend, isAIMode, setIsAIMode }) => {
-
-  const [text, setText] = useState("");
-
-  // 🔥 @ 버튼 = 토글
-  const onPressAt = () => {
-    setIsAIMode(prev => !prev);
-  };
+export default function InputBar({ onSend }) {
+  const [text, setText] = useState('');
 
   const handleSend = () => {
     if (!text.trim()) return;
-
-    // 🔥 AI 모드면 그냥 AI 실행
-    if (isAIMode) {
-      onSend("@ " + text); // 필요하면 prefix 붙이기
-    } else {
-      onSend(text);
-    }
-
-    setText("");
+    onSend(text.trim());
+    setText('');
   };
 
   return (
-    <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 10,
-      backgroundColor: isAIMode ? '#EEE8FF' : '#fff'
-    }}>
-
-      {/* @ 버튼 */}
-      <TouchableOpacity onPress={onPressAt}>
-        <Text style={{
-          fontSize: 20,
-          marginRight: 10,
-          color: isAIMode ? '#6C5CE7' : '#000'
-        }}>
-          @
-        </Text>
-      </TouchableOpacity>
-
-      {/* 🔥 고정 @ 표시 (텍스트 아님) */}
-      {isAIMode && (
-        <Text style={{
-          fontSize: 16,
-          marginRight: 4,
-          color: '#6C5CE7'
-        }}>
-          @
-        </Text>
-      )}
-
+    <View style={styles.container}>
       <TextInput
+        style={styles.input}
         value={text}
         onChangeText={setText}
-        style={{ flex: 1 }}
-        placeholder={isAIMode ? "AI에게 요청..." : "메시지 입력"}
+        placeholder="메시지를 입력하세요"
+        placeholderTextColor="#aaa"
+        multiline
+        onSubmitEditing={handleSend}
       />
-
-      <TouchableOpacity onPress={handleSend}>
-        <Text style={{
-          fontWeight: 'bold',
-          color: isAIMode ? '#6C5CE7' : '#000'
-        }}>
-          {isAIMode ? 'AI' : '전송'}
-        </Text>
+      <TouchableOpacity
+        style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+        onPress={handleSend}
+        disabled={!text.trim()}>
+        <Text style={styles.sendText}>전송</Text>
       </TouchableOpacity>
-
     </View>
   );
-};
+}
 
-export default InputBar;
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#333',
+    maxHeight: 100,
+  },
+  sendBtn: {
+    backgroundColor: '#4A90E2',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  sendBtnDisabled: { backgroundColor: '#ccc' },
+  sendText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+});
