@@ -71,6 +71,11 @@ const ResultScreen = ({ route, navigation }: any) => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ travelType: result }),
       });
+
+      console.log('응답 status:', response.status);
+      const data = await response.json();
+      console.log('서버 응답:', data);
+      await AsyncStorage.setItem('travelStyle', result);
     } catch (error) {
       console.log('성향 저장 에러:', error);
     } finally {
