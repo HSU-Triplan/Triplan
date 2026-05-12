@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity,
-  StyleSheet, Linking,
+  StyleSheet, Linking, Alert,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
-export default function AIMessageCard({ data }) {
-  const [selectedIdx, setSelectedIdx] = useState(0);   // 여행지 탭
-  const [selectedSpot, setSelectedSpot] = useState(0); // 핀 선택
+// onAddSpotToSchedule: (spot) => void  ← ChatRoomScreen에서 주입
+export default function AIMessageCard({ data, onAddSpotToSchedule }) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [selectedSpot, setSelectedSpot] = useState(0);
   const mapRef = useRef(null);
 
   const dest = data.destinations[selectedIdx];
@@ -29,29 +30,47 @@ export default function AIMessageCard({ data }) {
     };
   };
 
-  // ── 여행지 탭 전환 ──────────────────────────────────────────
   const handleDestChange = (idx) => {
     setSelectedIdx(idx);
     setSelectedSpot(0);
     setTimeout(() => {
       const region = getRegion();
-      if (region && mapRef.current) {
-        mapRef.current.animateToRegion(region, 600);
-      }
+      if (region && mapRef.current) mapRef.current.animateToRegion(region, 600);
     }, 100);
   };
 
-  // ── 핀 이동 (장소 탭 클릭 시) ───────────────────────────────
   const handleSpotPress = (spot, idx) => {
     setSelectedSpot(idx);
     if (spot.lat && spot.lng && mapRef.current) {
       mapRef.current.animateToRegion({
-        latitude: spot.lat,
-        longitude: spot.lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
+        latitude: spot.lat, longitude: spot.lng,
+        latitudeDelta: 0.01, longitudeDelta: 0.01,
       }, 500);
     }
+  };
+
+  // 일정 추가 버튼
+  const handleAddToSchedule = (spot) => {
+    Alert.alert(
+      '일정에 추가',
+      `"${spot.name}" 을 일정에 추가할까요?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '추가',
+          onPress: () => {
+            if (onAddSpotToSchedule) {
+              onAddSpotToSchedule({
+                time: '',
+                place: spot.name,
+                detail: spot.description || '',
+              });
+              Alert.alert('✅ 추가됐어요', `"${spot.name}" 이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const region = getRegion();
@@ -78,13 +97,14 @@ export default function AIMessageCard({ data }) {
               </Text>
               <Text style={[styles.tabCountry, selectedIdx === i && { color: '#ddd' }]}>
                 {d.country}
+                {d.travelTime ? ` · ${d.travelTime}` : ''}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
 
-      {/* ── 장소 핀 탭 (클릭 → 지도 이동) ── */}
+      {/* 장소 핀 탭 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pinTabScroll}>
         <View style={styles.pinTabRow}>
           {dest.spots.map((spot, i) => (
@@ -93,13 +113,9 @@ export default function AIMessageCard({ data }) {
               style={[styles.pinTab, selectedSpot === i && styles.pinTabActive]}
               onPress={() => handleSpotPress(spot, i)}>
               <View style={[styles.pinNum, selectedSpot === i && styles.pinNumActive]}>
-                <Text style={[styles.pinNumText, selectedSpot === i && { color: '#fff' }]}>
-                  {i + 1}
-                </Text>
+                <Text style={[styles.pinNumText, selectedSpot === i && { color: '#fff' }]}>{i + 1}</Text>
               </View>
-              <Text
-                style={[styles.pinTabText, selectedSpot === i && styles.pinTabTextActive]}
-                numberOfLines={1}>
+              <Text style={[styles.pinTabText, selectedSpot === i && styles.pinTabTextActive]} numberOfLines={1}>
                 {spot.name}
               </Text>
             </TouchableOpacity>
@@ -119,16 +135,12 @@ export default function AIMessageCard({ data }) {
           style={styles.map}
           provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
           initialRegion={region}>
-
           {validSpots.length > 1 && (
             <Polyline
               coordinates={validSpots.map(s => ({ latitude: s.lat, longitude: s.lng }))}
-              strokeColor="#6C5CE7"
-              strokeWidth={2.5}
-              lineDashPattern={[6, 3]}
+              strokeColor="#6C5CE7" strokeWidth={2.5} lineDashPattern={[6, 3]}
             />
           )}
-
           {validSpots.map((spot, i) => (
             <Marker
               key={i}
@@ -137,16 +149,10 @@ export default function AIMessageCard({ data }) {
               description={spot.description}
               onPress={() => setSelectedSpot(i)}>
               <View style={styles.markerWrap}>
-                <View style={[
-                  styles.markerBubble,
-                  selectedSpot === i && styles.markerBubbleActive
-                ]}>
+                <View style={[styles.markerBubble, selectedSpot === i && styles.markerBubbleActive]}>
                   <Text style={styles.markerNum}>{i + 1}</Text>
                 </View>
-                <View style={[
-                  styles.markerTail,
-                  selectedSpot === i && styles.markerTailActive
-                ]} />
+                <View style={[styles.markerTail, selectedSpot === i && styles.markerTailActive]} />
               </View>
             </Marker>
           ))}
@@ -157,14 +163,15 @@ export default function AIMessageCard({ data }) {
         </View>
       )}
 
-      {/* 장소 카드 리스트 */}
+      {/* 장소 카드 + 일정 추가 버튼 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.spotScroll}>
         <View style={styles.spotRow}>
           {dest.spots.map((spot, i) => (
             <TouchableOpacity
               key={i}
               style={[styles.spotCard, selectedSpot === i && styles.spotCardActive]}
-              onPress={() => handleSpotPress(spot, i)}>
+              onPress={() => handleSpotPress(spot, i)}
+              activeOpacity={0.85}>
 
               {spot.photoUrl ? (
                 <Image source={{ uri: spot.photoUrl }} style={styles.spotPhoto} />
@@ -182,10 +189,18 @@ export default function AIMessageCard({ data }) {
                 ) : null}
                 {spot.placeUrl ? (
                   <TouchableOpacity onPress={() => Linking.openURL(spot.placeUrl)}>
-                    <Text style={styles.spotLink}>카카오맵에서 보기 →</Text>
+                    <Text style={styles.spotLink}>카카오맵 →</Text>
                   </TouchableOpacity>
                 ) : null}
+
+                {/* 일정 추가 버튼 */}
+                <TouchableOpacity
+                  style={styles.addScheduleBtn}
+                  onPress={() => handleAddToSchedule(spot)}>
+                  <Text style={styles.addScheduleBtnText}>+ 일정 추가</Text>
+                </TouchableOpacity>
               </View>
+
             </TouchableOpacity>
           ))}
         </View>
@@ -205,7 +220,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C9B8FF',
   },
-
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10,
@@ -213,7 +227,6 @@ const styles = StyleSheet.create({
   headerIcon: { fontSize: 18 },
   headerText: { fontSize: 14, fontWeight: 'bold', color: '#3D2B9E', flex: 1 },
 
-  // 여행지 탭
   tabScroll: { paddingLeft: 12, marginBottom: 4 },
   tabRow: { flexDirection: 'row', gap: 8, paddingRight: 16 },
   tab: {
@@ -226,7 +239,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
   tabCountry: { fontSize: 10, color: '#888', marginTop: 2 },
 
-  // 장소 핀 탭
   pinTabScroll: { paddingLeft: 12, marginBottom: 6 },
   pinTabRow: { flexDirection: 'row', gap: 6, paddingRight: 16 },
   pinTab: {
@@ -246,7 +258,6 @@ const styles = StyleSheet.create({
   pinTabText: { fontSize: 12, color: '#555', maxWidth: 80 },
   pinTabTextActive: { color: '#fff', fontWeight: 'bold' },
 
-  // 추천 이유
   reasonBox: {
     backgroundColor: '#fff',
     marginHorizontal: 12, marginVertical: 8,
@@ -254,7 +265,6 @@ const styles = StyleSheet.create({
   },
   reasonText: { fontSize: 13, color: '#444', lineHeight: 20 },
 
-  // 지도
   map: { height: 220, marginHorizontal: 12, borderRadius: 12, marginBottom: 8 },
   mapFallback: {
     height: 100, marginHorizontal: 12, borderRadius: 12, marginBottom: 8,
@@ -262,13 +272,11 @@ const styles = StyleSheet.create({
   },
   mapFallbackText: { fontSize: 13, color: '#888' },
 
-  // 커스텀 마커
   markerWrap: { alignItems: 'center' },
   markerBubble: {
     backgroundColor: '#6C5CE7', width: 28, height: 28,
     borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#fff',
-    elevation: 4,
+    borderWidth: 2, borderColor: '#fff', elevation: 4,
   },
   markerBubbleActive: { backgroundColor: '#FF6B6B', width: 34, height: 34, borderRadius: 17 },
   markerNum: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
@@ -280,19 +288,17 @@ const styles = StyleSheet.create({
   },
   markerTailActive: { borderTopColor: '#FF6B6B' },
 
-  // 장소 카드
   spotScroll: { marginBottom: 14 },
   spotRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 10 },
   spotCard: {
-    width: 160, backgroundColor: '#fff',
+    width: 170, backgroundColor: '#fff',
     borderRadius: 12, overflow: 'hidden',
     borderWidth: 1, borderColor: '#E8E0FF',
   },
   spotCardActive: { borderColor: '#6C5CE7', borderWidth: 2 },
   spotPhoto: { width: '100%', height: 100 },
   spotPhotoPlaceholder: {
-    width: '100%', height: 100,
-    backgroundColor: '#E8E0FF',
+    width: '100%', height: 100, backgroundColor: '#E8E0FF',
     justifyContent: 'center', alignItems: 'center',
   },
   spotPhotoNum: { fontSize: 28, fontWeight: 'bold', color: '#6C5CE7' },
@@ -300,5 +306,17 @@ const styles = StyleSheet.create({
   spotName: { fontSize: 13, fontWeight: 'bold', color: '#333', marginBottom: 4 },
   spotDesc: { fontSize: 11.5, color: '#666', lineHeight: 16, marginBottom: 4 },
   spotAddress: { fontSize: 10.5, color: '#999', marginBottom: 4 },
-  spotLink: { fontSize: 11, color: '#6C5CE7', fontWeight: 'bold' },
+  spotLink: { fontSize: 11, color: '#6C5CE7', fontWeight: 'bold', marginBottom: 6 },
+
+  // 일정 추가 버튼
+  addScheduleBtn: {
+    backgroundColor: '#6C5CE7',
+    borderRadius: 8,
+    paddingVertical: 6,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  addScheduleBtnText: {
+    color: '#fff', fontSize: 12, fontWeight: 'bold',
+  },
 });

@@ -443,6 +443,7 @@ export default function SearchScreen({navigation }) {
                           departure_date: selectedPost?.departure_date,
                           bio: selectedPost?.bio,
                           max_people: selectedPost?.max_people,
+                          //                          max_people: post.max_people,
                         }
                       });
                     }}>

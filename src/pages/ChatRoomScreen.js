@@ -31,6 +31,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const flatListRef = useRef(null);
   const [aiPreferences, setAiPreferences] = useState([]); // [{text, category, addedAt}]
   const [isAILoading, setIsAILoading] = useState(false);  // AI 처리 중 로딩
+  const [pendingSpots, setPendingSpots] = useState([]);
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -94,6 +95,11 @@ export default function ChatRoomScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+// 일정추가
+  const addSpotToSchedule = (spotItem) => {
+    setPendingSpots(prev => [...prev, spotItem]);
   };
 
   const handleLeaveRoom = () => {
@@ -375,7 +381,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     setEditingId(selectedSchedule?.id || null);
     setEditTitle(selectedSchedule?.title || '');
     setEditDescription(selectedSchedule?.summary || '');
-    setEditPlan(selectedSchedule?.plan || []);
+    setEditPlan([...(selectedSchedule?.plan || []), ...pendingSpots]);
     setIsModalVisible(true);
   };
 
@@ -386,6 +392,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       summary: editDescription,
       plan: editPlan,
     });
+    setPendingSpots([]);
     setIsModalVisible(false);
   };
 
@@ -397,9 +404,11 @@ export default function ChatRoomScreen({ route, navigation }) {
         <Text style={styles.tripBio}>{bio}</Text>
         <View style={styles.tripTags}>
           <Text style={styles.tag}>📍 {destination}</Text>
-          <Text style={styles.tag}>🗓 {days}박{Number(days)+1}일</Text>
+          <Text style={styles.tag}>
+            🗓 {String(days).includes('박') ? days : `${days}박${Number(days)+1}일`}
+          </Text>
           {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
-          <Text style={styles.tag}>👥 최대 {max_people}명</Text>
+          {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
         </View>
       </View>
 
@@ -436,6 +445,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             myUserId={myUserId}
             selectedSchedule={selectedSchedule}
             setSelectedSchedule={setSelectedSchedule}
+            onAddSpotToSchedule={addSpotToSchedule}
           />
         )}
       />
@@ -545,7 +555,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule }) => {
+const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,onAddSpotToSchedule  }) => {
 
   // AI 로딩
   if (message.type === 'ai_loading') {
@@ -588,8 +598,13 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule 
       );
     }
 
-     return <AIMessageCard data={recData} />;
-   }
+    return (
+      <AIMessageCard
+        data={recData}
+        onAddSpotToSchedule={onAddSpotToSchedule}
+      />
+    );
+}
 
   // 기존 AI 카드 (더미)
   if (message.type === 'ai') {
