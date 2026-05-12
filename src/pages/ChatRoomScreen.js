@@ -9,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import InputBar from '../components/InputBar';
 import AIMessageCard from '../components/AIMessageCard';
 import { io } from 'socket.io-client';
+import SummaryModal from '../components/SummaryModal';
+import AISummaryCard from '../components/AISummaryCard';
 
 // 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
@@ -19,7 +21,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [messages, setMessages] = useState([
     { id: '1', type: 'system', text: '채팅방에 입장했습니다.' }
   ]);
-  const [isAIMode, setIsAIMode] = useState(false);
+//  const [isAIMode, setIsAIMode] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isMemberVisible, setIsMemberVisible] = useState(false);
@@ -35,6 +37,11 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [aiPreferences, setAiPreferences] = useState([]);
   const [isAILoading, setIsAILoading] = useState(false);
   const [pendingSpots, setPendingSpots] = useState([]);
+  const [isAddMemoVisible, setIsAddMemoVisible] = useState(false);
+  const [manualMemoInput, setManualMemoInput] = useState('');
+  const [isSummaryVisible, setIsSummaryVisible] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -99,7 +106,154 @@ export default function ChatRoomScreen({ route, navigation }) {
     );
   };
 
-  // 일정추가
+//  // 자동 분석 함수
+//  const analyzeConversation = async (batch) => {
+//    if (batch.length === 0 || isAutoMemoLoading) return;
+//    setIsAutoMemoLoading(true);
+//    try {
+//      const token = await AsyncStorage.getItem('token');
+//      await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-auto-memo`, {
+//        method: 'POST',
+//        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+//        body: JSON.stringify({ messages: batch }),
+//      });
+//    } catch (error) {
+//      console.log('자동 메모 분석 에러:', error);
+//    } finally {
+//      setIsAutoMemoLoading(false);
+//    }
+//  };
+//
+//  const triggerAutoAIAnalysis = (message) => {
+//    const triggered = shouldTriggerAI(message.text);
+//    console.log('[AutoMemo] 스캔: ' + message.text + ' → 트리거: ' + String(triggered));
+//    if (!triggered) return;
+//
+//    pendingMessagesRef.current.push({
+//      senderName: message.senderName || '나',
+//      text: message.text,
+//    });
+//
+//    console.log('[AutoMemo] 버퍼 누적: ' + pendingMessagesRef.current.length + '개, 30초 타이머 시작');
+//
+//    if (debounceRef.current) clearTimeout(debounceRef.current);
+//
+//    debounceRef.current = setTimeout(() => {
+//      const batch = [...pendingMessagesRef.current];
+//      pendingMessagesRef.current = [];
+//      console.log('[AutoMemo] 타이머 발동! ' + batch.length + '개 분석 시작');
+//      if (batch.length > 0) analyzeConversation(batch);
+//    }, 30000);
+//  };
+
+  // 수동 메모 추가 함수
+  const handleManualAddMemo = async () => {
+    if (!manualMemoInput.trim()) return;
+    setIsAddMemoVisible(false);
+    setManualMemoInput('');
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: manualMemoInput.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiPreferences(data.preferences);
+        setMessages(prev => [...prev, data.aiMessage]);
+      }
+    } catch (error) {
+      console.log('수동 메모 추가 에러:', error);
+    } finally {
+      setManualMemoInput('');
+      setIsAddMemoVisible(false);
+    }
+  };
+
+//  //승인 함수
+//  const handleApproveAutoMemo = async (extracted, messageId) => {
+//    try {
+//      const token = await AsyncStorage.getItem('token');
+//      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-memo-approve`, {
+//        method: 'POST',
+//        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+//        body: JSON.stringify({ extracted }),
+//      });
+//      const data = await res.json();
+//      if (data.success) {
+//        setAiPreferences(data.preferences);
+//        // 승인 카드를 approved 상태로 변경
+//        setMessages(prev =>
+//          prev.map(m => m.id === messageId ? { ...m, type: 'ai_memo_approved' } : m)
+//        );
+//      }
+//    } catch (error) {
+//      console.log('메모 승인 에러:', error);
+//    }
+//  };
+//
+//  const handleRejectAutoMemo = (messageId) => {
+//    setMessages(prev =>
+//      prev.map(m => m.id === messageId ? { ...m, type: 'ai_memo_rejected' } : m)
+//    );
+//  };
+
+
+  // 정리하기 함수 추가 ────────────────────────────────────
+  const handleSummarize = async () => {
+    if (isSummaryLoading) return;
+
+    const textMessages = messages.filter(m => m.type === 'text');
+    if (textMessages.length < 3) {
+      Alert.alert('대화가 부족해요', '분석하려면 대화가 3개 이상 필요해요.');
+      return;
+    }
+
+    setIsSummaryLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setSummaryData(data.summary);
+        setIsSummaryVisible(true);
+      } else {
+        Alert.alert('알림', data.message || '정리할 내용이 없어요.');
+      }
+    } catch (error) {
+      console.log('정리하기 에러:', error);
+      Alert.alert('오류', '정리 중 문제가 발생했습니다.');
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  };
+
+  // 승인 함수 추가 ────────────────────────────────────────
+  const handleSummaryApprove = async (editedSummary) => {
+    setIsSummaryVisible(false);
+    setSummaryData(null);
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ summary: editedSummary }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiPreferences(data.preferences);
+      }
+    } catch (error) {
+      console.log('정리 승인 에러:', error);
+    }
+  };
+// 일정추가
   const addSpotToSchedule = (spotItem) => {
     setPendingSpots(prev => [...prev, spotItem]);
   };
@@ -142,19 +296,39 @@ export default function ChatRoomScreen({ route, navigation }) {
       if (meData.success) setMyUserId(meData.user.id);
 
       // 기존 메시지
-      const msgRes = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`, {
+      const msgRes = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`,
+      {
         headers: { Authorization: `Bearer ${token}` },
       });
       const msgData = await msgRes.json();
       if (msgData.success && msgData.messages.length > 0) {
-        const loaded = msgData.messages.map(m => ({
-          id: String(m.id),
-          type: m.type || 'text',
-          text: m.content,
-          senderId: m.user_id,
-          senderName: m.users?.nickname || m.users?.name,
-          senderImage: m.users?.profile_image,
-        }));
+        const loaded = msgData.messages.map(m => {
+          const base = {
+            id: String(m.id),
+            type: m.type || 'text',
+            text: m.content,
+            senderId: m.user_id,
+            senderName: m.users?.nickname || m.users?.name,
+            senderImage: m.users?.profile_image,
+          };
+
+
+//          if (m.type === 'ai_memo_pending') {
+//            try { base.extracted = JSON.parse(m.content); }
+//            catch { base.extracted = []; }
+//          }
+
+          if (m.type === 'ai_recommend') {
+            try { base.data = JSON.parse(m.content); }
+            catch { base.data = null; }
+          }
+          if (m.type === 'ai_summary') {
+            try { base.data = JSON.parse(m.content); }
+            catch { base.data = null; }
+          }
+
+          return base;
+        });
         setMessages(loaded);
       }
 
@@ -169,6 +343,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       });
 
       socket.on('receive_message', (data) => {
+        console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
           setMessages(prev => {
             if (prev.some(m => m.id === data.id)) return prev;
@@ -180,6 +355,9 @@ export default function ChatRoomScreen({ route, navigation }) {
         requestAnimationFrame(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         });
+      });
+      socket.on('ai_memo_updated', (newPreferences) => {
+        setAiPreferences(newPreferences);
       });
 
       fetchMembers();
@@ -263,52 +441,6 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   const sendMessage = async (text) => {
-    if (isAIMode) {
-      const cleanText = text.replace(/^@/, '').trim();
-      if (!cleanText) {
-        setIsAIMode(false);
-        return;
-      }
-
-      setIsAILoading(true);
-      setIsAIMode(false);
-
-      const userMsg = {
-        id: 'user-ai-' + Date.now(),
-        type: 'text',
-        text: `@${cleanText}`,
-        senderId: myUserId,
-      };
-      setMessages(prev => [...prev, userMsg]);
-
-      try {
-        const token = await AsyncStorage.getItem('token');
-        const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ text: cleanText }),
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          setAiPreferences(data.preferences);
-          setMessages(prev => [...prev, data.aiMessage]);
-        }
-      } catch (error) {
-        console.log('AI 선호사항 처리 에러:', error);
-        Alert.alert('오류', 'AI 처리 중 문제가 발생했습니다.');
-      } finally {
-        setIsAILoading(false);
-        requestAnimationFrame(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        });
-      }
-      return;
-    }
-
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`, {
@@ -335,6 +467,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         requestAnimationFrame(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         });
+//        triggerAutoAIAnalysis(msg);
       }
     } catch (error) {
       console.log('메시지 전송 에러:', error);
@@ -384,16 +517,14 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   return (
-    // 🌟 1. 전체를 배경 이미지로 감싸기
-    <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
+    
+<ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
       <View style={styles.overlay} />
 
       <SafeAreaView style={styles.container}>
 
-        {/* 🌟 2. 상단 헤더 여백 추가 (투명 헤더를 위해) */}
         <View style={{ height: 40 }} />
 
-        {/* 🌟 3. 글래스모피즘(유리) 스타일 여행 정보 카드 */}
         <View style={styles.tripInfo}>
           <Text style={styles.tripBio}>{bio}</Text>
           <View style={styles.tripTags}>
@@ -406,10 +537,10 @@ export default function ChatRoomScreen({ route, navigation }) {
           </View>
         </View>
 
-        {aiPreferences.length > 0 && (
+        {(aiPreferences.length > 0 || true) && (
           <View style={styles.aiTagsContainer}>
             <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
               <View style={styles.aiTagsRow}>
                 {aiPreferences.map((pref, idx) => (
                   <View key={idx} style={styles.aiTag}>
@@ -423,10 +554,15 @@ export default function ChatRoomScreen({ route, navigation }) {
                 ))}
               </View>
             </ScrollView>
+            <TouchableOpacity
+              style={styles.aiTagAddBtn}
+              onPress={() => setIsAddMemoVisible(true)}>
+              <Text style={styles.aiTagAddBtnText}>＋</Text>
+            </TouchableOpacity>
           </View>
         )}
-
-        <FlatList
+        
+     <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(item) => item.id}
@@ -442,6 +578,36 @@ export default function ChatRoomScreen({ route, navigation }) {
             />
           )}
         />
+
+        <TouchableOpacity
+          style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
+          onPress={handleAiRecommend}
+          disabled={isAILoading}>
+          {isAILoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
+          onPress={handleSummarize}
+          disabled={isSummaryLoading}>
+          {isSummaryLoading ? (
+            <ActivityIndicator size="small" color="#6C5CE7" />
+          ) : (
+            <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
+          )}
+        </TouchableOpacity>
+
+        <InputBar onSend={sendMessage} />
+
+        <Modal
+          visible={isMemberVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsMemberVisible(false)}>
 
         <TouchableOpacity
           style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
@@ -537,12 +703,69 @@ export default function ChatRoomScreen({ route, navigation }) {
           </View>
         </Modal>
 
-      </SafeAreaView>
+////////////////////////////
+      <Modal visible={isAddMemoVisible} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.memoModalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsAddMemoVisible(false)}>
+          <TouchableOpacity style={styles.memoModalBox} activeOpacity={1} onPress={() => {}}>
+            <Text style={styles.memoModalTitle}>메모 추가</Text>
+            <Text style={styles.memoModalSub}>여행 관련 선호사항을 입력해주세요</Text>
+            <TextInput
+              style={styles.memoModalInput}
+              placeholder="예) 맛집위주, 예산 30만원, 온천"
+              placeholderTextColor="#aaa"
+              value={manualMemoInput}
+              onChangeText={setManualMemoInput}
+              autoFocus
+            />
+            <View style={styles.memoModalButtons}>
+              <TouchableOpacity onPress={() => { setIsAddMemoVisible(false); setManualMemoInput(''); }}>
+                <Text style={styles.memoModalCancel}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.memoModalConfirm} onPress={handleManualAddMemo}>
+                <Text style={styles.memoModalConfirmText}>추가</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
     </ImageBackground>
   );
 }
 
+// ── 메시지 아이템 ─────────────────────────────────────────────
 const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule }) => {
+
+
+    if (message.type === 'ai_summary') {
+      const summaryData = message.data
+        ? message.data
+        : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+      if (!summaryData) return null;
+      return <AISummaryCard data={summaryData} />;
+    }
+
+//    if (
+//      message.type === 'ai_memo_pending' ||
+//      message.type === 'ai_memo_approved' ||
+//      message.type === 'ai_memo_rejected'
+//    ) {
+//      console.log(`[MessageItem] ai_memo 렌더: type=${message.type}, extracted=`, message.extracted);
+//      return (
+//        <AIMemoApprovalCard
+//          message={message}
+//          onApprove={onApproveAutoMemo}
+//          onReject={onRejectAutoMemo}
+//        />
+//      );
+//    }
+
+  // AI 로딩
+  ////////////////////////////
+  
   if (message.type === 'ai_loading') {
     return (
       <View style={aiStyles.loadingWrap}>
@@ -724,7 +947,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#ddd',
     marginBottom: 16, fontSize: 15, paddingVertical: 8, color: '#333'
   },
-  editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBottom: 12, marginTop: 10 },
+  
+editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBottom: 12, marginTop: 10 },
   planItem: { marginBottom: 12, backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eee' },
   addButton: { color: '#FF6B6B', fontWeight: 'bold', marginBottom: 20, fontSize: 15 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, gap: 10 },
@@ -732,4 +956,37 @@ const styles = StyleSheet.create({
   modalBtnSave: { flex: 1, backgroundColor: '#FF6B6B', padding: 14, borderRadius: 15, alignItems: 'center' },
   cancelButton: { fontSize: 15, color: '#666', fontWeight: 'bold' },
   saveButton: { fontSize: 15, color: '#fff', fontWeight: 'bold' },
+  aiTagAddBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center', alignItems: 'center',
+    marginLeft: 6, flexShrink: 0,
+  },
+  aiTagAddBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold', lineHeight: 22 },
+  memoModalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  memoModalBox: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '80%' },
+  memoModalTitle: { fontSize: 17, fontWeight: 'bold', color: '#333', marginBottom: 6 },
+  memoModalSub: { fontSize: 12, color: '#888', marginBottom: 16 },
+  memoModalInput: {
+    borderWidth: 1, borderColor: '#FFD1D1', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 15, color: '#333', marginBottom: 16,
+  },
+  memoModalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16 },
+  memoModalCancel: { fontSize: 15, color: '#aaa', paddingVertical: 8 },
+  memoModalConfirm: { backgroundColor: '#FF6B6B', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 },
+  memoModalConfirmText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  summarizeButton: {
+    marginHorizontal: 16, marginVertical: 6,
+    borderRadius: 20, paddingVertical: 12,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255,107,107,0.08)',
+    flexDirection: 'row', elevation: 2,
+  },
+  summarizeButtonDisabled: { opacity: 0.5 },
+  summarizeButtonText: { color: '#FF6B6B', fontSize: 14, fontWeight: '900' },
 });
