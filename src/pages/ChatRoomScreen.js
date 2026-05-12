@@ -498,7 +498,7 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule 
       )}
       {isMe && (
         <View style={{
-          backgroundColor: '#FEE500',
+          backgroundColor: '#7EC8FF',
           padding: 10,
           borderRadius: 12,
           maxWidth: 220,
