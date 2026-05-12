@@ -295,9 +295,11 @@ export default function SearchScreen({navigation }) {
                     {post.users?.nickname || post.users?.name}
                   </Text>
                   <Text style={styles.metaDot}>·</Text>
-                  <Text style={styles.metaType}>
-                    {post.users?.travel_type ?? '성향 미설정'}
-                  </Text>
+                  <View style={[styles.badge, { backgroundColor: '#5296F5' }]}>
+                      <Text style={styles.badgeText}>{post.users?.travel_type ?? '성향 미설정'}</Text>
+                  </View>
+
+
                 </View>
 
                 {/* 여행지 + 출발날짜 + 일수 + 참가인원 */}
@@ -375,9 +377,11 @@ export default function SearchScreen({navigation }) {
                   <Text style={styles.userName}>
                     {selectedPost?.users?.nickname || selectedPost?.users?.name}
                   </Text>
-                  <Text style={styles.travelType}>
-                    {selectedPost?.users?.travel_type ?? '성향 미설정'}
-                  </Text>
+                  <View style={[styles.badge, { backgroundColor: '#5296F5' }]}>
+                    <Text style={styles.badgeText}>
+                        {selectedPost?.users?.travel_type ?? '성향 미설정'}
+                    </Text>
+                  </View>
                 </View>
                 <View style={{ marginLeft: 'auto', flexDirection: 'row', gap: 12, alignItems: 'center' }}>
                   {selectedPost?.user_id === myUserId && (
@@ -386,7 +390,7 @@ export default function SearchScreen({navigation }) {
                         setEditPost(selectedPost);
                         setSelectedPost(null);
                       }}>
-                        <Text style={{ fontSize: 14, color: '#4A90E2', fontWeight: 'bold' }}>수정</Text>
+                        <Text style={{ fontSize: 14, color: '#7EC8FF', fontWeight: 'bold' }}>수정</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => handleDelete(selectedPost?.id)}>
                         <Text style={{ fontSize: 14, color: '#FF3B30', fontWeight: 'bold' }}>삭제</Text>
@@ -425,7 +429,7 @@ export default function SearchScreen({navigation }) {
               {/* 참여하기 / 채팅방으로 이동 버튼 */}
                 {joinedRooms[selectedPost?.id] ? (
                   <TouchableOpacity
-                    style={[styles.joinButton, { backgroundColor: '#34C759' }]}
+                    style={[styles.joinButton, { backgroundColor: '#5296F5' }]}
                     onPress={() => {
                       const roomId = joinedRooms[selectedPost?.id];
                       setSelectedPost(null);
@@ -439,6 +443,7 @@ export default function SearchScreen({navigation }) {
                           departure_date: selectedPost?.departure_date,
                           bio: selectedPost?.bio,
                           max_people: selectedPost?.max_people,
+                          //                          max_people: post.max_people,
                         }
                       });
                     }}>
@@ -498,7 +503,7 @@ export default function SearchScreen({navigation }) {
                             <View style={styles.infoRow}>
                               <Text style={styles.infoLabel}>여행 타입</Text>
                               <View style={styles.typeContainer}>
-                                <Text style={[styles.infoValue, { color: '#4A90E2', fontWeight: 'bold' }]}>
+                                <Text style={[styles.infoValue, { color: '#5296F5', fontWeight: 'bold' }]}>
                                   {otherUser?.travel_type}
                                 </Text>
 
@@ -730,7 +735,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5296F5',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,

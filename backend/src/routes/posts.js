@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { processPreference, recommendDestinations } = require('../utils/gemini');
 const router = express.Router();
+const { searchGooglePlace } = require('../utils/googleMaps');
+const { searchKakaoPlace } = require('../utils/kakaoMap');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -513,6 +515,34 @@ router.get('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res)
   }
 });
 
+// ── 선호사항 삭제 ────────────────────────────────────────────
+router.delete('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { text } = req.body;
+
+  try {
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw error;
+
+    const updated = (room.ai_preferences || []).filter(p => p.text !== text);
+
+    await supabase
+      .from('chat_rooms')
+      .update({ ai_preferences: updated })
+      .eq('id', roomId);
+
+    res.json({ success: true, preferences: updated });
+  } catch (error) {
+    console.log('선호사항 삭제 에러:', error.message);
+    res.status(500).json({ success: false, message: '삭제 실패' });
+  }
+});
+
 // ── 3. 여행지 추천 ───────────────────────────────────────────
 router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res) => {
   const { roomId } = req.params;
@@ -521,10 +551,7 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
     // 선호사항 + 채팅방 정보 조회
     const { data: room, error } = await supabase
       .from('chat_rooms')
-      .select(`
-        ai_preferences,
-        posts (destination, days, departure_date, max_people)
-      `)
+      .select(`ai_preferences, posts (destination, days, departure_date, max_people)`)
       .eq('id', roomId)
       .single();
 
@@ -533,16 +560,43 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
     const preferences = room.ai_preferences || [];
     const roomInfo = room.posts || {};
 
-    // Gemini 여행지 추천
-    const recommendText = await recommendDestinations(preferences, roomInfo);
+    // 1. Gemini에서 JSON 구조로 추천 받기
+    const parsed = await recommendDestinations(preferences, roomInfo);
 
-    // messages 테이블에 저장
+    // 2. 각 spots에 좌표 + 사진 붙이기
+    for (const dest of parsed.destinations) {
+      for (const spot of dest.spots) {
+        let result = null;
+
+        if (dest.isKorea) {
+          result = await searchKakaoPlace(spot.name);
+        } else {
+          result = await searchGooglePlace(`${spot.name} ${dest.name}`);
+        }
+
+        if (result) {
+          spot.lat = result.lat;
+          spot.lng = result.lng;
+          spot.address = result.address;
+          spot.photoUrl = result.photoUrl || null;
+          spot.placeUrl = result.placeUrl || null;
+        } else {
+          // 검색 실패 시 기본값
+          spot.lat = null;
+          spot.lng = null;
+          spot.address = null;
+          spot.photoUrl = null;
+        }
+      }
+    }
+
+    // 3. messages 테이블에 JSON으로 저장
     const { data: savedMsg } = await supabase
       .from('messages')
       .insert({
         chat_room_id: roomId,
         user_id: req.user.userId,
-        content: recommendText,
+        content: JSON.stringify(parsed),  // JSON 문자열로 저장
         type: 'ai_recommend',
       })
       .select()
@@ -551,19 +605,16 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
     const aiMsg = {
       id: String(savedMsg.id),
       type: 'ai_recommend',
-      text: recommendText,
+      data: parsed,  // 파싱된 JSON 그대로 전달
     };
 
-    // Socket으로 채팅방 전체에 브로드캐스트
-    // io 객체를 req.app.get('io')로 가져와야 함
+    // 4. 소켓 브로드캐스트
     const io = req.app.get('io');
-    if (io) {
-      io.to(String(roomId)).emit('receive_message', aiMsg);
-    }
+    if (io) io.to(String(roomId)).emit('receive_message', aiMsg);
 
     res.json({ success: true, message: aiMsg });
   } catch (error) {
-    console.log('AI 추천 에러:', error);
+    console.log('AI 추천 에러:', error.message);
     res.status(500).json({ success: false, message: 'AI 추천 중 오류가 발생했습니다.' });
   }
 });
