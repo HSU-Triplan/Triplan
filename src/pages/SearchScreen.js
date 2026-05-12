@@ -18,7 +18,6 @@ import {
   SafeAreaView
 } from 'react-native';
 
-// 🏝️ 랜드마크 배경: 그리스 산토리니 (Santorini - 탐색과 휴양의 상징)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=800&auto=format&fit=crop';
 
 const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
@@ -28,6 +27,8 @@ export default function SearchScreen({navigation }) {
   const [searchText, setSearchText] = useState('');
   const [writeVisible, setWriteVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [infoVisible, setInfoVisible] = useState(false);
+
   const [destOpen, setDestOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState('전체');
@@ -206,12 +207,10 @@ export default function SearchScreen({navigation }) {
   };
 
   return (
-    // 🌟 배경을 뚜렷하게(blurRadius={4}) 설정하여 산토리니 풍경 강조
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
       <SafeAreaView style={styles.container}>
 
-        {/* 투명 유리 스타일의 검색 및 필터 바 */}
         <View style={styles.topBar}>
           <TextInput
             style={styles.searchBar}
@@ -244,7 +243,6 @@ export default function SearchScreen({navigation }) {
           </View>
         )}
 
-        {/* 게시글 피드 영역 */}
         <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
           {loading ? (
             <View style={styles.emptyContainer}>
@@ -283,9 +281,19 @@ export default function SearchScreen({navigation }) {
                 <View style={styles.cardMeta}>
                   <Text style={styles.metaText}>{post.users?.nickname || post.users?.name}</Text>
                   <Text style={styles.metaDot}>·</Text>
-                  <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                    <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{post.users?.travel_type ?? '성향 미설정'}</Text>
+
+                  {/* 🌟 4자리 알파벳 배지 + 설명 물음표 버튼 */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
+                      <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{post.users?.travel_type ?? '성향 미설정'}</Text>
+                    </View>
+                    {post.users?.travel_type && (
+                      <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                        <Text style={{ fontSize: 16 }}>❔</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
+
                 </View>
 
                 <View style={styles.travelInfo}>
@@ -300,22 +308,18 @@ export default function SearchScreen({navigation }) {
           <View style={{ height: 80 }} />
         </ScrollView>
 
-        {/* 🌟 산호색 포인트 FAB 버튼 */}
         <TouchableOpacity style={styles.fab} onPress={() => setWriteVisible(true)}>
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
 
-        {/* 글 작성 모달 */}
         <Modal visible={writeVisible} animationType="slide" onRequestClose={() => setWriteVisible(false)}>
           <WriteScreen onClose={() => { setWriteVisible(false); fetchPosts(); }} />
         </Modal>
 
-        {/* 게시글 수정 모달 */}
         <Modal visible={!!editPost} animationType="slide" onRequestClose={() => setEditPost(null)}>
           <EditPostScreen post={editPost} onClose={() => { setEditPost(null); fetchPosts(); }} />
         </Modal>
 
-        {/* 🌟 게시글 상세 모달 (글래스모피즘) */}
         <Modal visible={!!selectedPost} animationType="slide" transparent onRequestClose={() => setSelectedPost(null)}>
           <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setSelectedPost(null)}>
             <TouchableOpacity style={styles.detailBox} activeOpacity={1} onPress={() => {}}>
@@ -328,9 +332,19 @@ export default function SearchScreen({navigation }) {
                 </TouchableOpacity>
                 <View>
                   <Text style={styles.userName}>{selectedPost?.users?.nickname || selectedPost?.users?.name}</Text>
-                  <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.15)', marginTop: 4 }]}>
-                    <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{selectedPost?.users?.travel_type ?? '성향 미설정'}</Text>
+
+                  {/* 🌟 상세 모달: 4자리 알파벳 배지 + 설명 물음표 버튼 */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.15)' }]}>
+                      <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{selectedPost?.users?.travel_type ?? '성향 미설정'}</Text>
+                    </View>
+                    {selectedPost?.users?.travel_type && (
+                      <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                        <Text style={{ fontSize: 16 }}>❔</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
+
                 </View>
                 <View style={{ marginLeft: 'auto', flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                   {selectedPost?.user_id === myUserId && (
@@ -395,7 +409,6 @@ export default function SearchScreen({navigation }) {
           </TouchableOpacity>
         </Modal>
 
-        {/* 🌟 사용자 프로필 모달 */}
         <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
            <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
              <View style={styles.profileModalBox}>
@@ -413,9 +426,19 @@ export default function SearchScreen({navigation }) {
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>여행 타입</Text>
-                    <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                      <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type}</Text>
+
+                    {/* 🌟 다른 사용자 프로필: 4자리 알파벳 배지 + 설명 물음표 버튼 */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
+                        <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
+                      </View>
+                      {otherUser?.travel_type && (
+                        <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                          <Text style={{ fontSize: 16 }}>❔</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
+
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>친구 코드</Text>
@@ -443,7 +466,6 @@ export default function SearchScreen({navigation }) {
           </TouchableOpacity>
         </Modal>
 
-        {/* 필터 모달 */}
         <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
           <TouchableOpacity style={styles.filterOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
             <TouchableOpacity style={styles.modalBox} activeOpacity={1} onPress={() => {}}>
@@ -481,6 +503,25 @@ export default function SearchScreen({navigation }) {
                 <Text style={styles.applyButtonText}>적용하기</Text>
               </TouchableOpacity>
             </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
+        <Modal visible={infoVisible} transparent animationType="fade" onRequestClose={() => setInfoVisible(false)}>
+          <TouchableOpacity style={styles.filterOverlay} activeOpacity={1} onPress={() => setInfoVisible(false)}>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoTitle}>🧭 4가지 여행 성향 척도</Text>
+
+              <View style={{ gap: 12, marginBottom: 24 }}>
+                <Text style={styles.infoText}>📍 <Text style={styles.highlightText}>T / C</Text> : 도심 투어 (Town) vs 자연 휴양 (Country)</Text>
+                <Text style={styles.infoText}>📸 <Text style={styles.highlightText}>U / N</Text> : 유명 관광지 (Usual) vs 숨은 명소 (New)</Text>
+                <Text style={styles.infoText}>🏃‍♂️ <Text style={styles.highlightText}>A / R</Text> : 활동적인 (Active) vs 여유로운 (Relax)</Text>
+                <Text style={styles.infoText}>📝 <Text style={styles.highlightText}>J / P</Text> : 계획적인 (J) vs 즉흥적인 (P)</Text>
+              </View>
+
+              <TouchableOpacity style={styles.applyButton} onPress={() => setInfoVisible(false)}>
+                <Text style={styles.applyButtonText}>닫기</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         </Modal>
 
@@ -620,7 +661,6 @@ const styles = StyleSheet.create({
   joinButton: { backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10 },
   joinButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
-  // 프로필 모달 (다른 유저)
   profileModalBox: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
@@ -640,7 +680,6 @@ const styles = StyleSheet.create({
   copyButton: { backgroundColor: '#f0f0f0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, marginLeft: 10 },
   copyButtonText: { fontSize: 12, color: '#555', fontWeight: 'bold' },
 
-  // 필터 모달
   filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalBox: { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 24, padding: 24, width: '85%' },
   modalTitle: { fontSize: 20, fontWeight: '900', marginBottom: 20, color: '#333', textAlign: 'center' },
@@ -656,4 +695,28 @@ const styles = StyleSheet.create({
 
   applyButton: { backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+
+  infoBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    width: '85%',
+    elevation: 5,
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  infoText: {
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+  },
+  highlightText: {
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+  },
 });

@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ImageBackground, // 🌟 배경을 위해 추가
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🌟 배경: 한국의 미, 경복궁 (고급스럽고 화사한 느낌)
+// 🌟 배경: 한국의 미, 경복궁
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
 export default function HomeScreen() {
@@ -109,7 +109,6 @@ export default function HomeScreen() {
   });
 
   return (
-    // 🌟 1. 전체를 경복궁 배경으로 감싸기
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
 
@@ -119,13 +118,11 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />}>
 
-          {/* 🌟 2. 투명하고 세련된 헤더 */}
           <View style={styles.header}>
             <Text style={styles.greeting}>반가워요, {userName}님! ✨</Text>
             <Text style={styles.subGreeting}>오늘은 어디로 떠나고 싶으신가요? ✈️</Text>
           </View>
 
-          {/* 🌟 3. D-Day 카드 (산호색 포인트 & 입체감) */}
           {nextTrip ? (
             <View style={styles.dDayCard}>
               <View style={styles.dDayBadge}>
@@ -150,7 +147,6 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* 🌟 4. 내 여행 목록 (글래스모피즘 카드) */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>나의 여행 지도</Text>
 
@@ -209,13 +205,14 @@ const styles = StyleSheet.create({
   },
   subGreeting: {
     fontSize: 15,
-    color: '#FF6B6B', // 산호색 포인트
+    color: '#FF6B6B',
     fontWeight: '700',
     marginTop: 6,
   },
 
+  // 🌟 피드백 반영: 투명도 제거하고 깔끔한 흰색(#FFFFFF)으로 통일
   dDayCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: -20,
     borderRadius: 24,
@@ -242,8 +239,9 @@ const styles = StyleSheet.create({
   dDayInfoText: { fontSize: 14, color: '#666', fontWeight: '600' },
   dDayBio: { fontSize: 13, color: '#aaa', marginTop: 6, fontWeight: '500' },
 
+  // 🌟 빈 카드도 흰색 통일
   emptyCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: -20,
     borderRadius: 24,
@@ -257,8 +255,9 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 20 },
   sectionTitle: { fontSize: 19, fontWeight: '900', color: '#333', marginBottom: 15 },
 
+  // 🌟 일반 여행 카드도 흰색 통일
   tripCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
     marginBottom: 12,
@@ -285,8 +284,9 @@ const styles = StyleSheet.create({
   },
   myPostBadgeText: { fontSize: 10, color: '#FF6B6B', fontWeight: 'bold' },
 
+  // 🌟 리스트가 비어있을 때 박스도 흰색으로 통일
   emptyListContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: '#FFFFFF',
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
