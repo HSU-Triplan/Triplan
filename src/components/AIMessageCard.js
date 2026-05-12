@@ -5,16 +5,14 @@ import {
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
-export default function AIRecommendCard({ data }) {
-  const [selectedIdx, setSelectedIdx] = useState(0);
+export default function AIMessageCard({ data }) {
+  const [selectedIdx, setSelectedIdx] = useState(0);   // 여행지 탭
+  const [selectedSpot, setSelectedSpot] = useState(0); // 핀 선택
   const mapRef = useRef(null);
 
   const dest = data.destinations[selectedIdx];
-
-  // 좌표 있는 spots만 필터
   const validSpots = dest.spots.filter(s => s.lat && s.lng);
 
-  // 지도 초기 region — spots 중앙값
   const getRegion = () => {
     if (validSpots.length === 0) return null;
     const lats = validSpots.map(s => s.lat);
@@ -31,9 +29,10 @@ export default function AIRecommendCard({ data }) {
     };
   };
 
-  // 여행지 탭 변경 시 지도 이동
+  // ── 여행지 탭 전환 ──────────────────────────────────────────
   const handleDestChange = (idx) => {
     setSelectedIdx(idx);
+    setSelectedSpot(0);
     setTimeout(() => {
       const region = getRegion();
       if (region && mapRef.current) {
@@ -42,12 +41,25 @@ export default function AIRecommendCard({ data }) {
     }, 100);
   };
 
+  // ── 핀 이동 (장소 탭 클릭 시) ───────────────────────────────
+  const handleSpotPress = (spot, idx) => {
+    setSelectedSpot(idx);
+    if (spot.lat && spot.lng && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: spot.lat,
+        longitude: spot.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 500);
+    }
+  };
+
   const region = getRegion();
 
   return (
     <View style={styles.card}>
 
-      {/* 요약 헤더 */}
+      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerIcon}>✈️</Text>
         <Text style={styles.headerText}>{data.summary}</Text>
@@ -64,7 +76,32 @@ export default function AIRecommendCard({ data }) {
               <Text style={[styles.tabText, selectedIdx === i && styles.tabTextActive]}>
                 {i + 1}. {d.name}
               </Text>
-              <Text style={styles.tabCountry}>{d.country}</Text>
+              <Text style={[styles.tabCountry, selectedIdx === i && { color: '#ddd' }]}>
+                {d.country}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* ── 장소 핀 탭 (클릭 → 지도 이동) ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pinTabScroll}>
+        <View style={styles.pinTabRow}>
+          {dest.spots.map((spot, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.pinTab, selectedSpot === i && styles.pinTabActive]}
+              onPress={() => handleSpotPress(spot, i)}>
+              <View style={[styles.pinNum, selectedSpot === i && styles.pinNumActive]}>
+                <Text style={[styles.pinNumText, selectedSpot === i && { color: '#fff' }]}>
+                  {i + 1}
+                </Text>
+              </View>
+              <Text
+                style={[styles.pinTabText, selectedSpot === i && styles.pinTabTextActive]}
+                numberOfLines={1}>
+                {spot.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -83,7 +120,6 @@ export default function AIRecommendCard({ data }) {
           provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
           initialRegion={region}>
 
-          {/* 경로 선 */}
           {validSpots.length > 1 && (
             <Polyline
               coordinates={validSpots.map(s => ({ latitude: s.lat, longitude: s.lng }))}
@@ -93,18 +129,24 @@ export default function AIRecommendCard({ data }) {
             />
           )}
 
-          {/* 핀 마커 */}
           {validSpots.map((spot, i) => (
             <Marker
               key={i}
               coordinate={{ latitude: spot.lat, longitude: spot.lng }}
               title={`${i + 1}. ${spot.name}`}
-              description={spot.description}>
+              description={spot.description}
+              onPress={() => setSelectedSpot(i)}>
               <View style={styles.markerWrap}>
-                <View style={styles.markerBubble}>
+                <View style={[
+                  styles.markerBubble,
+                  selectedSpot === i && styles.markerBubbleActive
+                ]}>
                   <Text style={styles.markerNum}>{i + 1}</Text>
                 </View>
-                <View style={styles.markerTail} />
+                <View style={[
+                  styles.markerTail,
+                  selectedSpot === i && styles.markerTailActive
+                ]} />
               </View>
             </Marker>
           ))}
@@ -119,9 +161,11 @@ export default function AIRecommendCard({ data }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.spotScroll}>
         <View style={styles.spotRow}>
           {dest.spots.map((spot, i) => (
-            <View key={i} style={styles.spotCard}>
+            <TouchableOpacity
+              key={i}
+              style={[styles.spotCard, selectedSpot === i && styles.spotCardActive]}
+              onPress={() => handleSpotPress(spot, i)}>
 
-              {/* 사진 or 번호 placeholder */}
               {spot.photoUrl ? (
                 <Image source={{ uri: spot.photoUrl }} style={styles.spotPhoto} />
               ) : (
@@ -130,22 +174,19 @@ export default function AIRecommendCard({ data }) {
                 </View>
               )}
 
-              {/* 장소 정보 */}
               <View style={styles.spotInfo}>
                 <Text style={styles.spotName} numberOfLines={1}>{spot.name}</Text>
                 <Text style={styles.spotDesc} numberOfLines={2}>{spot.description}</Text>
                 {spot.address ? (
                   <Text style={styles.spotAddress} numberOfLines={1}>📍 {spot.address}</Text>
                 ) : null}
-                {/* 카카오 장소 링크 */}
                 {spot.placeUrl ? (
                   <TouchableOpacity onPress={() => Linking.openURL(spot.placeUrl)}>
                     <Text style={styles.spotLink}>카카오맵에서 보기 →</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
-
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
@@ -165,7 +206,6 @@ const styles = StyleSheet.create({
     borderColor: '#C9B8FF',
   },
 
-  // 헤더
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10,
@@ -173,7 +213,7 @@ const styles = StyleSheet.create({
   headerIcon: { fontSize: 18 },
   headerText: { fontSize: 14, fontWeight: 'bold', color: '#3D2B9E', flex: 1 },
 
-  // 탭
+  // 여행지 탭
   tabScroll: { paddingLeft: 12, marginBottom: 4 },
   tabRow: { flexDirection: 'row', gap: 8, paddingRight: 16 },
   tab: {
@@ -185,6 +225,26 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 12, fontWeight: 'bold', color: '#6C5CE7' },
   tabTextActive: { color: '#fff' },
   tabCountry: { fontSize: 10, color: '#888', marginTop: 2 },
+
+  // 장소 핀 탭
+  pinTabScroll: { paddingLeft: 12, marginBottom: 6 },
+  pinTabRow: { flexDirection: 'row', gap: 6, paddingRight: 16 },
+  pinTab: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#fff', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: '#C9B8FF',
+  },
+  pinTabActive: { backgroundColor: '#6C5CE7', borderColor: '#6C5CE7' },
+  pinNum: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#E8E0FF',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  pinNumActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  pinNumText: { fontSize: 11, fontWeight: 'bold', color: '#6C5CE7' },
+  pinTabText: { fontSize: 12, color: '#555', maxWidth: 80 },
+  pinTabTextActive: { color: '#fff', fontWeight: 'bold' },
 
   // 추천 이유
   reasonBox: {
@@ -208,9 +268,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#6C5CE7', width: 28, height: 28,
     borderRadius: 14, justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3, shadowRadius: 3, elevation: 4,
+    elevation: 4,
   },
+  markerBubbleActive: { backgroundColor: '#FF6B6B', width: 34, height: 34, borderRadius: 17 },
   markerNum: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   markerTail: {
     width: 0, height: 0,
@@ -218,6 +278,7 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     borderTopColor: '#6C5CE7',
   },
+  markerTailActive: { borderTopColor: '#FF6B6B' },
 
   // 장소 카드
   spotScroll: { marginBottom: 14 },
@@ -227,6 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, overflow: 'hidden',
     borderWidth: 1, borderColor: '#E8E0FF',
   },
+  spotCardActive: { borderColor: '#6C5CE7', borderWidth: 2 },
   spotPhoto: { width: '100%', height: 100 },
   spotPhotoPlaceholder: {
     width: '100%', height: 100,

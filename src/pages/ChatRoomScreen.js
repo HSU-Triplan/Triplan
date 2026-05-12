@@ -150,6 +150,19 @@ export default function ChatRoomScreen({ route, navigation }) {
   const handleAiRecommend = async () => {
     if (isAILoading) return;
 
+    // ── 필수 요소 체크 ──────────────────────────────────────────
+    const missing = [];
+    if (!destination) missing.push('여행지(@ 또는 게시글 설정)');
+    if (!days) missing.push('여행 일수(몇박몇일)');
+
+    if (missing.length > 0) {
+      Alert.alert(
+        '필수 정보가 부족해요',
+        `AI 추천을 받으려면 아래 정보가 필요해요:\n\n${missing.map(m => `• ${m}`).join('\n')}\n\n@ 버튼으로 선호사항을 추가해주세요!\n예) @3박4일, @도쿄`
+      );
+      return;
+    }
+
     if (aiPreferences.length === 0) {
       Alert.alert(
         '선호사항을 먼저 입력해주세요',
@@ -158,6 +171,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       return;
     }
 
+    // ── 추천 시작 ───────────────────────────────────────────────
     Alert.alert(
       '✈️ 여행지 추천받기',
       `현재 선호사항: ${aiPreferences.map(p => p.text).join(', ')}\n\nAI가 여행지 3곳을 추천해드릴까요?`,
@@ -168,7 +182,6 @@ export default function ChatRoomScreen({ route, navigation }) {
           onPress: async () => {
             setIsAILoading(true);
 
-            // 로딩 메시지 임시 표시
             const loadingId = 'ai-loading-' + Date.now();
             setMessages(prev => [...prev, {
               id: loadingId,
@@ -188,12 +201,9 @@ export default function ChatRoomScreen({ route, navigation }) {
               });
               const data = await res.json();
 
-              // 로딩 메시지 제거 후 결과 추가
               setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== loadingId);
-                if (data.success) {
-                  return [...filtered, data.message];
-                }
+                if (data.success) return [...filtered, data.message];
                 return filtered;
               });
             } catch (error) {
