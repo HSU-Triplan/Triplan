@@ -1,8 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
-
+const { processPreference, recommendDestinations } = require('../utils/gemini');
 const router = express.Router();
+const { searchGooglePlace } = require('../utils/googleMaps');
+const { searchKakaoPlace } = require('../utils/kakaoMap');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -424,5 +426,169 @@ router.post('/chat-rooms/:roomId/messages', authMiddleware, async (req, res) => 
   }
 });
 
+router.post('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { text } = req.body; // "@맛집위주" 에서 @ 제거된 "맛집위주"
+
+  if (!text?.trim()) {
+    return res.status(400).json({ success: false, message: '내용을 입력해주세요.' });
+  }
+
+  try {
+    // 기존 선호사항 조회
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw error;
+
+    const existing = room.ai_preferences || [];
+
+    // Gemini에게 카테고리 분류 + 중복 판단 요청
+    const geminiResult = await processPreference(text.trim(), existing);
+
+    // 중복이면 같은 카테고리 제거 후 새 것 추가, 아니면 그냥 추가
+    let updated = [...existing];
+    if (geminiResult.replaced && geminiResult.replacedText) {
+      updated = updated.filter(p => p.text !== geminiResult.replacedText);
+    }
+    updated.push({
+      text: text.trim(),
+      category: geminiResult.category,
+      addedAt: new Date().toISOString(),
+    });
+
+    // DB 업데이트
+    await supabase
+      .from('chat_rooms')
+      .update({ ai_preferences: updated })
+      .eq('id', roomId);
+
+    // AI 확인 메시지를 messages 테이블에도 저장 (다른 멤버도 볼 수 있게)
+    const { data: savedMsg } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content: geminiResult.message,
+        type: 'ai_preference',
+      })
+      .select()
+      .single();
+
+    res.json({
+      success: true,
+      preferences: updated,
+      aiMessage: {
+        id: String(savedMsg.id),
+        type: 'ai_preference',
+        text: geminiResult.message,
+        replaced: geminiResult.replaced,
+        replacedText: geminiResult.replacedText,
+      },
+    });
+  } catch (error) {
+     console.log('AI 선호사항 저장 에러 상세:', error.message, error.details);
+     res.status(500).json({ success: false, message: error.message }); //테스트
+   }
+});
+
+// ── 2. 선호사항 목록 조회 ────────────────────────────────────
+router.get('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select('ai_preferences')
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, preferences: room.ai_preferences || [] });
+  } catch (error) {
+    console.log('선호사항 조회 에러:', error);
+    res.status(500).json({ success: false, message: '조회 실패' });
+  }
+});
+
+// ── 3. 여행지 추천 ───────────────────────────────────────────
+router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    // 선호사항 + 채팅방 정보 조회
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select(`ai_preferences, posts (destination, days, departure_date, max_people)`)
+      .eq('id', roomId)
+      .single();
+
+    if (error) throw error;
+
+    const preferences = room.ai_preferences || [];
+    const roomInfo = room.posts || {};
+
+    // 1. Gemini에서 JSON 구조로 추천 받기
+    const parsed = await recommendDestinations(preferences, roomInfo);
+
+    // 2. 각 spots에 좌표 + 사진 붙이기
+    for (const dest of parsed.destinations) {
+      for (const spot of dest.spots) {
+        let result = null;
+
+        if (dest.isKorea) {
+          result = await searchKakaoPlace(spot.name);
+        } else {
+          result = await searchGooglePlace(`${spot.name} ${dest.name}`);
+        }
+
+        if (result) {
+          spot.lat = result.lat;
+          spot.lng = result.lng;
+          spot.address = result.address;
+          spot.photoUrl = result.photoUrl || null;
+          spot.placeUrl = result.placeUrl || null;
+        } else {
+          // 검색 실패 시 기본값
+          spot.lat = null;
+          spot.lng = null;
+          spot.address = null;
+          spot.photoUrl = null;
+        }
+      }
+    }
+
+    // 3. messages 테이블에 JSON으로 저장
+    const { data: savedMsg } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content: JSON.stringify(parsed),  // JSON 문자열로 저장
+        type: 'ai_recommend',
+      })
+      .select()
+      .single();
+
+    const aiMsg = {
+      id: String(savedMsg.id),
+      type: 'ai_recommend',
+      data: parsed,  // 파싱된 JSON 그대로 전달
+    };
+
+    // 4. 소켓 브로드캐스트
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', aiMsg);
+
+    res.json({ success: true, message: aiMsg });
+  } catch (error) {
+    console.log('AI 추천 에러:', error.message);
+    res.status(500).json({ success: false, message: 'AI 추천 중 오류가 발생했습니다.' });
+  }
+});
 
 module.exports = router;
