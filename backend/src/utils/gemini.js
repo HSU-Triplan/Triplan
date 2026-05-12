@@ -3,9 +3,6 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-/**
- * @요소 입력 처리: 카테고리 분류 + 중복 체크 + 확인 메시지 생성
- */
 async function processPreference(newText, existingPreferences) {
   const existingList = existingPreferences.map(p => p.text).join(', ') || '없음';
 
@@ -26,58 +23,68 @@ async function processPreference(newText, existingPreferences) {
   "replacedText": "교체된 기존 항목 (replaced: false면 null)",
   "message": "확인 메시지"
 }
-
-예시:
-입력: "예산30만원", 기존: ["예산10만원"] → {"category":"예산","replaced":true,"replacedText":"예산10만원","message":"💰 예산을 30만원으로 업데이트했어요!"}
-입력: "맛집위주", 기존: [] → {"category":"식사","replaced":false,"replacedText":null,"message":"🍽 맛집 위주로 기억할게요!"}
-입력: "온천", 기존: ["맛집위주"] → {"category":"테마","replaced":false,"replacedText":null,"message":"♨️ 온천 코스로 저장했어요!"}
 `;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
-
-  // JSON만 추출
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Gemini 응답 파싱 실패');
-
   return JSON.parse(jsonMatch[0]);
 }
 
-/**
- * 여행지 3곳 추천
- */
 async function recommendDestinations(preferences, roomInfo) {
   const prefList = preferences.map(p => p.text).join(', ') || '특별한 선호사항 없음';
   const { destination, days, departure_date, max_people } = roomInfo;
+  const nights = days ? Number(days) : 0;
+  const totalDays = nights + 1;
 
   const prompt = `
-너는 친근한 여행 플래너야. 아래 조건에 맞는 여행지 3곳을 추천해줘.
+너는 여행 플래너야. 아래 조건에 맞는 여행지 3곳을 추천해줘.
 
 여행 정보:
-- 출발 희망 지역/키워드: ${destination || '미정'}
-- 여행 일수: ${days || '미정'}박 ${days ? Number(days) + 1 : ''}일
+- 출발지/희망 지역: ${destination}
+- 여행 기간: ${nights}박 ${totalDays}일
 - 출발 예정일: ${departure_date || '미정'}
 - 인원: ${max_people || '미정'}명
 - 선호사항: ${prefList}
 
-형식을 정확히 지켜서 응답해:
+[중요 규칙 - 반드시 지켜야 함]
+1. 출발지(${destination})에서 ${nights}박 ${totalDays}일 일정에 현실적으로 이동 가능한 거리의 여행지만 추천해.
+2. 1박2일이면 출발지 기준 2~3시간 이내, 2박3일이면 4시간 이내, 3박4일이면 국내 전체 가능.
+3. 드라이브, 당일치기 키워드가 있으면 출발지에서 1~2시간 이내 근거리만 추천.
+4. 선호사항은 여행지 선택의 참고 조건이지, 거리 제약보다 우선하지 않아.
+5. 출발지가 수도권(서울/경기/인천)이면 수도권 근교 우선 추천.
 
-✈️ **여행지 추천 결과**
+반드시 아래 JSON 형식으로만 응답해. 다른 텍스트 없이:
+{
+  "summary": "전체 추천 한 줄 요약",
+  "destinations": [
+    {
+      "rank": 1,
+      "name": "여행지명 (도시명)",
+      "country": "국가명",
+      "isKorea": true,
+      "travelTime": "출발지에서 이동 시간 (예: 차로 1시간)",
+      "reason": "출발지와 거리, 선호사항을 연결한 추천 이유 2~3문장",
+      "spots": [
+        { "name": "장소명", "description": "한 줄 설명" },
+        { "name": "장소명", "description": "한 줄 설명" },
+        { "name": "장소명", "description": "한 줄 설명" }
+      ]
+    },
+    { "rank": 2, "name": "...", "country": "...", "isKorea": true, "travelTime": "...", "reason": "...", "spots": [{},{}] },
+    { "rank": 3, "name": "...", "country": "...", "isKorea": true, "travelTime": "...", "reason": "...", "spots": [{},{}] }
+  ]
+}
 
-1️⃣ **[여행지명]**
-[선호사항과 연결해서 추천 이유 2~3문장]
-
-2️⃣ **[여행지명]**
-[선호사항과 연결해서 추천 이유 2~3문장]
-
-3️⃣ **[여행지명]**
-[선호사항과 연결해서 추천 이유 2~3문장]
-
-💡 선호사항을 더 추가하면 더 정확하게 추천해드릴 수 있어요!
+주의: spots의 장소명은 실제 존재하는 유명 장소로 구체적으로 작성.
 `;
 
   const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  const text = result.response.text().trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Gemini 응답 파싱 실패');
+  return JSON.parse(jsonMatch[0]);
 }
 
 module.exports = { processPreference, recommendDestinations };

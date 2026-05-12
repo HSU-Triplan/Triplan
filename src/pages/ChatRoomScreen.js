@@ -31,6 +31,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const flatListRef = useRef(null);
   const [aiPreferences, setAiPreferences] = useState([]); // [{text, category, addedAt}]
   const [isAILoading, setIsAILoading] = useState(false);  // AI 처리 중 로딩
+  const [pendingSpots, setPendingSpots] = useState([]);
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -58,6 +59,47 @@ export default function ChatRoomScreen({ route, navigation }) {
     } catch (error) {
       console.log('선호사항 조회 에러:', error);
     }
+  };
+
+
+  // 1. 태그 삭제 함수
+  const handleDeletePreference = (pref) => {
+    Alert.alert(
+      '선호사항 삭제',
+      `"${pref.text}" 를 삭제할까요?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const res = await fetch(
+                `http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ text: pref.text }),
+                }
+              );
+              const data = await res.json();
+              if (data.success) setAiPreferences(data.preferences);
+            } catch (error) {
+              console.log('선호사항 삭제 에러:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+// 일정추가
+  const addSpotToSchedule = (spotItem) => {
+    setPendingSpots(prev => [...prev, spotItem]);
   };
 
   const handleLeaveRoom = () => {
@@ -150,6 +192,19 @@ export default function ChatRoomScreen({ route, navigation }) {
   const handleAiRecommend = async () => {
     if (isAILoading) return;
 
+    // ── 필수 요소 체크 ──────────────────────────────────────────
+    const missing = [];
+    if (!destination) missing.push('여행지(@ 또는 게시글 설정)');
+    if (!days) missing.push('여행 일수(몇박몇일)');
+
+    if (missing.length > 0) {
+      Alert.alert(
+        '필수 정보가 부족해요',
+        `AI 추천을 받으려면 아래 정보가 필요해요:\n\n${missing.map(m => `• ${m}`).join('\n')}\n\n@ 버튼으로 선호사항을 추가해주세요!\n예) @3박4일, @도쿄`
+      );
+      return;
+    }
+
     if (aiPreferences.length === 0) {
       Alert.alert(
         '선호사항을 먼저 입력해주세요',
@@ -158,6 +213,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       return;
     }
 
+    // ── 추천 시작 ───────────────────────────────────────────────
     Alert.alert(
       '✈️ 여행지 추천받기',
       `현재 선호사항: ${aiPreferences.map(p => p.text).join(', ')}\n\nAI가 여행지 3곳을 추천해드릴까요?`,
@@ -168,7 +224,6 @@ export default function ChatRoomScreen({ route, navigation }) {
           onPress: async () => {
             setIsAILoading(true);
 
-            // 로딩 메시지 임시 표시
             const loadingId = 'ai-loading-' + Date.now();
             setMessages(prev => [...prev, {
               id: loadingId,
@@ -188,12 +243,9 @@ export default function ChatRoomScreen({ route, navigation }) {
               });
               const data = await res.json();
 
-              // 로딩 메시지 제거 후 결과 추가
               setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== loadingId);
-                if (data.success) {
-                  return [...filtered, data.message];
-                }
+                if (data.success) return [...filtered, data.message];
                 return filtered;
               });
             } catch (error) {
@@ -329,7 +381,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     setEditingId(selectedSchedule?.id || null);
     setEditTitle(selectedSchedule?.title || '');
     setEditDescription(selectedSchedule?.summary || '');
-    setEditPlan(selectedSchedule?.plan || []);
+    setEditPlan([...(selectedSchedule?.plan || []), ...pendingSpots]);
     setIsModalVisible(true);
   };
 
@@ -340,6 +392,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       summary: editDescription,
       plan: editPlan,
     });
+    setPendingSpots([]);
     setIsModalVisible(false);
   };
 
@@ -351,9 +404,11 @@ export default function ChatRoomScreen({ route, navigation }) {
         <Text style={styles.tripBio}>{bio}</Text>
         <View style={styles.tripTags}>
           <Text style={styles.tag}>📍 {destination}</Text>
-          <Text style={styles.tag}>🗓 {days}박{Number(days)+1}일</Text>
+          <Text style={styles.tag}>
+            🗓 {String(days).includes('박') ? days : `${days}박${Number(days)+1}일`}
+          </Text>
           {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
-          <Text style={styles.tag}>👥 최대 {max_people}명</Text>
+          {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
         </View>
       </View>
 
@@ -366,6 +421,11 @@ export default function ChatRoomScreen({ route, navigation }) {
               {aiPreferences.map((pref, idx) => (
                 <View key={idx} style={styles.aiTag}>
                   <Text style={styles.aiTagText}>@ {pref.text}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeletePreference(pref)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={styles.aiTagDelete}>✕</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -385,6 +445,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             myUserId={myUserId}
             selectedSchedule={selectedSchedule}
             setSelectedSchedule={setSelectedSchedule}
+            onAddSpotToSchedule={addSpotToSchedule}
           />
         )}
       />
@@ -494,7 +555,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule }) => {
+const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,onAddSpotToSchedule  }) => {
 
   // AI 로딩
   if (message.type === 'ai_loading') {
@@ -521,15 +582,29 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule 
   }
 
   // AI 여행지 추천 결과
-  if (message.type === 'ai_recommend') {
-    return (
-      <View style={aiStyles.recommendWrap}>
-        <View style={aiStyles.recommendBubble}>
-          <Text style={aiStyles.recommendText}>{message.text}</Text>
+    if (message.type === 'ai_recommend') {
+      // 백엔드에서 data(JSON)로 오는 경우 / 이전 저장된 text(JSON문자열)로 오는 경우 둘 다 처리
+      const recData = message.data
+        ? message.data
+        : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+
+    if (!recData) {
+      return (
+        <View style={aiStyles.recommendWrap}>
+          <View style={aiStyles.recommendBubble}>
+            <Text style={aiStyles.recommendText}>{message.text}</Text>
+          </View>
         </View>
-      </View>
+      );
+    }
+
+    return (
+      <AIMessageCard
+        data={recData}
+        onAddSpotToSchedule={onAddSpotToSchedule}
+      />
     );
-  }
+}
 
   // 기존 AI 카드 (더미)
   if (message.type === 'ai') {
@@ -638,6 +713,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDE9FF', borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: '#C9B8FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiTagDelete: {
+    fontSize: 10,
+    color: '#9B8FCC',
+    fontWeight: 'bold',
   },
   aiTagText: { fontSize: 11, color: '#6C5CE7', fontWeight: '600' },
 
