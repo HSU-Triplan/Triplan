@@ -5,6 +5,7 @@ import SearchScreen from '../pages/SearchScreen';
 import ChatStack from '../navigation/chatNavigator';
 import ProfileScreen from '../pages/ProfileScreen';
 import MatchingScreen from '../pages/MatchingScreen';
+import FriendsScreen from '../pages/FriendsScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
@@ -46,6 +47,13 @@ export default function TabNavigator({ setIsLoggedIn }) {
            )
        }}
       />
+      <Tab.Screen name="친구" component={FriendsScreen}
+             options = {{
+                 tabBarIcon : ({color,size})=>(
+                     <Icon name="people-outline" size={24} color="black"/>
+                 )
+             }}
+            />
       <Tab.Screen name="프로필"
         options = {{
                  tabBarIcon : ({color,size})=>(
