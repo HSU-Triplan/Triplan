@@ -305,4 +305,106 @@ router.post('/matching/swipe', authMiddleware, async (req, res) => {
   }
 });
 
+// 사용자 친구 목록 조회
+router.get('/friends', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('friends')
+      .select('status,users:friend_id(name,profile_image,id)')
+      .eq('user_id', req.user.userId);
+
+    if (error) throw error;
+    console.log(data)
+    res.json({ success: true, friends: data });
+  } catch (error) {
+    console.error('친구목록 조회 에러:', error);
+    res.status(500).json({ success: false, message: '친구 목록 조회 실패' });
+  }
+});
+
+//친구 초대 요청
+
+router.get('/friendsAdd', authMiddleware, async (req, res) => {
+  try {
+    //친구 id 가져오기
+    let { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('friend_code', req.query.friendCode)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    console.log(data)
+
+    //친구 테이블에 저장
+    error  = await supabase
+      .from('friends')
+      .insert({
+        user_id: data.id,
+        friend_id: req.user.userId,
+        status: 'request',
+      });
+  } catch (error) {
+    console.error('친구 요청 에러:', req.query.friendCode);
+    res.status(500).json({ success: false, message: '친구 요청 실패' });
+  }
+});
+
+//친구 초대 수락
+
+router.get('/friendsAccept', authMiddleware, async (req, res) => {
+  try {
+    console.log("수락 요청 옴1")
+    //친구 수락 정보 저장을 위해서 status를 accept로 변경
+    let { data, error } = await supabase
+      .from('friends')
+      .update({status : 'accept'})
+      .eq('user_id', req.user.userId)
+      .eq('friend_id',req.query.friendId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    console.log(data)
+
+    //친구 테이블에 저장
+    error  = await supabase
+      .from('friends')
+      .insert({
+        user_id: req.query.friendId,
+        friend_id: req.user.userId,
+        status: 'accept',
+      });
+
+  } catch (error) {
+    console.error('친구 수락 에러:');
+    res.status(500).json({ success: false, message: '친구 수락 실패' });
+  }
+});
+
+//친구 초대 거절
+
+router.get('/friendsRefuse', authMiddleware, async (req, res) => {
+  try {
+    console.log("수락 거절 요청 옴1")
+    //친구 수락 정보를 db에서 삭제
+    let { data, error } = await supabase
+      .from('friends')
+      .delete()
+      .eq('user_id', req.user.userId)
+      .eq('friend_id',req.query.friendId);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('친구 초대 거절 에러:');
+    res.status(500).json({ success: false, message: '친구 초대 거절 실패' });
+  }
+});
+
+
 module.exports = router;
