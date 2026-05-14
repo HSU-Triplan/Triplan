@@ -45,6 +45,9 @@ export default function SearchScreen({navigation }) {
   const [otherUser,setOtherUser] = useState(null);
   const [profileImage,setProfileImage] = useState(null);
 
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   const openModal = () => {
     setTempDestination(selectedDestination);
     setTempType(selectedType);
@@ -68,7 +71,7 @@ export default function SearchScreen({navigation }) {
   const isFiltered = selectedDestination !== '전체' || selectedType !== '전체';
 
   const fetchPosts = useCallback(async () => {
-    setLoading(true);
+    setPostsLoading(true);
     try {
       const response = await fetch('http://10.0.2.2:3000/posts');
       const result = await response.json();
@@ -78,7 +81,7 @@ export default function SearchScreen({navigation }) {
     } catch (error) {
       console.log('게시글 불러오기 에러:', error);
     } finally {
-      setLoading(false);
+      setPostsLoading(false);
     }
   }, []);
 
@@ -109,7 +112,7 @@ export default function SearchScreen({navigation }) {
   }, []);
 
   const fetchProfile = async () => {
-    setLoading(true);
+    setProfileLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch('http://10.0.2.2:3000/users/others?id='+selectedPost.user_id, {
@@ -124,12 +127,12 @@ export default function SearchScreen({navigation }) {
     } catch (error) {
       console.log('다른 사용자 프로필 정보 에러:', error);
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
 
   const fetchProfileImage = async (post) => {
-    setLoading(true);
+    setProfileLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch('http://10.0.2.2:3000/users/others?id='+post.user_id, {
@@ -142,7 +145,7 @@ export default function SearchScreen({navigation }) {
     } catch (error) {
       console.log('다른 사용자 프로필 이미지 에러:', error);
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
 
@@ -271,7 +274,7 @@ export default function SearchScreen({navigation }) {
         )}
 
         <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
-          {loading ? (
+          {postsLoading  ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>여행 계획을 불러오는 중...</Text>
             </View>
@@ -354,10 +357,13 @@ export default function SearchScreen({navigation }) {
             <TouchableOpacity style={styles.detailBox} activeOpacity={1} onPress={() => {}}>
               <View style={styles.detailHeader}>
                  <TouchableOpacity onPress={() => fetchProfile()}>
-                    {profileImage === null ?
-                      <Image style={styles.avatar} /> :
+                    {profileLoading ? (
+                      <View style={[styles.avatar, { backgroundColor: '#eee' }]} />
+                    ) : profileImage === null ? (
+                      <Image style={styles.avatar} />
+                    ) : (
                       <Image style={styles.avatar} source={{uri : profileImage}} />
-                    }
+                    )}
                 </TouchableOpacity>
                 <View>
                   <Text style={styles.userName}>{selectedPost?.users?.nickname || selectedPost?.users?.name}</Text>
