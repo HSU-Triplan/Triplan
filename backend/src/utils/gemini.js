@@ -374,8 +374,60 @@ ${conversation}
   return safeParseJson(text, '대화 요약');
 }
 
+async function optimizeItinerary(spots, roomInfo) {
+  const days = Number(roomInfo.days) || 1;
+  const destination = roomInfo.destination || '여행지';
+
+  const spotList = spots
+    .map((s, i) => `${i + 1}. ${s.place}${s.detail ? ` (${s.detail})` : ''}`)
+    .join('\n');
+
+  const prompt = `
+당신은 여행 일정 플래너입니다. 아래 장소들을 바탕으로 ${days}박${days + 1}일 여행 일정을 최적화하세요.
+
+[여행 정보]
+- 목적지: ${destination}
+- 여행 기간: ${days}박${days + 1}일
+
+[추가할 장소 목록]
+${spotList}
+
+[최적화 규칙]
+- 위치가 가까운 장소끼리 같은 날로 묶기
+- 여행 기간에 부합하게 배치
+- 하루에 최대 3곳 배치 (무리하지 않게)
+- 오전/오후/저녁 시간대 자연스럽게 배분
+- 이동 동선이 최소화되도록 순서 배치
+- 마지막 날은 공항/이동 고려해 가벼운 일정
+- 각 장소마다 실용적인 팁 한 줄 포함
+
+[응답 형식 - JSON만 출력, 다른 텍스트 금지]
+{
+  "title": "여행 제목 (예: 제주도 3박4일)",
+  "days": [
+    {
+      "day": 1,
+      "label": "1일차 - 테마 한 줄",
+      "spots": [
+        {
+          "time": "10:00",
+          "name": "장소명",
+          "detail": "간단한 설명",
+          "tip": "실용 팁 한 줄"
+        }
+      ]
+    }
+  ]
+}
+`.trim();
+
+  const text = await ask(prompt, '일정 최적화');
+  return safeParseJson(text, '일정 최적화');
+}
+
 module.exports = {
   processPreference,
   recommendDestinations,
   summarizeConversation,
+  optimizeItinerary,
 };
