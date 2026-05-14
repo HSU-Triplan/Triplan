@@ -312,12 +312,6 @@ export default function ChatRoomScreen({ route, navigation }) {
             senderImage: m.users?.profile_image,
           };
 
-
-//          if (m.type === 'ai_memo_pending') {
-//            try { base.extracted = JSON.parse(m.content); }
-//            catch { base.extracted = []; }
-//          }
-
           if (m.type === 'ai_recommend') {
             try { base.data = JSON.parse(m.content); }
             catch { base.data = null; }
@@ -330,6 +324,11 @@ export default function ChatRoomScreen({ route, navigation }) {
           return base;
         });
         setMessages(loaded);
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 100);
+          });
       }
 
       fetchAiPreferences();
