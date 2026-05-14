@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet, SafeAreaView, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet, SafeAreaView, ImageBackground, Alert } from 'react-native';
 import * as Progress from 'react-native-progress';
+// 🌟 내 계정 토큰을 가져오기 위해 AsyncStorage 추가
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// 배경 이미지 URL
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=600&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
 const TravelStyleGame = ({ navigation }: any) => {
@@ -35,6 +36,33 @@ const TravelStyleGame = ({ navigation }: any) => {
     { q: '이번 여행에서 내가 더 행복을 느끼는 순간은?', options: [{ text: '내가 짠 계획대로 착착 완벽하게 일정이 진행될 때', type: 'J' }, { text: '계획에 없던 예쁜 장소를 우연히 발견했을 때', type: 'P' }] }
   ];
 
+  // 🌟 테스트 결과를 백엔드 DB에 저장하는 함수
+  const saveResult = async (finalType: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch('http://10.0.2.2:3000/users/update-tendency', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ travel_type: finalType }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // 저장이 완료되면 결과 화면으로 이동
+        navigation.replace('Result', { result: finalType });
+      } else {
+        Alert.alert('알림', '성향 저장에 실패했습니다.');
+        navigation.replace('Result', { result: finalType });
+      }
+    } catch (error) {
+      console.log('성향 저장 에러:', error);
+      navigation.replace('Result', { result: finalType });
+    }
+  };
+
   const handleSelect = (type: string) => {
     const newScores = { ...scores, [type]: scores[type] + 1 };
     setScores(newScores);
@@ -54,11 +82,16 @@ const TravelStyleGame = ({ navigation }: any) => {
           useNativeDriver: true,
         }).start();
       } else {
+        // 모든 질문이 끝났을 때 결과 계산
         const r1 = newScores.T >= newScores.C ? 'T' : 'C';
         const r2 = newScores.U >= newScores.N ? 'U' : 'N';
         const r3 = newScores.A >= newScores.R ? 'A' : 'R';
         const r4 = newScores.J >= newScores.P ? 'J' : 'P';
-        navigation.replace('Result', { result: `${r1}${r2}${r3}${r4}` });
+
+        const finalResult = `${r1}${r2}${r3}${r4}`;
+
+        // 🌟 바로 화면을 넘기지 않고, DB에 먼저 저장!
+        saveResult(finalResult);
       }
     });
   };
@@ -74,7 +107,6 @@ const TravelStyleGame = ({ navigation }: any) => {
         <View style={styles.overlay} />
 
         <View style={styles.content}>
-          {/* 🌟 상단 진행률 바 (남은 거리가 100부터 줄어들도록 수학 공식 수정 완료) */}
           <View style={styles.progressSection}>
             <Text style={styles.progressText}>여행지까지 남은 거리: {Math.round(((questions.length - step) / questions.length) * 100)}km</Text>
             <Progress.Bar

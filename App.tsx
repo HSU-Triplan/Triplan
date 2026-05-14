@@ -15,15 +15,25 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1511739001486-6b
 
 const AuthRouterScreen = ({ navigation }: any) => {
   useEffect(() => {
+    // 🌟 수정 1: 앱이 켜질 때 로컬이 아닌 '서버(DB)'에 내 성향이 있는지 확실하게 물어보기
     const checkTravelStyle = async () => {
       try {
-        const savedStyle = await AsyncStorage.getItem('travelStyle');
-        if (savedStyle) {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch('http://10.0.2.2:3000/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await response.json();
+
+        // DB에 내 성향(travel_type)이 이미 존재한다면? -> 메인 탭으로 프리패스!
+        if (result.success && result.user.travel_type) {
+          await AsyncStorage.setItem('travelStyle', result.user.travel_type); // 폰에도 슬쩍 저장해둠
           navigation.replace('Main');
         } else {
+          // 성향이 없다면? -> 테스트 인트로 화면으로!
           navigation.replace('TestIntro');
         }
       } catch (e) {
+        console.log('유저 정보 확인 에러:', e);
         navigation.replace('TestIntro');
       }
     };
@@ -51,7 +61,6 @@ const TestIntroScreen = ({ navigation }: any) => (
 const ResultScreen = ({ route, navigation }: any) => {
   const result = route?.params?.result || '분석 중';
 
-  // 사용자의 개별 성향 한 줄 설명
   const descriptions: { [key: string]: string } = {
     T: '🚌 가성비 대중교통 여행자',
     C: '🚕 편안한 카/렌트 여행자',
@@ -66,7 +75,9 @@ const ResultScreen = ({ route, navigation }: any) => {
   const handleConfirm = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch('http://10.0.2.2:3000/users/travel-type', {
+
+      // 🌟 수정 2: 'const response =' 를 추가하여 백엔드 통신 에러 고치기
+      const response = await fetch('http://10.0.2.2:3000/users/travel-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ travelType: result }),
@@ -75,6 +86,8 @@ const ResultScreen = ({ route, navigation }: any) => {
       console.log('응답 status:', response.status);
       const data = await response.json();
       console.log('서버 응답:', data);
+
+      // 로컬에도 저장해서 다음번 로딩을 더 빠르게 만듦
       await AsyncStorage.setItem('travelStyle', result);
     } catch (error) {
       console.log('성향 저장 에러:', error);
@@ -95,14 +108,12 @@ const ResultScreen = ({ route, navigation }: any) => {
           <View style={styles.resultCard}>
             <Text style={styles.resultText}>{result}</Text>
 
-            {/* 1. 사용자의 결과 요약 */}
             <View style={styles.descContainer}>
               {result.split('').map((char: string, index: number) => (
                 <Text key={index} style={styles.descText}>{descriptions[char]}</Text>
               ))}
             </View>
 
-            {/* 🌟 2. 하단 성향 지표 가이드 (구분선 추가) */}
             <View style={styles.divider} />
             <Text style={styles.guideTitle}>[ 성향 지표 ]</Text>
             <View style={styles.guideContainer}>
@@ -181,14 +192,11 @@ const styles = StyleSheet.create({
   resultText: { fontSize: 60, fontWeight: '900', color: '#FF6B6B', letterSpacing: 5, marginBottom: 15 },
   descContainer: { alignItems: 'flex-start', width: '100%', paddingLeft: 10, marginBottom: 5 },
   descText: { fontSize: 15, color: '#444', fontWeight: 'bold', marginBottom: 5 },
-
-  // 🌟 가이드 관련 스타일
   divider: { width: '100%', height: 1, backgroundColor: '#DDD', marginVertical: 15 },
   guideTitle: { fontSize: 13, color: '#888', fontWeight: 'bold', marginBottom: 10 },
   guideContainer: { width: '100%' },
   guideRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   guideText: { fontSize: 12, color: '#777', fontWeight: '600' },
-
   subtitle: { fontSize: 18, color: '#666', textAlign: 'center', marginTop: 10, lineHeight: 26 },
   confirmButton: { backgroundColor: '#FF6B6B', paddingVertical: 15, paddingHorizontal: 60, borderRadius: 10 },
   buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
