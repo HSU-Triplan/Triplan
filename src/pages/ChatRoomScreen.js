@@ -486,7 +486,10 @@ export default function ChatRoomScreen({ route, navigation }) {
           <TouchableOpacity onPress={() => { fetchMembers(); setIsMemberVisible(true); }}>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>멤버</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={openEditModal}>
+          <TouchableOpacity onPress={ () => {
+                openEditModal()
+            }
+          }>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>일정</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLeaveRoom}>
@@ -495,9 +498,10 @@ export default function ChatRoomScreen({ route, navigation }) {
         </View>
       ),
     });
-  }, [navigation, selectedSchedule]);
+  }, [navigation, selectedSchedule,pendingSpots]);
 
   const openEditModal = () => {
+    console.log("pendingspot출력 : " + JSON.stringify(pendingSpots))
     setEditingId(selectedSchedule?.id || null);
     setEditTitle(selectedSchedule?.title || '');
     setEditDescription(selectedSchedule?.summary || '');
@@ -662,9 +666,12 @@ export default function ChatRoomScreen({ route, navigation }) {
                 </TouchableOpacity>
                 {editPlan.map((p, idx) => (
                   <View key={idx} style={styles.planItem}>
+                    <TouchableOpacity style={{marginLeft : 'auto'}}><Text style={{color : 'red'}}>삭제</Text></TouchableOpacity>
                     <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
                     <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
                     <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
+                    {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
+
                   </View>
                 ))}
                 <View style={styles.modalButtons}>
@@ -973,4 +980,7 @@ editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBot
   },
   summarizeButtonDisabled: { opacity: 0.5 },
   summarizeButtonText: { color: '#FF6B6B', fontSize: 14, fontWeight: '900' },
+  editImage : {
+    height : 250
+  }
 });

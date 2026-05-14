@@ -64,8 +64,11 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
                 time: '',
                 place: spot.name,
                 detail: spot.description || '',
+                photoUrl : spot.photoUrl,
+                mapUrl : spot.placeUrl
               });
               Alert.alert('✅ 추가됐어요', `"${spot.name}" 이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
+              console.log("aimessagecard에서 추가한 정보 : " + JSON.stringify(spot))
             }
           },
         },
