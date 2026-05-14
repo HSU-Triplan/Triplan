@@ -666,19 +666,6 @@ export default function ChatRoomScreen({ route, navigation }) {
             <View style={styles.editBox}>
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <Text style={styles.modalTitle}>일정 수정</Text>
-                <TextInput value={editTitle} onChangeText={setEditTitle} placeholder="제목" style={styles.editInput} />
-                <TextInput value={editDescription} onChangeText={setEditDescription} placeholder="전체 설명" style={styles.editInput} />
-                <Text style={styles.editSectionTitle}>일정 추가</Text>
-                <TextInput value={newPlanItem.time} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, time: t }))} placeholder="시간" style={styles.editInput} />
-                <TextInput value={newPlanItem.place} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, place: t }))} placeholder="장소" style={styles.editInput} />
-                <TextInput value={newPlanItem.detail} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, detail: t }))} placeholder="상세 내용" style={styles.editInput} />
-                <TouchableOpacity onPress={() => {
-                  if (!newPlanItem.time && !newPlanItem.place) return;
-                  setEditPlan(prev => [...prev, { ...newPlanItem }]);
-                  setNewPlanItem({ time: '', place: '', detail: '' });
-                }}>
-                  <Text style={styles.addButton}>+ 추가하기</Text>
-                </TouchableOpacity>
                 {editPlan.map((p, idx) => (
                   <View key={idx} style={styles.planItem}>
                     <TouchableOpacity style={{marginLeft : 'auto'}}><Text style={{color : 'red'}}>삭제</Text></TouchableOpacity>

@@ -632,6 +632,12 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       .eq('type', 'text')  // 일반 텍스트 메시지만
       .order('created_at', { ascending: true });
 
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('posts(days, departure_date, destination)')
+      .eq('id', roomId)
+      .single();
+
     if (error) throw error;
     if (!messages || messages.length === 0) {
       return res.json({ success: false, message: '분석할 대화가 없어요.' });
@@ -643,8 +649,13 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       type: m.type,
     }));
 
-    // Gemini 분석
-    const summary = await summarizeConversation(formatted);
+    const roomInfo = {
+      days: room.posts?.days,
+      departure_date: room.posts?.departure_date,
+      destination: room.posts?.destination,
+    };
+
+    const summary = await summarizeConversation(formatted, roomInfo);
 
     res.json({ success: true, summary });
   } catch (error) {

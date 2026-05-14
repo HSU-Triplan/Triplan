@@ -331,40 +331,43 @@ ${existingText}
   return safeParseJson(text, '선호사항 분류');
 }
 
-async function summarizeConversation(messages) {
+async function summarizeConversation(messages, roomInfo = {}) {
   const conversation = messages
     .filter(m => m.type === 'text' || !m.type)
-        .map(m => {
-          const name = m.senderName || '참여자';
-          const text = m.text || m.content || '';
-          return `${name}: ${text}`;
-        })
-        .filter(line => line.trim().length > 5)
-        .join('\n');
+    .map(m => {
+      const name = m.senderName || '참여자';
+      const text = m.text || m.content || '';
+      return `${name}: ${text}`;
+    })
+    .filter(line => line.trim().length > 5)
+    .join('\n');
 
-         if (!conversation.trim()) {
-           return { who: [], when: [], where: [], how: [], what: [] };
-         }
+  if (!conversation.trim()) {
+    return { who: [], when: [], where: [], how: [], what: [] };
+  }
+
+  // roomInfo에서 확정 정보 주입
+  const knownInfo = [
+    roomInfo.days ? `- 여행 기간: ${roomInfo.days}박${Number(roomInfo.days) + 1}일 (확정)` : '',
+    roomInfo.departure_date ? `- 출발일: ${roomInfo.departure_date} (확정)` : '',
+    roomInfo.destination ? `- 목적지: ${roomInfo.destination} (확정)` : '',
+  ].filter(Boolean).join('\n');
 
   const prompt = `
 아래 여행 채팅 대화를 분석해서 5W 항목을 추출하세요.
 
+${knownInfo ? `[방 정보 - 이미 확정된 사항]\n${knownInfo}\n` : ''}
 [대화]
 ${conversation}
 
 [규칙]
-- 대화에서 명확히 언급된 내용만 추출
-- 불분명한 항목은 빈 배열로
+- 확정된 방 정보는 반드시 when/where 항목에 포함
+- 대화에서 추가로 언급된 내용도 포함
+- 불분명한 항목은 빈 배열
 - 항목당 짧고 명확하게 (1~3단어)
+- JSON만 출력, 다른 텍스트 절대 금지
 
-[응답 형식 - JSON만 출력]
-{
-  "who":   [],
-  "when":  [],
-  "where": [],
-  "how":   [],
-  "what":  []
-}
+{"who":[],"when":[],"where":[],"how":[],"what":[]}
 `.trim();
 
   const text = await ask(prompt, '대화 요약');
