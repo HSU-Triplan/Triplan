@@ -23,8 +23,8 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1499856871958-5b
 const DESTINATION_OPTIONS = ['전체', '국내', '아시아', '유럽', '아메리카', '오세아니아/기타'];
 const TYPE_OPTIONS = ['전체', 'TUAJ', 'TUAP', 'TURJ', 'TURP', 'TNAJ', 'TNAP', 'TNRJ', 'TNRP', 'CUAJ', 'CUAP', 'CURJ', 'CURP', 'CNAJ', 'CNAP', 'CNRJ', 'CNRP'];
 
-// ✨ 새로 추가된 필터 옵션
-const DURATION_OPTIONS = ['전체', '당일치기', '1박 2일', '2박 3일', '3박 이상'];
+// 상세 필터 옵션
+const DURATION_OPTIONS = ['전체', '당일치기', '1박2일', '2박3일', '3박 이상'];
 const GENDER_OPTIONS = ['전체', '동성만', '성별 무관'];
 const THEME_OPTIONS = ['전체', '빵지순례', '역사/문화', '힐링/휴양', '액티비티', '쇼핑'];
 
@@ -42,14 +42,14 @@ export default function SearchScreen({navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
 
-  // ✨ 드롭다운 열림/닫힘 상태
+  // 드롭다운 상태
   const [destOpen, setDestOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [durationOpen, setDurationOpen] = useState(false);
   const [genderOpen, setGenderOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
 
-  // ✨ 실제 적용된 필터 상태
+  // 실제 적용된 필터 상태
   const [selectedDestination, setSelectedDestination] = useState('전체');
   const [selectedType, setSelectedType] = useState('전체');
   const [selectedDuration, setSelectedDuration] = useState('전체');
@@ -57,7 +57,7 @@ export default function SearchScreen({navigation }) {
   const [selectedTheme, setSelectedTheme] = useState('전체');
   const [recruitOnly, setRecruitOnly] = useState(false);
 
-  // ✨ 모달 내 임시 필터 상태
+  // 모달 내 임시 필터 상태
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
   const [tempDuration, setTempDuration] = useState('전체');
@@ -65,7 +65,7 @@ export default function SearchScreen({navigation }) {
   const [tempTheme, setTempTheme] = useState('전체');
   const [tempRecruitOnly, setTempRecruitOnly] = useState(false);
 
-  const [showMoreFilters, setShowMoreFilters] = useState(false); // 상세 필터 보기 토글
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -261,26 +261,57 @@ export default function SearchScreen({navigation }) {
     Alert.alert('복사 완료', '친구 코드가 복사되었습니다!');
   };
 
+  // 🌟 데이터 누락 및 형식 불일치를 방지하도록 업그레이드된 필터 로직
   const filteredPosts = posts.filter(post => {
-    const matchesSearch = searchText === '' ||
-                          post.bio.includes(searchText) ||
-                          post.destination.includes(searchText);
+    const safeBio = post.bio || '';
+    const safeDest = post.destination || '';
+    const safePlan = post.plan || '';
 
+    // 1. 검색어 필터
+    const matchesSearch = searchText === '' ||
+                          safeBio.includes(searchText) ||
+                          safeDest.includes(searchText);
+
+    // 2. 여행지 필터 (사전 매핑)
     let matchesDestination = false;
     if (selectedDestination === '전체') {
       matchesDestination = true;
     } else {
       const keywords = REGION_KEYWORDS[selectedDestination] || [];
-      matchesDestination = keywords.some(keyword => post.destination.includes(keyword));
+      matchesDestination = keywords.some(keyword => safeDest.includes(keyword));
     }
 
+    // 3. 성향 필터
     const matchesType = selectedType === '전체' || post.users?.travel_type === selectedType;
-    const matchesRecruit = !recruitOnly || post.current_people < post.max_people;
 
-    // ✨ 새 필터 조건 적용 (서버 데이터 구조에 맞게 필드명 확인 필요)
-    const matchesDuration = selectedDuration === '전체' || post.days === selectedDuration;
-    const matchesGender = selectedGender === '전체' || post.gender_rule === selectedGender;
-    const matchesTheme = selectedTheme === '전체' || post.theme === selectedTheme;
+    // 4. 모집 중 필터 (숫자 강제 형변환으로 에러 차단)
+    const current = Number(post.current_people) || 0;
+    const max = Number(post.max_people) || 0;
+    const matchesRecruit = !recruitOnly || current < max;
+
+    // 5. 여행 기간 상세 필터 (포함 여부 검사)
+    const safeDays = post.days || '';
+    const matchesDuration = selectedDuration === '전체' || safeDays.includes(selectedDuration);
+
+    // 6. 동행 성별 상세 필터 (데이터가 없어도 튕기지 않게 유연하게 처리)
+    const postGender = post.gender_rule || post.users?.gender || '성별 무관';
+    let matchesGender = false;
+    if (selectedGender === '전체' || selectedGender === '성별 무관') {
+      matchesGender = true;
+    } else {
+      matchesGender = postGender.includes(selectedGender);
+    }
+
+    // 7. 여행 테마 상세 필터 (DB에 데이터가 없을 경우 글 내용 및 계획에서 키워드를 직접 추적!)
+    let matchesTheme = false;
+    if (selectedTheme === '전체') {
+      matchesTheme = true;
+    } else {
+      const postTheme = post.theme || '';
+      matchesTheme = postTheme.includes(selectedTheme) ||
+                     safeBio.includes(selectedTheme) ||
+                     safePlan.includes(selectedTheme);
+    }
 
     return matchesSearch && matchesDestination && matchesType && matchesRecruit && matchesDuration && matchesGender && matchesTheme;
   });
@@ -606,7 +637,6 @@ export default function SearchScreen({navigation }) {
                   </ScrollView>
                 )}
 
-                {/* 상세 필터 더보기 토글 버튼 */}
                 <TouchableOpacity
                   style={{ marginTop: 20, alignItems: 'center', paddingVertical: 10 }}
                   onPress={() => setShowMoreFilters(!showMoreFilters)}
