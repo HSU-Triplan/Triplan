@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
-const { processPreference, recommendDestinations,extractMemoFromConversation,summarizeConversation  } = require('../utils/gemini');
+const { processPreference, recommendDestinations, summarizeConversation } = require('../utils/gemini');
 const router = express.Router();
 const { searchGooglePlace } = require('../utils/googleMaps');
 const { searchKakaoPlace } = require('../utils/kakaoMap');
