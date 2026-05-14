@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
-const { processPreference, recommendDestinations,extractMemoFromConversation,summarizeConversation  } = require('../utils/gemini');
+const { processPreference, recommendDestinations, summarizeConversation, optimizeItinerary  } = require('../utils/gemini');
 const router = express.Router();
 const { searchGooglePlace } = require('../utils/googleMaps');
 const { searchKakaoPlace } = require('../utils/kakaoMap');
@@ -632,6 +632,12 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       .eq('type', 'text')  // 일반 텍스트 메시지만
       .order('created_at', { ascending: true });
 
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('posts(days, departure_date, destination)')
+      .eq('id', roomId)
+      .single();
+
     if (error) throw error;
     if (!messages || messages.length === 0) {
       return res.json({ success: false, message: '분석할 대화가 없어요.' });
@@ -643,8 +649,13 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       type: m.type,
     }));
 
-    // Gemini 분석
-    const summary = await summarizeConversation(formatted);
+    const roomInfo = {
+      days: room.posts?.days,
+      departure_date: room.posts?.departure_date,
+      destination: room.posts?.destination,
+    };
+
+    const summary = await summarizeConversation(formatted, roomInfo);
 
     res.json({ success: true, summary });
   } catch (error) {
@@ -737,63 +748,58 @@ router.post('/chat-rooms/:roomId/ai-summarize-approve', authMiddleware, async (r
   }
 });
 
-// ── 대화 맥락 자동 메모 추출 ──────────────────────────────────
-//router.post('/chat-rooms/:roomId/ai-auto-memo', authMiddleware, async (req, res) => {
-//  const { roomId } = req.params;
-//  const { messages } = req.body; // [{senderName, text}] 배열
-//
-//  if (!messages || messages.length === 0) {
-//    return res.status(400).json({ success: false, message: '메시지가 없습니다.' });
-//  }
-//
-//  try {
-//    // 기존 선호사항 조회
-//    const { data: room, error } = await supabase
-//      .from('chat_rooms')
-//      .select('ai_preferences')
-//      .eq('id', roomId)
-//      .single();
-//
-//    if (error) throw error;
-//
-//    const existing = room.ai_preferences || [];
-//
-//    // Gemini 분석
-//    const result = await extractMemoFromConversation(messages, existing);
-//
-//    // 새로 추출된 게 없으면 바로 종료
-//    if (!result.hasNew || result.extracted.length === 0) {
-//      return res.json({ success: true, hasNew: false });
-//    }
-//
-//    // 승인 대기 메시지를 messages 테이블에 저장
-//    const { data: savedMsg } = await supabase
-//      .from('messages')
-//      .insert({
-//        chat_room_id: roomId,
-//        user_id: req.user.userId,
-//        content: JSON.stringify(result.extracted),
-//        type: 'ai_memo_pending',  // 승인 대기 타입
-//      })
-//      .select()
-//      .single();
-//
-//    const pendingMsg = {
-//      id: String(savedMsg.id),
-//      type: 'ai_memo_pending',
-//      extracted: result.extracted,  // [{text, category, replaces}]
-//    };
-//
-//    // 소켓으로 채팅방 전체에 브로드캐스트
-//    const io = req.app.get('io');
-//    if (io) io.to(String(roomId)).emit('receive_message', pendingMsg);
-//
-//    res.json({ success: true, hasNew: true, message: pendingMsg });
-//  } catch (error) {
-//    console.log('자동 메모 추출 에러:', error.message);
-//    res.status(500).json({ success: false, message: '메모 추출 중 오류가 발생했습니다.' });
-//  }
-//});
+// ── 일정 확정 + AI 동선 최적화 ────────────────────────────────
+router.post('/chat-rooms/:roomId/ai-itinerary', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { spots } = req.body; // [{ time, place, detail, photoUrl }]
+
+  if (!spots || spots.length === 0) {
+    return res.status(400).json({ success: false, message: '일정 항목이 없습니다.' });
+  }
+
+  try {
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('posts(days, destination)')
+      .eq('id', roomId)
+      .single();
+
+    const roomInfo = {
+      days: room?.posts?.days,
+      destination: room?.posts?.destination,
+    };
+
+    // Gemini 동선 최적화
+    const itinerary = await optimizeItinerary(spots, roomInfo);
+
+    // messages 저장
+    const { data: savedMsg } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: roomId,
+        user_id: req.user.userId,
+        content: JSON.stringify(itinerary),
+        type: 'ai_itinerary',
+      })
+      .select()
+      .single();
+
+    const aiMsg = {
+      id: String(savedMsg.id),
+      type: 'ai_itinerary',
+      data: itinerary,
+    };
+
+    // 브로드캐스트
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', aiMsg);
+
+    res.json({ success: true, message: aiMsg });
+  } catch (error) {
+    console.log('일정 확정 에러:', error.message);
+    res.status(500).json({ success: false, message: '일정 생성 중 오류가 발생했습니다.' });
+  }
+});
 
 // ── 승인된 메모 저장 ──────────────────────────────────────────
 router.post('/chat-rooms/:roomId/ai-memo-approve', authMiddleware, async (req, res) => {

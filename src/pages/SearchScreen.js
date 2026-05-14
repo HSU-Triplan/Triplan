@@ -20,8 +20,21 @@ import {
 
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=800&auto=format&fit=crop';
 
-const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
+const DESTINATION_OPTIONS = ['전체', '국내', '아시아', '유럽', '아메리카', '오세아니아/기타'];
 const TYPE_OPTIONS = ['전체', 'TUAJ', 'TUAP', 'TURJ', 'TURP', 'TNAJ', 'TNAP', 'TNRJ', 'TNRP', 'CUAJ', 'CUAP', 'CURJ', 'CURP', 'CNAJ', 'CNAP', 'CNRJ', 'CNRP'];
+
+// ✨ 새로 추가된 필터 옵션
+const DURATION_OPTIONS = ['전체', '당일치기', '1박 2일', '2박 3일', '3박 이상'];
+const GENDER_OPTIONS = ['전체', '동성만', '성별 무관'];
+const THEME_OPTIONS = ['전체', '빵지순례', '역사/문화', '힐링/휴양', '액티비티', '쇼핑'];
+
+const REGION_KEYWORDS = {
+  '국내': ['국내', '서울', '부산', '제주', '강릉', '속초', '인천', '대구', '대전', '광주', '전주', '경주', '여수', '강원'],
+  '아시아': ['아시아', '일본', '도쿄', '오사카', '후쿠오카', '삿포로', '중국', '대만', '타이베이', '홍콩', '마카오', '태국', '방콕', '베트남', '다낭', '나트랑', '필리핀', '세부', '싱가포르', '발리'],
+  '유럽': ['유럽', '영국', '런던', '프랑스', '파리', '이탈리아', '로마', '스위스', '스페인', '바르셀로나', '독일', '체코', '프라하'],
+  '아메리카': ['아메리카', '미국', '뉴욕', 'LA', '하와이', '캐나다', '토론토', '밴쿠버', '멕시코', '남미', '브라질'],
+  '오세아니아/기타': ['오세아니아', '호주', '시드니', '뉴질랜드', '괌', '사이판', '아프리카', '이집트', '중동', '기타']
+};
 
 export default function SearchScreen({navigation }) {
   const [searchText, setSearchText] = useState('');
@@ -29,13 +42,30 @@ export default function SearchScreen({navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
 
+  // ✨ 드롭다운 열림/닫힘 상태
   const [destOpen, setDestOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
+  const [durationOpen, setDurationOpen] = useState(false);
+  const [genderOpen, setGenderOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+
+  // ✨ 실제 적용된 필터 상태
   const [selectedDestination, setSelectedDestination] = useState('전체');
   const [selectedType, setSelectedType] = useState('전체');
-
-  // 🌟 새롭게 추가된 '모집 중만 보기' 상태값
+  const [selectedDuration, setSelectedDuration] = useState('전체');
+  const [selectedGender, setSelectedGender] = useState('전체');
+  const [selectedTheme, setSelectedTheme] = useState('전체');
   const [recruitOnly, setRecruitOnly] = useState(false);
+
+  // ✨ 모달 내 임시 필터 상태
+  const [tempDestination, setTempDestination] = useState('전체');
+  const [tempType, setTempType] = useState('전체');
+  const [tempDuration, setTempDuration] = useState('전체');
+  const [tempGender, setTempGender] = useState('전체');
+  const [tempTheme, setTempTheme] = useState('전체');
+  const [tempRecruitOnly, setTempRecruitOnly] = useState(false);
+
+  const [showMoreFilters, setShowMoreFilters] = useState(false); // 상세 필터 보기 토글
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,38 +73,48 @@ export default function SearchScreen({navigation }) {
   const [selectedPost, setSelectedPost] = useState(null);
   const [myUserId, setMyUserId] = useState(null);
 
-  const [tempDestination, setTempDestination] = useState('전체');
-  const [tempType, setTempType] = useState('전체');
-  const [tempRecruitOnly, setTempRecruitOnly] = useState(false); // 임시 체크 상태
-
   const [editPost, setEditPost] = useState(null);
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState(null);
   const [profileImage,setProfileImage] = useState(null);
 
+  const closeAllDropdowns = () => {
+    setDestOpen(false); setTypeOpen(false); setDurationOpen(false); setGenderOpen(false); setThemeOpen(false);
+  };
+
   const openModal = () => {
     setTempDestination(selectedDestination);
     setTempType(selectedType);
-    setTempRecruitOnly(recruitOnly); // 모달 열 때 현재 상태 복사
-    setDestOpen(false);
-    setTypeOpen(false);
+    setTempDuration(selectedDuration);
+    setTempGender(selectedGender);
+    setTempTheme(selectedTheme);
+    setTempRecruitOnly(recruitOnly);
+
+    closeAllDropdowns();
+    setShowMoreFilters(false);
     setModalVisible(true);
   };
 
   const applyFilter = () => {
     setSelectedDestination(tempDestination);
     setSelectedType(tempType);
-    setRecruitOnly(tempRecruitOnly); // 적용 버튼 누르면 확정
+    setSelectedDuration(tempDuration);
+    setSelectedGender(tempGender);
+    setSelectedTheme(tempTheme);
+    setRecruitOnly(tempRecruitOnly);
     setModalVisible(false);
   };
 
   const clearFilter = () => {
     setSelectedDestination('전체');
     setSelectedType('전체');
-    setRecruitOnly(false); // 초기화할 때 같이 꺼짐
+    setSelectedDuration('전체');
+    setSelectedGender('전체');
+    setSelectedTheme('전체');
+    setRecruitOnly(false);
   };
 
-  const isFiltered = selectedDestination !== '전체' || selectedType !== '전체' || recruitOnly;
+  const isFiltered = selectedDestination !== '전체' || selectedType !== '전체' || selectedDuration !== '전체' || selectedGender !== '전체' || selectedTheme !== '전체' || recruitOnly;
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -221,19 +261,28 @@ export default function SearchScreen({navigation }) {
     Alert.alert('복사 완료', '친구 코드가 복사되었습니다!');
   };
 
-  // 🌟 핵심 로직: 모집 중 필터까지 포함하여 걸러내기
   const filteredPosts = posts.filter(post => {
     const matchesSearch = searchText === '' ||
                           post.bio.includes(searchText) ||
                           post.destination.includes(searchText);
 
-    const matchesDestination = selectedDestination === '전체' || post.destination === selectedDestination;
-    const matchesType = selectedType === '전체' || post.users?.travel_type === selectedType;
+    let matchesDestination = false;
+    if (selectedDestination === '전체') {
+      matchesDestination = true;
+    } else {
+      const keywords = REGION_KEYWORDS[selectedDestination] || [];
+      matchesDestination = keywords.some(keyword => post.destination.includes(keyword));
+    }
 
-    // 모집 중인 글만 보기 필터가 켜져 있다면, 현재 인원이 최대 인원보다 적은 방만 통과!
+    const matchesType = selectedType === '전체' || post.users?.travel_type === selectedType;
     const matchesRecruit = !recruitOnly || post.current_people < post.max_people;
 
-    return matchesSearch && matchesDestination && matchesType && matchesRecruit;
+    // ✨ 새 필터 조건 적용 (서버 데이터 구조에 맞게 필드명 확인 필요)
+    const matchesDuration = selectedDuration === '전체' || post.days === selectedDuration;
+    const matchesGender = selectedGender === '전체' || post.gender_rule === selectedGender;
+    const matchesTheme = selectedTheme === '전체' || post.theme === selectedTheme;
+
+    return matchesSearch && matchesDestination && matchesType && matchesRecruit && matchesDuration && matchesGender && matchesTheme;
   });
 
   return (
@@ -259,7 +308,7 @@ export default function SearchScreen({navigation }) {
         </View>
 
         {isFiltered && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.appliedRow}>
+          <View style={styles.appliedRow}>
             {selectedDestination !== '전체' && (
               <View style={styles.appliedTag}>
                 <Text style={styles.appliedTagText}>📍 {selectedDestination}</Text>
@@ -270,6 +319,21 @@ export default function SearchScreen({navigation }) {
                 <Text style={styles.appliedTagText}>🧭 {selectedType}</Text>
               </View>
             )}
+            {selectedDuration !== '전체' && (
+              <View style={styles.appliedTag}>
+                <Text style={styles.appliedTagText}>🗓 {selectedDuration}</Text>
+              </View>
+            )}
+            {selectedGender !== '전체' && (
+              <View style={styles.appliedTag}>
+                <Text style={styles.appliedTagText}>👥 {selectedGender}</Text>
+              </View>
+            )}
+            {selectedTheme !== '전체' && (
+              <View style={styles.appliedTag}>
+                <Text style={styles.appliedTagText}>🎒 {selectedTheme}</Text>
+              </View>
+            )}
             {recruitOnly && (
               <View style={styles.appliedTag}>
                 <Text style={styles.appliedTagText}>✅ 모집 중</Text>
@@ -278,7 +342,7 @@ export default function SearchScreen({navigation }) {
             <TouchableOpacity onPress={clearFilter} style={styles.clearFilterButton}>
                 <Text style={styles.clearFilterText}>✕ 초기화</Text>
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         )}
 
         <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
@@ -510,53 +574,111 @@ export default function SearchScreen({navigation }) {
 
         <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
           <TouchableOpacity style={styles.filterOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
-            <TouchableOpacity style={styles.modalBox} activeOpacity={1} onPress={() => {}}>
-              <Text style={styles.modalTitle}>여행 필터</Text>
+            <View style={styles.modalBox}>
+              <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+                <Text style={styles.modalTitle}>여행 필터</Text>
 
-              <TouchableOpacity style={styles.dropdownHeader} onPress={() => { setDestOpen(!destOpen); setTypeOpen(false); }}>
-                <Text style={styles.dropdownLabel}>📍 여행지</Text>
-                <Text style={styles.dropdownValue}>{tempDestination} {destOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {destOpen && (
-                <View style={styles.dropdownList}>
-                  {DESTINATION_OPTIONS.map(opt => (
-                    <TouchableOpacity key={opt} style={[styles.dropdownItem, tempDestination === opt && styles.dropdownItemActive]} onPress={() => { setTempDestination(opt); setDestOpen(false); }}>
-                      <Text style={[styles.dropdownItemText, tempDestination === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                <TouchableOpacity style={styles.dropdownHeader} onPress={() => { closeAllDropdowns(); setDestOpen(!destOpen); }}>
+                  <Text style={styles.dropdownLabel}>📍 여행지</Text>
+                  <Text style={styles.dropdownValue}>{tempDestination} {destOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {destOpen && (
+                  <View style={styles.dropdownList}>
+                    {DESTINATION_OPTIONS.map(opt => (
+                      <TouchableOpacity key={opt} style={[styles.dropdownItem, tempDestination === opt && styles.dropdownItemActive]} onPress={() => { setTempDestination(opt); setDestOpen(false); }}>
+                        <Text style={[styles.dropdownItemText, tempDestination === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                <TouchableOpacity style={[styles.dropdownHeader, { marginTop: 12 }]} onPress={() => { closeAllDropdowns(); setTypeOpen(!typeOpen); }}>
+                  <Text style={styles.dropdownLabel}>🧭 성향</Text>
+                  <Text style={styles.dropdownValue}>{tempType} {typeOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {typeOpen && (
+                  <ScrollView style={[styles.dropdownList, { maxHeight: 180 }]} nestedScrollEnabled={true}>
+                    {TYPE_OPTIONS.map(opt => (
+                      <TouchableOpacity key={opt} style={[styles.dropdownItem, tempType === opt && styles.dropdownItemActive]} onPress={() => { setTempType(opt); setTypeOpen(false); }}>
+                        <Text style={[styles.dropdownItemText, tempType === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+
+                {/* 상세 필터 더보기 토글 버튼 */}
+                <TouchableOpacity
+                  style={{ marginTop: 20, alignItems: 'center', paddingVertical: 10 }}
+                  onPress={() => setShowMoreFilters(!showMoreFilters)}
+                >
+                  <Text style={{ color: '#888', fontWeight: 'bold', fontSize: 14 }}>
+                    상세 필터 {showMoreFilters ? '접기 ▲' : '더보기 ▼'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showMoreFilters && (
+                  <>
+                    <TouchableOpacity style={[styles.dropdownHeader, { marginTop: 12 }]} onPress={() => { closeAllDropdowns(); setDurationOpen(!durationOpen); }}>
+                      <Text style={styles.dropdownLabel}>🗓 여행 기간</Text>
+                      <Text style={styles.dropdownValue}>{tempDuration} {durationOpen ? '▲' : '▼'}</Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+                    {durationOpen && (
+                      <View style={styles.dropdownList}>
+                        {DURATION_OPTIONS.map(opt => (
+                          <TouchableOpacity key={opt} style={[styles.dropdownItem, tempDuration === opt && styles.dropdownItemActive]} onPress={() => { setTempDuration(opt); setDurationOpen(false); }}>
+                            <Text style={[styles.dropdownItemText, tempDuration === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
 
-              <TouchableOpacity style={[styles.dropdownHeader, { marginTop: 12 }]} onPress={() => { setTypeOpen(!typeOpen); setDestOpen(false); }}>
-                <Text style={styles.dropdownLabel}>🧭 성향</Text>
-                <Text style={styles.dropdownValue}>{tempType} {typeOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {typeOpen && (
-                <ScrollView style={[styles.dropdownList, { maxHeight: 180 }]} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
-                  {TYPE_OPTIONS.map(opt => (
-                    <TouchableOpacity key={opt} style={[styles.dropdownItem, tempType === opt && styles.dropdownItemActive]} onPress={() => { setTempType(opt); setTypeOpen(false); }}>
-                      <Text style={[styles.dropdownItemText, tempType === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                    <TouchableOpacity style={[styles.dropdownHeader, { marginTop: 12 }]} onPress={() => { closeAllDropdowns(); setGenderOpen(!genderOpen); }}>
+                      <Text style={styles.dropdownLabel}>👥 동행 성별</Text>
+                      <Text style={styles.dropdownValue}>{tempGender} {genderOpen ? '▲' : '▼'}</Text>
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
+                    {genderOpen && (
+                      <View style={styles.dropdownList}>
+                        {GENDER_OPTIONS.map(opt => (
+                          <TouchableOpacity key={opt} style={[styles.dropdownItem, tempGender === opt && styles.dropdownItemActive]} onPress={() => { setTempGender(opt); setGenderOpen(false); }}>
+                            <Text style={[styles.dropdownItemText, tempGender === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
 
-              {/* 🌟 추가된 '모집 중인 글만 보기' 스위치(체크박스) */}
-              <TouchableOpacity
-                style={[styles.dropdownHeader, { marginTop: 12, borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 4 }]}
-                onPress={() => setTempRecruitOnly(!tempRecruitOnly)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.dropdownLabel}>✅ 모집 중인 방만 보기</Text>
-                <View style={[styles.checkbox, tempRecruitOnly && styles.checkboxActive]}>
-                  {tempRecruitOnly && <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>✓</Text>}
-                </View>
-              </TouchableOpacity>
+                    <TouchableOpacity style={[styles.dropdownHeader, { marginTop: 12 }]} onPress={() => { closeAllDropdowns(); setThemeOpen(!themeOpen); }}>
+                      <Text style={styles.dropdownLabel}>🎒 여행 테마</Text>
+                      <Text style={styles.dropdownValue}>{tempTheme} {themeOpen ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    {themeOpen && (
+                      <View style={styles.dropdownList}>
+                        {THEME_OPTIONS.map(opt => (
+                          <TouchableOpacity key={opt} style={[styles.dropdownItem, tempTheme === opt && styles.dropdownItemActive]} onPress={() => { setTempTheme(opt); setThemeOpen(false); }}>
+                            <Text style={[styles.dropdownItemText, tempTheme === opt && styles.dropdownItemTextActive]}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
 
-              <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
-                <Text style={styles.applyButtonText}>적용하기</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dropdownHeader, { marginTop: 16, borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 4 }]}
+                  onPress={() => setTempRecruitOnly(!tempRecruitOnly)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.dropdownLabel}>✅ 모집 중인 방만 보기</Text>
+                  <View style={[styles.checkbox, tempRecruitOnly && styles.checkboxActive]}>
+                    {tempRecruitOnly && <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>✓</Text>}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
+                  <Text style={styles.applyButtonText}>적용하기</Text>
+                </TouchableOpacity>
+
+              </ScrollView>
+            </View>
           </TouchableOpacity>
         </Modal>
 
@@ -626,6 +748,7 @@ const styles = StyleSheet.create({
 
   appliedRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
@@ -642,7 +765,7 @@ const styles = StyleSheet.create({
   },
   appliedTagText: { fontSize: 13, color: '#FF6B6B', fontWeight: 'bold' },
 
-  clearFilterButton: { marginLeft: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  clearFilterButton: { marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 4 },
   clearFilterText: { fontSize: 12, color: '#888', fontWeight: 'bold' },
 
   feed: { flex: 1 },
@@ -739,7 +862,7 @@ const styles = StyleSheet.create({
   copyButtonText: { fontSize: 12, color: '#555', fontWeight: 'bold' },
 
   filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalBox: { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 24, padding: 24, width: '85%' },
+  modalBox: { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 24, padding: 24, width: '85%', maxHeight: '80%' },
   modalTitle: { fontSize: 20, fontWeight: '900', marginBottom: 20, color: '#333', textAlign: 'center' },
 
   dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14 },
@@ -754,7 +877,6 @@ const styles = StyleSheet.create({
   applyButton: { backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
-  // 🌟 체크박스 스타일 추가
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
   checkboxActive: { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B' },
 
