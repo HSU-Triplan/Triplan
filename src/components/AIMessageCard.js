@@ -11,9 +11,10 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
   const [selectedSpot, setSelectedSpot] = useState(0);
   const mapRef = useRef(null);
 
-  const dest = data.destinations[selectedIdx];
-  const validSpots = dest.spots.filter(s => s.lat && s.lng);
+  if (!data?.destinations?.length) return null;
+  const dest = data.destinations[selectedIdx] ?? data.destinations[0];
 
+  const validSpots = dest.spots?.filter(s => s.lat && s.lng) ?? [];
   const getRegion = () => {
     if (validSpots.length === 0) return null;
     const lats = validSpots.map(s => s.lat);
