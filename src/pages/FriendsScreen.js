@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,279 +7,223 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Clipboard,
   TextInput,
-  Switch,
-  Animated
+  ImageBackground,
+  SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+
+// 🗽 가장 안정적이고 차단되지 않는 자유의 여신상 사진 주소
+const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?q=80&w=800&auto=format&fit=crop';
 
 export default function FriendsScreen({ setIsLoggedIn }) {
-    const [screen, setScreen] = useState('friends');
-    const isUploadingRef = useRef(false);
-    const [friendsList,setFriendsList] = useState(null);
-    const [requestList,setRequestList] = useState(null);
-     const [friendCode,setFriendCode] = useState('');
-     const [selection,setSelection] = useState("friendsList");
+  const [screen, setScreen] = useState('friends');
+  const isUploadingRef = useRef(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [requestList, setRequestList] = useState([]);
+  const [friendCode, setFriendCode] = useState('');
 
-
-    //친구 목록 가져오기
-    useFocusEffect(
-      React.useCallback(() => {
-        if (isUploadingRef.current) return;
-        const loadUserInfo = async () => {
-          try {
-            const token = await AsyncStorage.getItem('token');
-
-            const response = await fetch('http://10.0.2.2:3000/users/friends', {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-
-            const result = await response.json();
-
-            if (result.success && !isUploadingRef.current) {
-                let friends = []
-                let request = []
-                for(let i = 0 ; i < result.friends.length;i++){
-                    if(result.friends[i].status == 'accept'){
-                        friends.push(result.friends[i])
-                    }else if(result.friends[i].status == 'request'){
-                        request.push(result.friends[i])
-                    }
-                }
-                setFriendsList(friends)
-                setRequestList(request)
-            }
-          }
-          catch (e) {
-            console.log('친구 정보 불러오기 실패:', e);
-          }
-        };
-        loadUserInfo();
-      }, [])
-    );
-
-    //친구 추가 함수
-    const friendAdd = async () => {
+  const fetchFriends = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-
-      const response = await fetch('http://10.0.2.2:3000/users/friendsAdd?friendCode='+friendCode, {
+      const response = await fetch('http://10.0.2.2:3000/users/friends', {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const result = await response.json();
 
-    }
-    catch (e) {
+      if (result.success && !isUploadingRef.current) {
+        let friends = [];
+        let request = [];
+        for (let i = 0; i < result.friends.length; i++) {
+          if (result.friends[i].status === 'accept') {
+            friends.push(result.friends[i]);
+          } else if (result.friends[i].status === 'request') {
+            request.push(result.friends[i]);
+          }
+        }
+        setFriendsList(friends);
+        setRequestList(request);
+      }
+    } catch (e) {
       console.log('친구 정보 불러오기 실패:', e);
     }
-  }
+  };
 
-  //친구 요청 수락 함수
+  useFocusEffect(
+    useCallback(() => {
+      fetchFriends();
+    }, [])
+  );
+
+  const friendAdd = async () => {
+    if (!friendCode.trim()) {
+      Alert.alert('알림', '친구 코드를 입력해주세요!');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch('http://10.0.2.2:3000/users/friendsAdd?friendCode=' + friendCode, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+
+      Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
+      setFriendCode('');
+      fetchFriends();
+    } catch (e) {
+      console.log('친구 추가 실패:', e);
+    }
+  };
+
   const friendAccept = async (request) => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log(request.users.id)
-        const response = await fetch('http://10.0.2.2:3000/users/friendsAccept?friendId='+request.users.id, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      catch (e) {
-        console.log('친구 요청 수락 실패:', e);
-      }
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch('http://10.0.2.2:3000/users/friendsAccept?friendId=' + request.users.id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert('수락 완료', `${request.users.name}님과 친구가 되었습니다!`);
+      fetchFriends();
+    } catch (e) {
+      console.log('친구 요청 수락 실패:', e);
     }
+  };
 
- //친구 요청 거절 함수
   const friendRefuse = async (request) => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log(request.users.id)
-        const response = await fetch('http://10.0.2.2:3000/users/friendsRefuse?friendId='+request.users.id, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      catch (e) {
-        console.log('친구 요청 거절 실패:', e);
-      }
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch('http://10.0.2.2:3000/users/friendsRefuse?friendId=' + request.users.id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert('거절 완료', '친구 요청을 거절했습니다.');
+      fetchFriends();
+    } catch (e) {
+      console.log('친구 요청 거절 실패:', e);
     }
+  };
 
   return (
-    <View style={{ flex: 1 }}>
+    <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4} resizeMode="cover">
+      <View style={styles.overlay} />
+      <SafeAreaView style={styles.container}>
 
-          {/* 앱바 */}
-          <View style={styles.appBar}>
-          <TouchableOpacity style={[(selection == "friendsList") ? styles.selectedAppBarButton : styles.appBarButton]}
-            onPress={() =>
-                {
-                    setSelection("friendsList")
-                    setScreen('friends')
-                }
-            }>
-            <Text style={styles.title}>친구</Text>
+        <View style={styles.appBar}>
+          <TouchableOpacity style={[styles.tabButton, screen === 'friends' && styles.tabButtonActive]} onPress={() => setScreen('friends')}>
+            <Text style={[styles.tabText, screen === 'friends' && styles.tabTextActive]}>내 친구</Text>
           </TouchableOpacity>
-           <TouchableOpacity style={[(selection == "requestList") ? styles.selectedAppBarButton : styles.appBarButton]}
-                onPress={() => {
-                     setSelection("requestList")
-                    setScreen('request')}
-           }>
-                <Text style={styles.title}>받은요청</Text>
-           </TouchableOpacity>
-           <TouchableOpacity style={[(selection == "add") ? styles.selectedAppBarButton : styles.appBarButton]}
-                onPress={() => {
-                    setSelection("add")
-                    setScreen('add')
-                }
-           }>
-                <Text style={styles.title}>친구추가</Text>
+          <TouchableOpacity style={[styles.tabButton, screen === 'request' && styles.tabButtonActive]} onPress={() => setScreen('request')}>
+            <Text style={[styles.tabText, screen === 'request' && styles.tabTextActive]}>받은 요청 {requestList?.length > 0 ? `(${requestList.length})` : ''}</Text>
           </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={[styles.tabButton, screen === 'add' && styles.tabButtonActive]} onPress={() => setScreen('add')}>
+            <Text style={[styles.tabText, screen === 'add' && styles.tabTextActive]}>친구 추가</Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* 내용 */}
-          <View style={{ flex: 1 }}>
-            {screen === "friends" &&
-                (
-                <ScrollView>
-                    <Text style={styles.friendsCount}>친구 {friendsList?.length}</Text>
-                        {friendsList?.map((friend,index) =>
-                        (
-                            <View key = {index} style={styles.friendsList}>
-                                <Image style={styles.profileImage}
-                                    source={{uri:friend.users.profile_image}}/>
-                                <Text style={styles.friendName}>{friend.users.name}</Text>
+        <View style={styles.contentArea}>
 
-                            </View>
-                        )
-                    )}
-                </ScrollView>
-              )
-            }
-             {screen === "request" &&  (
-              <ScrollView>
-                  <Text style={styles.friendsCount}>받은요청 {requestList?.length}</Text>
-                      {requestList?.map((friend,index) =>
-                      (
-                          <View key = {index} style={styles.friendsList}>
-                              <Image style={styles.profileImage}
-                                  source={{uri:friend.users.profile_image}}/>
-                              <Text style={styles.friendName}>{friend.users.name}</Text>
-                              <View style={styles.btn}>
-                                <TouchableOpacity onPress = {()=>friendAccept(requestList[index])}
-                                    style={styles.acceptBtn}><Text style={{color:'#ffffff'}}>수락</Text></TouchableOpacity>
-                                <TouchableOpacity onPress = {()=>friendRefuse(requestList[index])}
-                                    style={styles.refuseBtn}><Text style={{color:'#ffffff'}}>거절</Text></TouchableOpacity>
-                            </View>
-                          </View>
-                      )
-                  )}
-              </ScrollView>
-            )}
-              {screen === "add" && (
-              <View>
-                <Text style={styles.friendsCount}>친구 코드 입력</Text>
-                    <TextInput value = {friendCode} onChangeText = {setFriendCode} onSubmitEditing ={(event) => {
-                        friendAdd()
-                    }} style={styles.friendCodeInput}></TextInput>
-
+          {screen === 'friends' && (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.headerRow}>
+                <Text style={styles.listTitle}>내 동행 친구</Text>
+                <View style={styles.countBadge}><Text style={styles.countText}>{friendsList?.length || 0}명</Text></View>
               </View>
-              )}
-          </View>
 
-    </View>
+              {friendsList?.length === 0 ? (
+                <View style={styles.emptyBox}><Text style={styles.emptyEmoji}>🤝</Text><Text style={styles.emptyText}>아직 등록된 친구가 없어요</Text></View>
+              ) : (
+                friendsList?.map((friend, index) => (
+                  <View key={index} style={styles.userCard}>
+                    <Image style={styles.profileImage} source={{ uri: friend.users.profile_image || 'https://via.placeholder.com/100' }} />
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{friend.users.name}</Text>
+                      <Text style={styles.userSubText}>함께 여행할 준비 완료! ✈️</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          )}
+
+          {screen === 'request' && (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.headerRow}>
+                <Text style={styles.listTitle}>받은 친구 요청</Text>
+                <View style={styles.countBadge}><Text style={styles.countText}>{requestList?.length || 0}건</Text></View>
+              </View>
+
+              {requestList?.length === 0 ? (
+                <View style={styles.emptyBox}><Text style={styles.emptyEmoji}>📭</Text><Text style={styles.emptyText}>새로운 친구 요청이 없습니다</Text></View>
+              ) : (
+                requestList?.map((request, index) => (
+                  <View key={index} style={styles.userCard}>
+                    <Image style={styles.profileImage} source={{ uri: request.users.profile_image || 'https://via.placeholder.com/100' }} />
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{request.users.name}</Text>
+                      <Text style={styles.userSubText}>친구가 되고 싶어 해요!</Text>
+                    </View>
+                    <View style={styles.btnGroup}>
+                      <TouchableOpacity onPress={() => friendAccept(request)} style={styles.acceptBtn}><Text style={styles.acceptBtnText}>수락</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => friendRefuse(request)} style={styles.refuseBtn}><Text style={styles.refuseBtnText}>거절</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          )}
+
+          {screen === 'add' && (
+            <View style={styles.addFriendBox}>
+              <Text style={styles.addFriendEmoji}>🔍</Text>
+              <Text style={styles.addFriendTitle}>새로운 동행 찾기</Text>
+              <Text style={styles.addFriendDesc}>친구가 공유해준 영문/숫자 코드를 입력해주세요.</Text>
+
+              <View style={styles.inputContainer}>
+                <TextInput value={friendCode} onChangeText={setFriendCode} placeholder="친구 코드 입력 (예: ABC123D)" placeholderTextColor="#aaa" style={styles.friendCodeInput} autoCapitalize="characters" onSubmitEditing={friendAdd} />
+              </View>
+
+              <TouchableOpacity style={styles.submitBtn} onPress={friendAdd}><Text style={styles.submitBtnText}>친구 요청 보내기</Text></TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-    appBar: {
-        height: 60,
-        backgroundColor: '#ffffff',
-        flexDirection : 'row',
-        justifyContent: 'flex-start',
-         alignItems:'center',
-
-
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-    },
-
-    appBarButton : {
-        borderWidth : 1,
-        borderColor : '#ddd',
-        borderRadius: 20,
-        width : 70,
-        height : 40,
-        justifyContent : 'center',
-        alignItems:'center',
-        margin : 3
-
-    },
-
-    selectedAppBarButton : {
-            borderWidth : 1,
-            borderColor : '#5296F5',
-            backgroundColor : '#5296F5',
-            borderRadius: 20,
-            width : 70,
-            height : 40,
-            justifyContent : 'center',
-            alignItems:'center',
-            margin : 3
-
-    },
-
-    title: {
-        fontSize: 17,
-        fontWeight: 'bold',
-    },
-
-    friendsList : {
-        flexDirection : 'row',
-        marginLeft : 10,
-        marginTop : 20,
-    },
-    profileImage : {
-        width:50,
-        height:50,
-        borderRadius : 25
-    },
-    friendsCount:{
-         marginLeft : 10,
-          marginTop : 20
-    },
-    friendName:{
-         marginLeft : 10,
-         fontWeight : "bold"
-    },
-    friendCodeInput :{
-        marginTop : 10,
-        marginLeft : 10,
-        borderWidth : 1,
-        width : 100,
-        height : 60,
-        color : 'black'
-    },
-    btn : {
-        marginLeft : 'auto',
-        flexDirection : 'row',
-        alignItems : 'center'
-    },
-    acceptBtn : {
-        borderWidth : 1,
-        marginRight : 10,
-        borderColor : '#7EC8FF',
-        backgroundColor : '#7EC8FF',
-
-    },
-    refuseBtn : {
-        borderWidth : 1,
-
-        borderColor : '#ff0000',
-        backgroundColor : '#ff0000',
-    }
+  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: '#eef2f5' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(245, 247, 250, 0.45)' },
+  container: { flex: 1 },
+  appBar: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  tabButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 24, backgroundColor: 'transparent' },
+  tabButtonActive: { backgroundColor: '#FF6B6B', shadowColor: '#FF6B6B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4 },
+  tabText: { fontSize: 15, fontWeight: 'bold', color: '#666' },
+  tabTextActive: { color: '#fff' },
+  contentArea: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 10 },
+  listTitle: { fontSize: 20, fontWeight: '900', color: '#333' },
+  countBadge: { backgroundColor: 'rgba(255, 107, 107, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#FF6B6B' },
+  countText: { fontSize: 13, fontWeight: 'bold', color: '#FF6B6B' },
+  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: 16, borderRadius: 20, marginBottom: 12, elevation: 3 },
+  profileImage: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#eee', borderWidth: 2, borderColor: '#fff' },
+  userInfo: { flex: 1, marginLeft: 14 },
+  userName: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+  userSubText: { fontSize: 13, color: '#888' },
+  btnGroup: { flexDirection: 'row', gap: 8 },
+  acceptBtn: { backgroundColor: '#FF6B6B', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  acceptBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  refuseBtn: { backgroundColor: '#f0f0f0', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  refuseBtnText: { color: '#666', fontWeight: 'bold', fontSize: 14 },
+  addFriendBox: { backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: 30, borderRadius: 24, alignItems: 'center', marginTop: 20, elevation: 4 },
+  addFriendEmoji: { fontSize: 48, marginBottom: 16 },
+  addFriendTitle: { fontSize: 20, fontWeight: '900', color: '#333', marginBottom: 8 },
+  addFriendDesc: { fontSize: 14, color: '#777', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  inputContainer: { width: '100%', backgroundColor: '#f5f5f5', borderRadius: 16, borderWidth: 1, borderColor: '#eee', marginBottom: 20 },
+  friendCodeInput: { paddingHorizontal: 20, paddingVertical: 16, fontSize: 16, color: '#333', textAlign: 'center', fontWeight: 'bold', letterSpacing: 2 },
+  submitBtn: { backgroundColor: '#FF6B6B', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 24 },
+  emptyEmoji: { fontSize: 50, marginBottom: 16 },
+  emptyText: { fontSize: 16, fontWeight: 'bold', color: '#666' },
 });
