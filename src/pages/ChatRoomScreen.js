@@ -666,13 +666,13 @@ export default function ChatRoomScreen({ route, navigation }) {
                 </TouchableOpacity>
                 {editPlan.map((p, idx) => (
                   <View key={idx} style={styles.planItem}>
-                    <TouchableOpacity style={{marginLeft : 'auto'}}><Text style={{color : 'red'}}>삭제</Text></TouchableOpacity>
+                    <TouchableOpacity onPress = {() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}><Text style={{color : 'red'}}>삭제</Text></TouchableOpacity>
                     <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
                     <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
                     <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
                     {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
 
-                  </View>
+                 </View>
                 ))}
                 <View style={styles.modalButtons}>
                   <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
