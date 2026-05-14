@@ -10,6 +10,7 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [selectedSpot, setSelectedSpot] = useState(0);
   const mapRef = useRef(null);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   if (!data?.destinations?.length) return null;
   const dest = data.destinations[selectedIdx] ?? data.destinations[0];
@@ -132,39 +133,49 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
         <Text style={styles.reasonText}>{dest.reason}</Text>
       </View>
 
-      {/* 지도 */}
-      {region ? (
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
-          initialRegion={region}>
-          {validSpots.length > 1 && (
-            <Polyline
-              coordinates={validSpots.map(s => ({ latitude: s.lat, longitude: s.lng }))}
-              strokeColor="#6C5CE7" strokeWidth={2.5} lineDashPattern={[6, 3]}
-            />
-          )}
-          {validSpots.map((spot, i) => (
-            <Marker
-              key={i}
-              coordinate={{ latitude: spot.lat, longitude: spot.lng }}
-              title={`${i + 1}. ${spot.name}`}
-              description={spot.description}
-              onPress={() => setSelectedSpot(i)}>
-              <View style={styles.markerWrap}>
-                <View style={[styles.markerBubble, selectedSpot === i && styles.markerBubbleActive]}>
-                  <Text style={styles.markerNum}>{i + 1}</Text>
+      {/* 지도 토글 버튼 */}
+      <TouchableOpacity
+        style={styles.mapToggleBtn}
+        onPress={() => setIsMapExpanded(prev => !prev)}>
+        <Text style={styles.mapToggleText}>
+          {isMapExpanded ? '🗺 지도 접기 ▲' : '🗺 지도 보기 ▼'}
+        </Text>
+      </TouchableOpacity>
+
+      {isMapExpanded && (
+        region ? (
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
+            initialRegion={region}>
+            {validSpots.length > 1 && (
+              <Polyline
+                coordinates={validSpots.map(s => ({ latitude: s.lat, longitude: s.lng }))}
+                strokeColor="#6C5CE7" strokeWidth={2.5} lineDashPattern={[6, 3]}
+              />
+            )}
+            {validSpots.map((spot, i) => (
+              <Marker
+                key={i}
+                coordinate={{ latitude: spot.lat, longitude: spot.lng }}
+                title={`${i + 1}. ${spot.name}`}
+                description={spot.description}
+                onPress={() => setSelectedSpot(i)}>
+                <View style={styles.markerWrap}>
+                  <View style={[styles.markerBubble, selectedSpot === i && styles.markerBubbleActive]}>
+                    <Text style={styles.markerNum}>{i + 1}</Text>
+                  </View>
+                  <View style={[styles.markerTail, selectedSpot === i && styles.markerTailActive]} />
                 </View>
-                <View style={[styles.markerTail, selectedSpot === i && styles.markerTailActive]} />
-              </View>
-            </Marker>
-          ))}
-        </MapView>
-      ) : (
-        <View style={styles.mapFallback}>
-          <Text style={styles.mapFallbackText}>🗺 지도 정보를 불러올 수 없어요</Text>
-        </View>
+              </Marker>
+            ))}
+          </MapView>
+        ) : (
+          <View style={styles.mapFallback}>
+            <Text style={styles.mapFallbackText}>🗺 지도 정보를 불러올 수 없어요</Text>
+          </View>
+        )
       )}
 
       {/* 장소 카드 + 일정 추가 버튼 */}
@@ -322,5 +333,19 @@ const styles = StyleSheet.create({
   },
   addScheduleBtnText: {
     color: '#fff', fontSize: 12, fontWeight: 'bold',
+  },
+  mapToggleBtn: {
+    marginHorizontal: 12,
+    marginBottom: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#E8E0FF',
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  mapToggleText: {
+    fontSize: 12,
+    color: '#6C5CE7',
+    fontWeight: 'bold',
   },
 });
