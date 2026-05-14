@@ -33,13 +33,20 @@ export default function SearchScreen({navigation }) {
   const [typeOpen, setTypeOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState('전체');
   const [selectedType, setSelectedType] = useState('전체');
+
+  // 🌟 새롭게 추가된 '모집 중만 보기' 상태값
+  const [recruitOnly, setRecruitOnly] = useState(false);
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [joinedRooms, setJoinedRooms] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
   const [myUserId, setMyUserId] = useState(null);
+
   const [tempDestination, setTempDestination] = useState('전체');
   const [tempType, setTempType] = useState('전체');
+  const [tempRecruitOnly, setTempRecruitOnly] = useState(false); // 임시 체크 상태
+
   const [editPost, setEditPost] = useState(null);
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState(null);
@@ -48,6 +55,7 @@ export default function SearchScreen({navigation }) {
   const openModal = () => {
     setTempDestination(selectedDestination);
     setTempType(selectedType);
+    setTempRecruitOnly(recruitOnly); // 모달 열 때 현재 상태 복사
     setDestOpen(false);
     setTypeOpen(false);
     setModalVisible(true);
@@ -56,16 +64,17 @@ export default function SearchScreen({navigation }) {
   const applyFilter = () => {
     setSelectedDestination(tempDestination);
     setSelectedType(tempType);
+    setRecruitOnly(tempRecruitOnly); // 적용 버튼 누르면 확정
     setModalVisible(false);
   };
 
-  // 🌟 필터 지우기 기능 추가 (옵션)
   const clearFilter = () => {
     setSelectedDestination('전체');
     setSelectedType('전체');
+    setRecruitOnly(false); // 초기화할 때 같이 꺼짐
   };
 
-  const isFiltered = selectedDestination !== '전체' || selectedType !== '전체';
+  const isFiltered = selectedDestination !== '전체' || selectedType !== '전체' || recruitOnly;
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -212,21 +221,19 @@ export default function SearchScreen({navigation }) {
     Alert.alert('복사 완료', '친구 코드가 복사되었습니다!');
   };
 
-  // 🌟 핵심 로직: 전체 게시글(posts) 중 필터 조건에 맞는 글만 골라내기
+  // 🌟 핵심 로직: 모집 중 필터까지 포함하여 걸러내기
   const filteredPosts = posts.filter(post => {
-    // 1. 검색어 필터 (검색어가 비어있으면 모두 통과, 내용이나 목적지에 포함되면 통과)
     const matchesSearch = searchText === '' ||
                           post.bio.includes(searchText) ||
                           post.destination.includes(searchText);
 
-    // 2. 여행지 필터 ('전체'면 모두 통과, 아니면 글의 목적지와 선택한 목적지가 같아야 통과)
     const matchesDestination = selectedDestination === '전체' || post.destination === selectedDestination;
-
-    // 3. 성향 필터 ('전체'면 모두 통과, 아니면 글 작성자의 성향과 선택한 성향이 같아야 통과)
     const matchesType = selectedType === '전체' || post.users?.travel_type === selectedType;
 
-    // 세 가지 조건을 모두 만족하는 글만 남깁니다.
-    return matchesSearch && matchesDestination && matchesType;
+    // 모집 중인 글만 보기 필터가 켜져 있다면, 현재 인원이 최대 인원보다 적은 방만 통과!
+    const matchesRecruit = !recruitOnly || post.current_people < post.max_people;
+
+    return matchesSearch && matchesDestination && matchesType && matchesRecruit;
   });
 
   return (
@@ -252,7 +259,7 @@ export default function SearchScreen({navigation }) {
         </View>
 
         {isFiltered && (
-          <View style={styles.appliedRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.appliedRow}>
             {selectedDestination !== '전체' && (
               <View style={styles.appliedTag}>
                 <Text style={styles.appliedTagText}>📍 {selectedDestination}</Text>
@@ -263,11 +270,15 @@ export default function SearchScreen({navigation }) {
                 <Text style={styles.appliedTagText}>🧭 {selectedType}</Text>
               </View>
             )}
-            {/* 🌟 필터 초기화 버튼 추가 */}
+            {recruitOnly && (
+              <View style={styles.appliedTag}>
+                <Text style={styles.appliedTagText}>✅ 모집 중</Text>
+              </View>
+            )}
             <TouchableOpacity onPress={clearFilter} style={styles.clearFilterButton}>
                 <Text style={styles.clearFilterText}>✕ 초기화</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
 
         <ScrollView style={styles.feed} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
@@ -275,13 +286,11 @@ export default function SearchScreen({navigation }) {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>여행 계획을 불러오는 중...</Text>
             </View>
-          // 🌟 변경점: posts.length 대신 filteredPosts.length 사용
           ) : filteredPosts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>조건에 맞는 게시글이 없습니다.</Text>
             </View>
           ) : (
-            // 🌟 변경점: posts.map 대신 filteredPosts.map 사용
             filteredPosts.map(post => (
               <TouchableOpacity
                 key={post.id}
@@ -303,6 +312,11 @@ export default function SearchScreen({navigation }) {
                       <Text style={styles.badgeText}>참여 중</Text>
                     </View>
                   )}
+                  {post.current_people >= post.max_people && (
+                    <View style={[styles.badge, { backgroundColor: '#999' }]}>
+                      <Text style={styles.badgeText}>마감됨</Text>
+                    </View>
+                  )}
                 </View>
 
                 <Text style={styles.bio}>{post.bio}</Text>
@@ -311,7 +325,6 @@ export default function SearchScreen({navigation }) {
                   <Text style={styles.metaText}>{post.users?.nickname || post.users?.name}</Text>
                   <Text style={styles.metaDot}>·</Text>
 
-                  {/* 4자리 알파벳 배지 + 설명 물음표 버튼 */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
                       <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{post.users?.travel_type ?? '성향 미설정'}</Text>
@@ -329,7 +342,9 @@ export default function SearchScreen({navigation }) {
                   <Text style={styles.travelTag}>📍 {post.destination}</Text>
                   {post.departure_date ? <Text style={styles.travelTag}>🛫 {post.departure_date}</Text> : null}
                   <Text style={styles.travelTag}>🗓 {post.days}</Text>
-                  <Text style={styles.travelTag}>👥 {post.current_people}/{post.max_people}명</Text>
+                  <Text style={[styles.travelTag, post.current_people >= post.max_people && { color: '#999', borderColor: '#ccc' }]}>
+                    👥 {post.current_people}/{post.max_people}명
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -361,8 +376,6 @@ export default function SearchScreen({navigation }) {
                 </TouchableOpacity>
                 <View>
                   <Text style={styles.userName}>{selectedPost?.users?.nickname || selectedPost?.users?.name}</Text>
-
-                  {/* 상세 모달: 4자리 알파벳 배지 + 설명 물음표 버튼 */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.15)' }]}>
                       <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{selectedPost?.users?.travel_type ?? '성향 미설정'}</Text>
@@ -373,7 +386,6 @@ export default function SearchScreen({navigation }) {
                       </TouchableOpacity>
                     )}
                   </View>
-
                 </View>
                 <View style={{ marginLeft: 'auto', flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                   {selectedPost?.user_id === myUserId && (
@@ -429,6 +441,10 @@ export default function SearchScreen({navigation }) {
                   }}>
                   <Text style={[styles.joinButtonText, { color: '#FF6B6B' }]}>채팅방으로 이동 →</Text>
                 </TouchableOpacity>
+              ) : selectedPost?.current_people >= selectedPost?.max_people ? (
+                <View style={[styles.joinButton, { backgroundColor: '#ccc' }]}>
+                  <Text style={styles.joinButtonText}>모집 마감</Text>
+                </View>
               ) : (
                 <TouchableOpacity style={styles.joinButton} onPress={async () => { await handleJoin(selectedPost?.id); setSelectedPost(null); }}>
                   <Text style={styles.joinButtonText}>참여하기</Text>
@@ -455,8 +471,6 @@ export default function SearchScreen({navigation }) {
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>여행 타입</Text>
-
-                    {/* 다른 사용자 프로필: 4자리 알파벳 배지 + 설명 물음표 버튼 */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
                         <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
@@ -467,7 +481,6 @@ export default function SearchScreen({navigation }) {
                         </TouchableOpacity>
                       )}
                     </View>
-
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>친구 코드</Text>
@@ -527,6 +540,18 @@ export default function SearchScreen({navigation }) {
                   ))}
                 </ScrollView>
               )}
+
+              {/* 🌟 추가된 '모집 중인 글만 보기' 스위치(체크박스) */}
+              <TouchableOpacity
+                style={[styles.dropdownHeader, { marginTop: 12, borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 4 }]}
+                onPress={() => setTempRecruitOnly(!tempRecruitOnly)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dropdownLabel}>✅ 모집 중인 방만 보기</Text>
+                <View style={[styles.checkbox, tempRecruitOnly && styles.checkboxActive]}>
+                  {tempRecruitOnly && <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>✓</Text>}
+                </View>
+              </TouchableOpacity>
 
               <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
                 <Text style={styles.applyButtonText}>적용하기</Text>
@@ -605,7 +630,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     gap: 8,
-    alignItems: 'center', // 🌟 추가
+    alignItems: 'center',
   },
   appliedTag: {
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
@@ -617,17 +642,8 @@ const styles = StyleSheet.create({
   },
   appliedTagText: { fontSize: 13, color: '#FF6B6B', fontWeight: 'bold' },
 
-  // 🌟 필터 초기화 버튼 스타일
-  clearFilterButton: {
-    marginLeft: 'auto',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  clearFilterText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: 'bold',
-  },
+  clearFilterButton: { marginLeft: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  clearFilterText: { fontSize: 12, color: '#888', fontWeight: 'bold' },
 
   feed: { flex: 1 },
   feedContent: { padding: 16, gap: 16 },
@@ -737,6 +753,10 @@ const styles = StyleSheet.create({
 
   applyButton: { backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+
+  // 🌟 체크박스 스타일 추가
+  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
+  checkboxActive: { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B' },
 
   infoBox: {
     backgroundColor: '#ffffff',
