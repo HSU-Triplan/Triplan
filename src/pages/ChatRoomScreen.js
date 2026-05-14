@@ -11,6 +11,7 @@ import AIMessageCard from '../components/AIMessageCard';
 import { io } from 'socket.io-client';
 import SummaryModal from '../components/SummaryModal';
 import AISummaryCard from '../components/AISummaryCard';
+import AIItineraryCard from '../components/AIItineraryCard';
 
 // 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
@@ -317,6 +318,10 @@ export default function ChatRoomScreen({ route, navigation }) {
             try { base.data = JSON.parse(m.content); }
             catch { base.data = null; }
           }
+          if (m.type === 'ai_itinerary') {
+            try { base.data = JSON.parse(m.content); }
+            catch { base.data = null; }
+          }
           if (m.type === 'ai_summary') {
             try { base.data = JSON.parse(m.content); }
             catch { base.data = null; }
@@ -509,6 +514,45 @@ export default function ChatRoomScreen({ route, navigation }) {
     setIsModalVisible(true);
   };
 
+  const handleConfirmItinerary = async () => {
+    if (editPlan.length === 0) {
+      Alert.alert('일정이 없어요', '추가된 장소가 없습니다.');
+      return;
+    }
+
+    setIsModalVisible(false);
+
+    const loadingId = 'itinerary-loading-' + Date.now();
+    setMessages(prev => [...prev, {
+      id: loadingId,
+      type: 'ai_loading',
+      text: 'AI가 동선을 최적화하는 중...',
+    }]);
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-itinerary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ spots: editPlan }),
+      });
+      const data = await res.json();
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== loadingId);
+        if (data.success) return [...filtered, data.message];
+        return filtered;
+      });
+
+      setPendingSpots([]);
+      requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
+    } catch (error) {
+      console.log('일정 확정 에러:', error);
+      setMessages(prev => prev.filter(m => m.id !== loadingId));
+      Alert.alert('오류', '일정 생성 중 문제가 발생했습니다.');
+    }
+  };
+
   const saveEdit = () => {
     setSelectedSchedule({
       id: editingId || Date.now().toString(),
@@ -666,19 +710,6 @@ export default function ChatRoomScreen({ route, navigation }) {
             <View style={styles.editBox}>
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <Text style={styles.modalTitle}>일정 수정</Text>
-                <TextInput value={editTitle} onChangeText={setEditTitle} placeholder="제목" style={styles.editInput} />
-                <TextInput value={editDescription} onChangeText={setEditDescription} placeholder="전체 설명" style={styles.editInput} />
-                <Text style={styles.editSectionTitle}>일정 추가</Text>
-                <TextInput value={newPlanItem.time} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, time: t }))} placeholder="시간" style={styles.editInput} />
-                <TextInput value={newPlanItem.place} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, place: t }))} placeholder="장소" style={styles.editInput} />
-                <TextInput value={newPlanItem.detail} onChangeText={(t) => setNewPlanItem(prev => ({ ...prev, detail: t }))} placeholder="상세 내용" style={styles.editInput} />
-                <TouchableOpacity onPress={() => {
-                  if (!newPlanItem.time && !newPlanItem.place) return;
-                  setEditPlan(prev => [...prev, { ...newPlanItem }]);
-                  setNewPlanItem({ time: '', place: '', detail: '' });
-                }}>
-                  <Text style={styles.addButton}>+ 추가하기</Text>
-                </TouchableOpacity>
                 {editPlan.map((p, idx) => (
                   <View key={idx} style={styles.planItem}>
                     <TouchableOpacity onPress = {() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}><Text style={{color : 'red'}}>삭제</Text></TouchableOpacity>
@@ -693,8 +724,8 @@ export default function ChatRoomScreen({ route, navigation }) {
                   <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
                     <Text style={styles.cancelButton}>취소</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={saveEdit} style={styles.modalBtnSave}>
-                    <Text style={styles.saveButton}>저장</Text>
+                  <TouchableOpacity onPress={handleConfirmItinerary} style={styles.modalBtnSave}>
+                    <Text style={styles.saveButton}>🗓 일정 확정</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -773,6 +804,14 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
         </View>
       </View>
     );
+  }
+
+  if (message.type === 'ai_itinerary') {
+    const itineraryData = message.data
+      ? message.data
+      : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+    if (!itineraryData) return null;
+    return <AIItineraryCard data={itineraryData} />;
   }
 
   if (message.type === 'ai_recommend') {
