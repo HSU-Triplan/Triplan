@@ -42,6 +42,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [isSummaryVisible, setIsSummaryVisible] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isTripInfoExpanded, setIsTripInfoExpanded] = useState(true);
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -522,48 +523,63 @@ export default function ChatRoomScreen({ route, navigation }) {
   return (
     
 <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
-      <View style={styles.overlay} />
+  <View style={styles.overlay} />
 
-      <SafeAreaView style={styles.container}>
+  <SafeAreaView style={styles.container}>
 
-        <View style={{ height: 40 }} />
+    <View style={{ height: 40 }} />
 
-        <View style={styles.tripInfo}>
-          <Text style={styles.tripBio}>{bio}</Text>
-          <View style={styles.tripTags}>
-            <Text style={styles.tag}>📍 {destination}</Text>
-            <Text style={styles.tag}>
-              🗓 {String(days).includes('박') ? days : `${days}박${Number(days)+1}일`}
-            </Text>
-            {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
-            {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
-          </View>
+    <View style={styles.tripInfo}>
+      <View style={styles.tripBioRow}>
+        <Text style={styles.tripBio}>{bio}</Text>
+        <TouchableOpacity onPress={() => setIsTripInfoExpanded(prev => !prev)}>
+          <Text style={styles.tripToggleIcon}>
+            {isTripInfoExpanded ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {isTripInfoExpanded && (
+        <View style={styles.tripTags}>
+          <Text style={styles.tag}>📍 {destination}</Text>
+          <Text style={styles.tag}>
+            🗓 {String(days).includes('박') ? days : `${days}박${Number(days) + 1}일`}
+          </Text>
+          {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
+          {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
         </View>
+      )}
+    </View>
 
-        {(aiPreferences.length > 0 || true) && (
-          <View style={styles.aiTagsContainer}>
-            <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-              <View style={styles.aiTagsRow}>
-                {aiPreferences.map((pref, idx) => (
-                  <View key={idx} style={styles.aiTag}>
-                    <Text style={styles.aiTagText}>@ {pref.text}</Text>
-                    <TouchableOpacity
-                      onPress={() => handleDeletePreference(pref)}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                      <Text style={styles.aiTagDelete}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+    {isTripInfoExpanded && (
+      <View style={styles.aiTagsContainer}>
+        <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flex: 1 }}>
+          <View style={styles.aiTagsRow}>
+            {aiPreferences.map((pref, idx) => (
+              <View key={idx} style={styles.aiTag}>
+                <Text style={styles.aiTagText}>@ {pref.text}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeletePreference(pref)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                  <Text style={styles.aiTagDelete}>✕</Text>
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.aiTagAddBtn}
-              onPress={() => setIsAddMemoVisible(true)}>
-              <Text style={styles.aiTagAddBtnText}>＋</Text>
-            </TouchableOpacity>
+            ))}
           </View>
-        )}
+        </ScrollView>
+
+        <TouchableOpacity
+          style={styles.aiTagAddBtn}
+          onPress={() => setIsAddMemoVisible(true)}>
+          <Text style={styles.aiTagAddBtnText}>＋</Text>
+        </TouchableOpacity>
+      </View>
+    )}
         
      <FlatList
           ref={flatListRef}
@@ -686,7 +702,6 @@ export default function ChatRoomScreen({ route, navigation }) {
           </View>
         </Modal>
 
-////////////////////////////
       <Modal visible={isAddMemoVisible} transparent animationType="fade">
         <TouchableOpacity
           style={styles.memoModalOverlay}
@@ -737,24 +752,6 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
       if (!summaryData) return null;
       return <AISummaryCard data={summaryData} />;
     }
-
-//    if (
-//      message.type === 'ai_memo_pending' ||
-//      message.type === 'ai_memo_approved' ||
-//      message.type === 'ai_memo_rejected'
-//    ) {
-//      console.log(`[MessageItem] ai_memo 렌더: type=${message.type}, extracted=`, message.extracted);
-//      return (
-//        <AIMemoApprovalCard
-//          message={message}
-//          onApprove={onApproveAutoMemo}
-//          onReject={onRejectAutoMemo}
-//        />
-//      );
-//    }
-
-  // AI 로딩
-  ////////////////////////////
   
   if (message.type === 'ai_loading') {
     return (
@@ -970,16 +967,18 @@ editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBot
   memoModalConfirm: { backgroundColor: '#FF6B6B', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 },
   memoModalConfirmText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
   summarizeButton: {
-    marginHorizontal: 16, marginVertical: 6,
-    borderRadius: 20, paddingVertical: 12,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255,107,107,0.08)',
-    flexDirection: 'row', elevation: 2,
+//    marginHorizontal: 16, marginVertical: 6,
+//    borderRadius: 20, paddingVertical: 12,
+//    alignItems: 'center', justifyContent: 'center',
+//    borderWidth: 1.5, borderColor: '#FF6B6B',
+    backgroundColor: '#FF6B6B',
+//    flexDirection: 'row', elevation: 2,
   },
   summarizeButtonDisabled: { opacity: 0.5 },
   summarizeButtonText: {
-    color: '#FF6B6B', fontSize: 13, fontWeight: '900',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '900',
   },
   editImage : {
     height : 250
@@ -997,5 +996,45 @@ editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBot
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
+  },
+  mapToggleBtn: {
+    marginHorizontal: 12,
+    marginBottom: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#E8E0FF',
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  mapToggleText: {
+    fontSize: 12,
+    color: '#6C5CE7',
+    fontWeight: 'bold',
+  },
+  tripBioRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tripBio: {
+    fontSize: 16, fontWeight: '900', color: '#333',
+    flex: 1,  // ← 추가 (▲▼ 버튼 공간 확보)
+  },
+  tripToggleIcon: {
+    fontSize: 14,
+    color: '#888',
+    paddingLeft: 8,
+  },
+  aiTagStatic: {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  aiTagStaticText: {
+    fontSize: 12,
+    color: '#555',
   },
 });
