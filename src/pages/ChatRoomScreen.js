@@ -583,27 +583,27 @@ export default function ChatRoomScreen({ route, navigation }) {
           )}
         />
 
-        <TouchableOpacity
-          style={[styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
-          onPress={handleAiRecommend}
-          disabled={isAILoading}>
-          {isAILoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.actionButtonRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
+            onPress={handleAiRecommend}
+            disabled={isAILoading}>
+            {isAILoading
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.recommendButtonText}>✈️ 여행지 추천</Text>
+            }
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
-          onPress={handleSummarize}
-          disabled={isSummaryLoading}>
-          {isSummaryLoading ? (
-            <ActivityIndicator size="small" color="#6C5CE7" />
-          ) : (
-            <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
+            onPress={handleSummarize}
+            disabled={isSummaryLoading}>
+            {isSummaryLoading
+              ? <ActivityIndicator size="small" color="#6C5CE7" />
+              : <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
+            }
+          </TouchableOpacity>
+        </View>
 
         <InputBar onSend={sendMessage} />
 
@@ -902,14 +902,14 @@ const styles = StyleSheet.create({
   messageList: { flex: 1 },
 
   recommendButton: {
-    marginHorizontal: 16, marginVertical: 10,
     backgroundColor: '#FF6B6B',
-    borderRadius: 25, paddingVertical: 14,
-    alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', elevation: 4,
   },
-  recommendButtonDisabled: { backgroundColor: '#FFB5B5' },
-  recommendButtonText: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  recommendButtonDisabled: {
+    backgroundColor: '#FFB5B5',
+  },
+  recommendButtonText: {
+    color: '#fff', fontSize: 13, fontWeight: '900',
+  },
 
   modalOverlayDark: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   memberBox: {
@@ -979,8 +979,24 @@ editSectionTitle: { fontWeight: '900', fontSize: 16, color: '#FF6B6B', marginBot
     flexDirection: 'row', elevation: 2,
   },
   summarizeButtonDisabled: { opacity: 0.5 },
-  summarizeButtonText: { color: '#FF6B6B', fontSize: 14, fontWeight: '900' },
+  summarizeButtonText: {
+    color: '#FF6B6B', fontSize: 13, fontWeight: '900',
+  },
   editImage : {
     height : 250
-  }
+  },
+  actionButtonRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginVertical: 6,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 20,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
 });
