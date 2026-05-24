@@ -3,6 +3,15 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+//firebase admin 초기화
+const {admin} = require('./utils/firebase')
 
 const authRouter = require('./routes/auth');
 const postsRouter = require('./routes/posts');
@@ -48,7 +57,48 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', data);
+    chatAlarm(data.roomId, data.senderId)
   });
+
+  //fcm으로 채팅 알람 보내기
+  const chatAlarm = async (roomId,senderId) => {
+    let usersFcmTokens = []
+    try{
+        let {data , error} = await supabase
+            .from('chat_members')
+            .select('user_id,users(fcm_token)')
+            .eq('chat_room_id',roomId);
+        console.log("data : "+ JSON.stringify(data))
+        for(let i=0 ; i<data.length ; i++){
+            //메세지 송신자는 안보냄
+            if(data[i].user_id == senderId){
+                console.log(data[i].user_id+ "이 아이디는 송신자입니다.");
+                continue;
+            }
+            console.log(i + "번째 token 발송 : ",data[i].users.fcm_token)
+            const res = await admin.messaging().send({
+                token : data[i].users.fcm_token,
+
+                notification : {
+                    title : '메세지 알람',
+                    body : '채팅방에 새 메세지가 전송되었습니다.'
+                },
+
+                android: {
+                    priority: 'high'
+                },
+
+                data : {
+                    type : 'new-message'
+                }
+            });
+            console.log("새 메세지 알람 보내기 완료: "+ res)
+        }
+    }catch(error){
+        console.log("error : "+ error)
+    }
+
+  }
 
   socket.on('disconnect', () => {
     console.log('소켓 해제:', socket.id);

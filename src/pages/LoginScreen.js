@@ -12,6 +12,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   GoogleSignin,
 } from '@react-native-google-signin/google-signin';
+import {PermissionsAndroid} from 'react-native';
+import messaging from '@react-native-firebase/messaging';
 
 // 🌟 동일한 세계 랜드마크 배경 이미지
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=600&auto=format&fit=crop';
@@ -38,7 +40,26 @@ export default function LoginScreen({ setIsLoggedIn }) {
 
       if (result.success) {
         await AsyncStorage.setItem('token', result.token);
+        const token = await result.token;
+
         setIsLoggedIn(true);
+
+        (async () => {
+            //fcm 토큰 얻기
+            const fcmToken = await messaging().getToken();
+            console.log(fcmToken);
+            //fcm토큰 저장
+            await fetch('http://10.0.2.2:3000/users/saveFcmToken',{
+                method : 'POST',
+                headers: { Authorization: `Bearer ${token}` , 'Content-Type' : 'application/json'},
+                body : JSON.stringify({ fcm_token : fcmToken }),
+            });
+
+            //알람 권한 요청
+            await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+            );
+        })();
       }
     } catch (error) {
       console.log('로그인 에러:', error);

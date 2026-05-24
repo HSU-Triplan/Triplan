@@ -34,7 +34,7 @@ router.post('/google', async (req, res) => {
     // 없으면 신규 유저 생성
     if (!user) {
       const friendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const { data: newUser } = await supabase
+      const { data: newUser , error } = await supabase
         .from('users')
         .insert({
           email,
@@ -47,6 +47,8 @@ router.post('/google', async (req, res) => {
         .select()
         .single();
       user = newUser;
+      console.log("user :"+newUser)
+      console.log("error :" + JSON.stringify(error))
     }
 
     // JWT 발급

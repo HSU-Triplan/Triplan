@@ -5,6 +5,8 @@ const { processPreference, recommendDestinations, summarizeConversation, optimiz
 const router = express.Router();
 const { searchGooglePlace } = require('../utils/googleMaps');
 const { searchKakaoPlace } = require('../utils/kakaoMap');
+//firebase admin 초기화
+const {admin} = require('../utils/firebase')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -822,12 +824,54 @@ router.post('/chat-rooms/:roomId/ai-itinerary', authMiddleware, async (req, res)
     const io = req.app.get('io');
     if (io) io.to(String(roomId)).emit('receive_message', aiMsg);
 
+    scheduleConfirmedAlarm(roomId,req.user.userId)
     res.json({ success: true, message: aiMsg });
   } catch (error) {
     console.log('일정 확정 에러:', error.message);
     res.status(500).json({ success: false, message: '일정 생성 중 오류가 발생했습니다.' });
   }
 });
+
+//fcm으로 일정 확정 알람 보내기
+  const scheduleConfirmedAlarm = async (roomId,senderId) => {
+    let usersFcmTokens = []
+    try{
+        let {data , error} = await supabase
+            .from('chat_members')
+            .select('user_id,users(fcm_token)')
+            .eq('chat_room_id',roomId);
+        console.log("data : "+ JSON.stringify(data))
+        for(let i=0 ; i<data.length ; i++){
+            //메세지 송신자는 안보냄
+            if(data[i].user_id == senderId){
+                console.log(data[i].user_id+ "이 아이디는 송신자입니다.");
+                continue;
+            }
+            console.log(i + "번째 token 발송 : ",data[i].users.fcm_token)
+            const res = await admin.messaging().send({
+                token : data[i].users.fcm_token,
+
+                notification : {
+                    title : '메세지 알람',
+                    body : '채팅방에 일정확정이 완료되었습니다.'
+                },
+
+                android: {
+                    priority: 'high'
+                },
+
+                data : {
+                    type : 'new-message'
+                }
+            });
+            console.log("일정 확정 알람 보내기 완료: "+ res)
+        }
+    }catch(error){
+        console.log("error : "+ error)
+    }
+
+  }
+
 
 // ── 승인된 메모 저장 ──────────────────────────────────────────
 router.post('/chat-rooms/:roomId/ai-memo-approve', authMiddleware, async (req, res) => {
