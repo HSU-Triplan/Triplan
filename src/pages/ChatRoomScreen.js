@@ -468,7 +468,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           senderImage: result.message.users?.profile_image,
         };
         setMessages(prev => [...prev, msg]);
-        socketRef.current?.emit('send_message', { ...msg, roomId: String(roomId) });
+        socketRef.current?.emit('send_message', { ...msg, roomId: String(roomId) ,senderId : myUserId });
         requestAnimationFrame(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         });

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "204424587523",
+    "project_id": "triplan-eab23",
+    "storage_bucket": "triplan-eab23.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:204424587523:android:eeb669f7e3fa1139272136",
+        "android_client_info": {
+          "package_name": "com.triplan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLo_O_UekvOx8RIvUgLPcrUI4ncaR3A4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,6 +4,9 @@ const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
+//firebase admin 초기화
+const {admin} = require('../utils/firebase')
+
 const router = express.Router();
 
 const supabase = createClient(
@@ -378,10 +381,38 @@ router.get('/friendsAccept', authMiddleware, async (req, res) => {
         friend_id: req.user.userId,
         status: 'accept',
       });
-
   } catch (error) {
     console.error('친구 수락 에러:');
     res.status(500).json({ success: false, message: '친구 수락 실패' });
+  }try{
+ //친구 요청 수락 푸쉬 알람 보내기
+    let {data : friendData, error : friendError} = await supabase
+        .from('users')
+        .select('fcm_token')
+        .eq('id',req.query.friendId);
+    console.log("friendData"+JSON.stringify(friendData)+"req.query.friednId : "+req.query.friendId);
+    let fcm_token = friendData[0].fcm_token
+    console.log("token : ",fcm_token)
+    const res = await admin.messaging().send({
+        token : fcm_token,
+
+        notification : {
+            title : '친구 요청 수락',
+            body : '친구 요청이 수락되었습니다.'
+        },
+
+        android: {
+            priority: 'high'
+        },
+
+        data : {
+            type : 'friend_accept'
+        }
+    });
+    console.log("알람 보내기 완료: "+ res)
+  }catch(error){
+    console.error('알람 보내기 에러: ',error);
+
   }
 });
 
@@ -403,6 +434,28 @@ router.get('/friendsRefuse', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('친구 초대 거절 에러:');
     res.status(500).json({ success: false, message: '친구 초대 거절 실패' });
+  }
+});
+
+//사용자 fcm_token 저장
+
+router.post('/saveFcmToken', authMiddleware, async (req, res) => {
+  try {
+    console.log("fcm 토큰 저장 요청 옴")
+    console.log("fcm 토큰 :" + req.body.fcm_token)
+    //친구 수락 정보를 db에서 삭제
+    let { data, error } = await supabase
+      .from('users')
+      .update({fcm_token : req.body.fcm_token})
+      .eq('id', req.user.userId);
+
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('fcm 토큰 저장 에러:');
+    res.status(500).json({ success: false, message: 'fcm 토큰 저장 에러' });
   }
 });
 
