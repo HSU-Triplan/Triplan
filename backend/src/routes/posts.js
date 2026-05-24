@@ -231,6 +231,13 @@ router.delete('/chat-rooms/:roomId/leave', authMiddleware, async (req, res) => {
     const { roomId } = req.params;
     const userId = req.user.userId;
 
+    // 이름 먼저 조회 (삭제 전에)
+    const { data: user } = await supabase
+      .from('users')
+      .select('nickname, name')
+      .eq('id', userId)
+      .single();
+
     const { error } = await supabase
       .from('chat_members')
       .delete()
@@ -238,6 +245,15 @@ router.delete('/chat-rooms/:roomId/leave', authMiddleware, async (req, res) => {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    // 퇴장 브로드캐스트
+    const displayName = user?.nickname || user?.name || '누군가';
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', {
+      id: `system-leave-${Date.now()}`,
+      type: 'system',
+      text: `${displayName}님이 여행에서 떠났습니다.`,
+    });
 
     res.json({ success: true });
   } catch (error) {

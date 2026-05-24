@@ -19,9 +19,7 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
 
-  const [messages, setMessages] = useState([
-    { id: '1', type: 'system', text: '채팅방에 입장했습니다.' }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isMemberVisible, setIsMemberVisible] = useState(false);
@@ -276,6 +274,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
       socket.on('connect', () => {
         socket.emit('join_room', String(roomId));
+        socket.emit('register', meData.user.id);
       });
 
       socket.on('receive_message', (data) => {
