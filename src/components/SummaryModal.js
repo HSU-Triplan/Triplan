@@ -8,7 +8,7 @@ const FIELDS = [
   { key: 'who',   icon: '👥', label: '누가 (인원)' },
   { key: 'when',  icon: '📅', label: '언제 (날짜/기간)' },
   { key: 'where', icon: '📍', label: '어디서 (여행지)' },
-  { key: 'how',   icon: '🚗', label: '어떻게 (이동수단)' },
+  { key: 'how',   icon: '🤔', label: '어떻게 (기타)' },
   { key: 'what',  icon: '🎯', label: '무엇을 (활동)' },
 ];
 

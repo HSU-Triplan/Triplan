@@ -8,6 +8,9 @@ const authRouter = require('./routes/auth');
 const postsRouter = require('./routes/posts');
 const usersRouter = require('./routes/users');
 
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -31,13 +34,18 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('소켓 연결:', socket.id);
 
-  // 채팅방 입장
-  socket.on('join_room', (roomId) => {
-    socket.join(roomId);
-    console.log(`소켓 ${socket.id} → 방 ${roomId} 입장`);
-  });
+  // userId 등록
+//  socket.on('register', (userId) => {
+//    socket.userId = userId;
+//  });
 
-  // 메시지 수신 → 같은 방에 브로드캐스트
+  // 채팅방 입장
+   socket.on('join_room', ({ roomId, userId }) => {
+     socket.join(roomId);
+     socket.userId = userId;
+     console.log(`소켓 ${socket.id} → 방 ${roomId} 입장`);
+   });
+
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', data);
   });

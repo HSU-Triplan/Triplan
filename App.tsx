@@ -6,6 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/pages/LoginScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 import TravelStyleGame from './TravelStyleGame';
+// 👇 1. 새로 만든 프로필 설정 화면을 불러옵니다.
+import ProfileEditScreen from './src/pages/ProfileEditScreen';
 
 const { width } = Dimensions.get('window');
 const Stack = createNativeStackNavigator();
@@ -15,7 +17,6 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1511739001486-6b
 
 const AuthRouterScreen = ({ navigation }: any) => {
   useEffect(() => {
-    // 🌟 수정 1: 앱이 켜질 때 로컬이 아닌 '서버(DB)'에 내 성향이 있는지 확실하게 물어보기
     const checkTravelStyle = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
@@ -24,12 +25,10 @@ const AuthRouterScreen = ({ navigation }: any) => {
         });
         const result = await response.json();
 
-        // DB에 내 성향(travel_type)이 이미 존재한다면? -> 메인 탭으로 프리패스!
         if (result.success && result.user.travel_type) {
-          await AsyncStorage.setItem('travelStyle', result.user.travel_type); // 폰에도 슬쩍 저장해둠
+          await AsyncStorage.setItem('travelStyle', result.user.travel_type);
           navigation.replace('Main');
         } else {
-          // 성향이 없다면? -> 테스트 인트로 화면으로!
           navigation.replace('TestIntro');
         }
       } catch (e) {
@@ -40,7 +39,11 @@ const AuthRouterScreen = ({ navigation }: any) => {
     checkTravelStyle();
   }, [navigation]);
 
-  return <View style={{ flex: 1, backgroundColor: '#fff' }} />;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: 20, color: 'black' }}>서버에서 유저 정보 확인 중...⏳</Text>
+    </View>
+  );
 };
 
 const TestIntroScreen = ({ navigation }: any) => (
@@ -76,7 +79,6 @@ const ResultScreen = ({ route, navigation }: any) => {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      // 🌟 수정 2: 'const response =' 를 추가하여 백엔드 통신 에러 고치기
       const response = await fetch('http://10.0.2.2:3000/users/travel-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -87,12 +89,12 @@ const ResultScreen = ({ route, navigation }: any) => {
       const data = await response.json();
       console.log('서버 응답:', data);
 
-      // 로컬에도 저장해서 다음번 로딩을 더 빠르게 만듦
       await AsyncStorage.setItem('travelStyle', result);
     } catch (error) {
       console.log('성향 저장 에러:', error);
     } finally {
-      navigation.replace('Main');
+      // 👇 2. 'Main' 대신 'ProfileEdit' 화면으로 넘어가게 수정했습니다.
+      navigation.replace('ProfileEdit', { isFirstTime: true });
     }
   };
 
@@ -148,7 +150,13 @@ export default function App() {
     checkToken();
   }, []);
 
-  if (isLoggedIn === null) return null;
+  if (isLoggedIn === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 20, color: 'black' }}>자동 로그인 확인 중...🔑</Text>
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -163,6 +171,8 @@ export default function App() {
             <Stack.Screen name="TestIntro" component={TestIntroScreen} />
             <Stack.Screen name="Test" component={TravelStyleGame} />
             <Stack.Screen name="Result" component={ResultScreen} />
+            {/* 👇 3. 네비게이션 스택에 프로필 화면을 등록했습니다. */}
+            <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
             <Stack.Screen name="Main">
               {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
             </Stack.Screen>
