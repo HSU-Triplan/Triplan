@@ -273,8 +273,10 @@ export default function ChatRoomScreen({ route, navigation }) {
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        socket.emit('join_room', String(roomId));
-        socket.emit('register', meData.user.id);
+        socket.emit('join_room', {
+          roomId: String(roomId),
+          userId: meData.user.id,
+        });
       });
 
       socket.on('receive_message', (data) => {
