@@ -28,35 +28,38 @@ const ProfileEditScreen = ({ navigation, route }) => {
   };
 
   const handleSave = async () => {
-    try {
-      // 1. 로컬 저장 (홈화면/마이페이지 즉시 반영용)
-      await AsyncStorage.setItem('nickname', nickname);
-      await AsyncStorage.setItem('gender', gender);
-      await AsyncStorage.setItem('birth_year', formatDate(birthDate));
-      await AsyncStorage.setItem('bio', bio);
+    if (!nickname.trim()) {
+      Alert.alert('알림', '닉네임을 입력해주세요.');
+      return;
+    }
 
+    try {
       const token = await AsyncStorage.getItem('token');
 
-      // 2. 서버 저장 시도 (인수인계용 코드)
-      try {
-        await fetch('http://10.0.2.2:3000/users/profile', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            nickname,
-            gender,
-            birth_year: formatDate(birthDate),
-            bio
-          }),
-        });
-      } catch (e) {
-        console.log('서버 연동 전 (로컬 저장 완료)');
+      const res = await fetch('http://10.0.2.2:3000/users/me', {  // ← PUT/profile → PATCH/me
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nickname: nickname.trim(),
+          gender,
+          birth_year: formatDate(birthDate),
+          bio: bio.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      console.log('프로필 저장 응답:', data);
+
+      if (!data.success) {
+        Alert.alert('오류', '저장에 실패했습니다.');
+        return;
       }
 
-      // 3. 메인으로 이동
+      await AsyncStorage.setItem('nickname', nickname.trim());
+
       if (isFirstTime) {
         navigation.replace('Main');
       } else {
@@ -64,7 +67,7 @@ const ProfileEditScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.log('저장 에러:', error);
-      Alert.alert("알림", "저장 중 오류가 발생했습니다.");
+      Alert.alert('알림', '저장 중 오류가 발생했습니다.');
     }
   };
 
