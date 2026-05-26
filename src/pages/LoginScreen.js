@@ -40,11 +40,17 @@ export default function LoginScreen({ setIsLoggedIn }) {
 
       if (result.success) {
         await AsyncStorage.setItem('token', result.token);
-        const token = await result.token;
+        const token = result.token;
 
         setIsLoggedIn(true);
 
         (async () => {
+
+            //알람 권한 요청
+            await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+            );
+
             //fcm 토큰 얻기
             const fcmToken = await messaging().getToken();
             console.log(fcmToken);
@@ -54,11 +60,6 @@ export default function LoginScreen({ setIsLoggedIn }) {
                 headers: { Authorization: `Bearer ${token}` , 'Content-Type' : 'application/json'},
                 body : JSON.stringify({ fcm_token : fcmToken }),
             });
-
-            //알람 권한 요청
-            await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-            );
         })();
       }
     } catch (error) {
