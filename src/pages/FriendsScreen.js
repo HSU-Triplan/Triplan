@@ -11,7 +11,7 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1605130284535-11
 // 🌟 현재 상황에 맞춰서 true / false를 선택하세요!
 // true  = 내 컴퓨터에서 켠 로컬 서버 (http://10.0.2.2:3000)
 // false = 클라우드 배포 서버 (https://triplan-backend-qwrs.onrender.com)
-const USE_LOCAL_SERVER = true; 
+const USE_LOCAL_SERVER = false; 
 
 const API_URL = USE_LOCAL_SERVER 
   ? 'http://10.0.2.2:3000' 

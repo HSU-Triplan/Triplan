@@ -13,8 +13,14 @@ import SummaryModal from '../components/SummaryModal';
 import AISummaryCard from '../components/AISummaryCard';
 import AIItineraryCard from '../components/AIItineraryCard';
 
-// 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
+// 🌟 고급스러운 세계 여행 랜드마크 배경
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
+
+// 🌟 [수정] 친구 탭과 동일하게 서버 주소 스위치 장착!
+const USE_LOCAL_SERVER = false;
+const API_URL = USE_LOCAL_SERVER
+  ? 'http://10.0.2.2:3000'
+  : 'https://triplan-backend-qwrs.onrender.com';
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
@@ -42,11 +48,16 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isTripInfoExpanded, setIsTripInfoExpanded] = useState(true);
 
+  // 🌟 프로필 모달용 상태
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [profileUser, setProfileUser] = useState(null);
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
+
   // 멤버 불러오기
   const fetchMembers = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/members`, {
+      const response = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/members`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -60,7 +71,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const fetchAiPreferences = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`, {
+      const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-preference`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -70,7 +81,6 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  // 1. 태그 삭제 함수
   const handleDeletePreference = (pref) => {
     Alert.alert(
       '선호사항 삭제',
@@ -84,7 +94,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             try {
               const token = await AsyncStorage.getItem('token');
               const res = await fetch(
-                `https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`,
+                `${API_URL}/posts/chat-rooms/${roomId}/ai-preference`,
                 {
                   method: 'DELETE',
                   headers: {
@@ -105,14 +115,13 @@ export default function ChatRoomScreen({ route, navigation }) {
     );
   };
 
-  // 수동 메모 추가 함수
   const handleManualAddMemo = async () => {
     if (!manualMemoInput.trim()) return;
     setIsAddMemoVisible(false);
     setManualMemoInput('');
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`, {
+      const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-preference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ text: manualMemoInput.trim() }),
@@ -130,7 +139,6 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  // 정리하기 함수
   const handleSummarize = async () => {
     if (isSummaryLoading) return;
 
@@ -143,7 +151,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     setIsSummaryLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-summarize`, {
+      const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
@@ -163,14 +171,13 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  // 승인 함수
   const handleSummaryApprove = async (editedSummary) => {
     setIsSummaryVisible(false);
     setSummaryData(null);
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
+      const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ summary: editedSummary }),
@@ -184,7 +191,6 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   };
 
-  // 일정추가
   const addSpotToSchedule = (spotItem) => {
     setPendingSpots(prev => [...prev, spotItem]);
   };
@@ -198,7 +204,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/leave`, {
+            const response = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/leave`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -213,21 +219,83 @@ export default function ChatRoomScreen({ route, navigation }) {
     ]);
   };
 
-  const handleBackToList = () => navigation.goBack();
+  // 🌟 [수정] 조용히 실패하지 않도록 거짓말 탐지기(Alert) 추가 완료!
+  const handleProfilePress = async (userId) => {
+    if (!userId) {
+      Alert.alert('알림', '유저 정보를 확인할 수 없습니다.');
+      return;
+    }
+    if (userId === myUserId) return;
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // 서버에서 정상 응답을 안 주면 경고창 띄우기!
+      if (!response.ok) {
+        Alert.alert('오류', '서버에서 프로필을 불러오지 못했습니다.');
+        return;
+      }
+
+      const result = await response.json();
+      const user = result.user || result.data || result;
+
+      if (user) {
+        setProfileUser(user);
+        setIsProfileModalVisible(true);
+      } else {
+        Alert.alert('알림', '프로필 데이터가 비어있습니다.');
+      }
+    } catch (e) {
+      console.log('프로필 로드 실패:', e);
+      Alert.alert('오류', '서버와 연결할 수 없습니다. 서버가 켜져 있는지 확인해주세요.');
+    }
+  };
+
+  // 🌟 팝업에서 친구 추가 요청 보내기 함수
+  const handleAddFriendFromModal = async () => {
+    if (!profileUser?.friend_code) {
+      Alert.alert('알림', '친구 코드가 없는 유저입니다.');
+      return;
+    }
+
+    setIsAddingFriend(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/users/friendsAdd?friendCode=${profileUser.friend_code}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (data.success || res.ok) {
+        Alert.alert('친구 요청', '성공적으로 보냈습니다!');
+        setIsProfileModalVisible(false);
+      } else {
+        Alert.alert('알림', data.message || '친구 추가에 실패했습니다.');
+      }
+    } catch (e) {
+      Alert.alert('오류', '네트워크 문제가 발생했습니다.');
+    } finally {
+      setIsAddingFriend(false);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
       const token = await AsyncStorage.getItem('token');
 
       // 내 userId
-      const meRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
+      const meRes = await fetch(`${API_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const meData = await meRes.json();
       if (meData.success) setMyUserId(meData.user.id);
 
       // 기존 메시지
-      const msgRes = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/messages`,
+      const msgRes = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/messages`,
       {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -269,7 +337,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       fetchAiPreferences();
 
       // 소켓 연결
-      const socket = io('https://triplan-backend-qwrs.onrender.com');
+      const socket = io(`${API_URL}`);
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -347,7 +415,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
             try {
               const token = await AsyncStorage.getItem('token');
-              const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-recommend`, {
+              const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-recommend`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -380,7 +448,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const sendMessage = async (text) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/messages`, {
+      const response = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -457,7 +525,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-itinerary`, {
+      const res = await fetch(`${API_URL}/posts/chat-rooms/${roomId}/ai-itinerary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ spots: editPlan }),
@@ -555,6 +623,7 @@ export default function ChatRoomScreen({ route, navigation }) {
               selectedSchedule={selectedSchedule}
               setSelectedSchedule={setSelectedSchedule}
               onAddSpotToSchedule={addSpotToSchedule}
+              onProfilePress={handleProfilePress} // 🌟 프사 누르기 연결 유지
             />
           )}
         />
@@ -583,7 +652,37 @@ export default function ChatRoomScreen({ route, navigation }) {
 
         <InputBar onSend={sendMessage} />
 
-        {/* 🌟 멤버 모달 */}
+        {/* 🌟 프로필 팝업(바텀 시트) 모달 */}
+        <Modal
+          visible={isProfileModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsProfileModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlayDark}
+            activeOpacity={1}
+            onPress={() => setIsProfileModalVisible(false)}
+          >
+            <TouchableOpacity style={styles.bottomSheet} activeOpacity={1}>
+              <View style={styles.sheetHandle} />
+              <Image source={{ uri: profileUser?.profile_image || 'https://via.placeholder.com/90' }} style={styles.sheetImage} />
+              <Text style={styles.sheetName}>{profileUser?.nickname || profileUser?.name || '알 수 없는 유저'}</Text>
+              <Text style={styles.sheetType}>{profileUser?.travel_type || '성향 미설정'}</Text>
+              <Text style={styles.sheetBio}>{profileUser?.bio || '등록된 소개가 없습니다.'}</Text>
+
+              <TouchableOpacity
+                style={styles.sheetAddBtn}
+                onPress={handleAddFriendFromModal}
+                disabled={isAddingFriend}
+              >
+                {isAddingFriend ? <ActivityIndicator color="#fff" /> : <Text style={styles.sheetAddBtnText}>친구 추가하기</Text>}
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* 멤버 모달 */}
         <Modal
           visible={isMemberVisible}
           transparent
@@ -621,7 +720,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           </TouchableOpacity>
         </Modal>
 
-        {/* 🌟 일정 수정 모달 */}
+        {/* 일정 수정 모달 */}
         <Modal visible={isModalVisible} transparent animationType="fade">
           <View style={styles.modalOverlayDark}>
             <View style={styles.editBox}>
@@ -692,7 +791,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule }) => {
+const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule, onProfilePress }) => {
 
   if (message.type === 'ai_summary') {
     const summaryData = message.data
@@ -758,7 +857,6 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
     );
   }
 
-  // 🌟 시스템 메시지 처리 🌟
   if (message.type === 'system') {
     return (
       <View style={styles.systemMessageContainer}>
@@ -773,10 +871,13 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
     <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginHorizontal: 12, marginVertical: 6 }}>
       {!isMe && (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-          <Image
-            source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
-          />
+          {/* 프사 클릭 연결 */}
+          <TouchableOpacity onPress={() => onProfilePress(message.senderId)}>
+            <Image
+              source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
+              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
+            />
+          </TouchableOpacity>
           <View>
             <Text style={{ fontSize: 11, color: '#666', marginBottom: 4, marginLeft: 2 }}>{message.senderName}</Text>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: 220, elevation: 2 }}>
@@ -942,20 +1043,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#ddd',
   },
   aiTagStaticText: { fontSize: 12, color: '#555' },
-
-  // 🌟 시스템 메시지 전용 스타일 추가 완료 🌟
-  systemMessageContainer: {
-    alignItems: 'center',
-    marginVertical: 12,
-  },
+  systemMessageContainer: { alignItems: 'center', marginVertical: 12 },
   systemMessageText: {
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    color: '#666',
-    fontSize: 12,
-    fontWeight: 'bold',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 15,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.08)', color: '#666', fontSize: 12,
+    fontWeight: 'bold', paddingHorizontal: 16, paddingVertical: 6,
+    borderRadius: 15, overflow: 'hidden',
   },
+  bottomSheet: {
+    backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30,
+    padding: 30, alignItems: 'center', width: '100%', paddingBottom: 40,
+  },
+  sheetHandle: { width: 40, height: 5, backgroundColor: '#ddd', borderRadius: 3, marginBottom: 20 },
+  sheetImage: { width: 90, height: 90, borderRadius: 45, marginBottom: 15, borderWidth: 3, borderColor: '#FF6B6B' },
+  sheetName: { fontSize: 22, fontWeight: '900', color: '#333' },
+  sheetType: { fontSize: 14, color: '#FF6B6B', fontWeight: 'bold', marginVertical: 8 },
+  sheetBio: { fontSize: 14, color: '#777', textAlign: 'center', marginBottom: 25 },
+  sheetAddBtn: { backgroundColor: '#6C5CE7', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 25, width: '100%', alignItems: 'center' },
+  sheetAddBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });
