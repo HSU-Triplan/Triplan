@@ -60,20 +60,27 @@ export default function MatchingScreen() {
     const user = users[index];
     try {
       const token = await AsyncStorage.getItem('token');
+
+      // 스와이프 저장
       const response = await fetch('http://10.0.2.2:3000/users/matching/swipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          receiverId: user.id,
-          status,
-        }),
+        body: JSON.stringify({ receiverId: user.id, status }),
       });
       const result = await response.json();
+
+      // 친구 요청도 전송
+      if (status === 'accepted' && user.friend_code) {
+        await fetch(`http://10.0.2.2:3000/users/friendsAdd?friendCode=${user.friend_code}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
       if (result.matched) {
-        Alert.alert('🎉 매칭 성립!', `${user.nickname || user.name}님과 매칭됐어요!`);
+        Alert.alert('🎉 매칭 성립!', `${user.nickname || user.name}님과 매칭됐어요!\n친구 요청도 함께 보냈습니다.`);
       }
     } catch (error) {
       console.log('스와이프 에러:', error);
