@@ -53,7 +53,7 @@ export default function LoginScreen({ setIsLoggedIn }) {
 
             //fcm 토큰 얻기
             const fcmToken = await messaging().getToken();
-            console.log(fcmToken);
+//            console.log(fcmToken);
             //fcm토큰 저장
             await fetch('https://triplan-backend-qwrs.onrender.com/users/saveFcmToken',{
                 method : 'POST',
