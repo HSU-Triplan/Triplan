@@ -9,12 +9,12 @@ import {
   Alert,
   TextInput,
   ImageBackground,
-  SafeAreaView
+  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
-// 🗽 가장 안정적이고 차단되지 않는 자유의 여신상 사진 주소
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?q=80&w=800&auto=format&fit=crop';
 
 export default function FriendsScreen({ setIsLoggedIn }) {
@@ -23,6 +23,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const [friendsList, setFriendsList] = useState([]);
   const [requestList, setRequestList] = useState([]);
   const [friendCode, setFriendCode] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   const fetchFriends = async () => {
     try {
@@ -30,6 +31,9 @@ export default function FriendsScreen({ setIsLoggedIn }) {
       const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/friends', {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!response.ok) return;
+
       const result = await response.json();
 
       if (result.success && !isUploadingRef.current) {
@@ -57,46 +61,87 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   );
 
   const friendAdd = async () => {
+    if (isSending) return;
     if (!friendCode.trim()) {
       Alert.alert('알림', '친구 코드를 입력해주세요!');
       return;
     }
+
+    setIsSending(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=' + friendCode, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await response.json();
+      const response = await fetch(
+        'https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=' + friendCode.trim(),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
-      setFriendCode('');
-      fetchFriends();
+      if (!response.ok) {
+        Alert.alert('오류', '서버가 요청을 처리하지 못했습니다. 코드를 확인해주세요.');
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
+        setFriendCode('');
+        fetchFriends();
+      } else {
+        Alert.alert('알림', result.message || '친구 추가에 실패했습니다.');
+      }
     } catch (e) {
       console.log('친구 추가 실패:', e);
+      Alert.alert('오류', '서버 연결에 실패했습니다.');
+    } finally {
+      setIsSending(false);
     }
   };
 
   const friendAccept = async (request) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsAccept?friendId=' + request.users.id, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      Alert.alert('수락 완료', `${request.users.name}님과 친구가 되었습니다!`);
-      fetchFriends();
+      const response = await fetch(
+        'https://triplan-backend-qwrs.onrender.com/users/friendsAccept?friendId=' + request.users?.id,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!response.ok) {
+        Alert.alert('오류', '서버에서 수락 처리를 완료하지 못했습니다.');
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setRequestList(prev => prev.filter(req => req.users?.id !== request.users?.id));
+        setFriendsList(prev => [...prev, { ...request, status: 'accept' }]);
+        const displayName = request.users?.nickname || request.users?.name || '유저';
+        Alert.alert('수락 완료', `${displayName}님과 친구가 되었습니다!`);
+      } else {
+        Alert.alert('알림', result.message || '수락 처리에 실패했습니다.');
+      }
     } catch (e) {
       console.log('친구 요청 수락 실패:', e);
+      Alert.alert('오류', '네트워크 문제가 발생했습니다.');
     }
   };
 
   const friendRefuse = async (request) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsRefuse?friendId=' + request.users.id, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      Alert.alert('거절 완료', '친구 요청을 거절했습니다.');
-      fetchFriends();
+      const response = await fetch(
+        'https://triplan-backend-qwrs.onrender.com/users/friendsRefuse?friendId=' + request.users?.id,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!response.ok) {
+        Alert.alert('오류', '서버에서 거절 처리를 완료하지 못했습니다.');
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setRequestList(prev => prev.filter(req => req.users?.id !== request.users?.id));
+        Alert.alert('거절 완료', '친구 요청을 거절했습니다.');
+      }
     } catch (e) {
       console.log('친구 요청 거절 실패:', e);
     }
@@ -108,15 +153,19 @@ export default function FriendsScreen({ setIsLoggedIn }) {
       <SafeAreaView style={styles.container}>
 
         <View style={styles.appBar}>
-          <TouchableOpacity style={[styles.tabButton, screen === 'friends' && styles.tabButtonActive]} onPress={() => setScreen('friends')}>
-            <Text style={[styles.tabText, screen === 'friends' && styles.tabTextActive]}>내 친구</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tabButton, screen === 'request' && styles.tabButtonActive]} onPress={() => setScreen('request')}>
-            <Text style={[styles.tabText, screen === 'request' && styles.tabTextActive]}>받은 요청 {requestList?.length > 0 ? `(${requestList.length})` : ''}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tabButton, screen === 'add' && styles.tabButtonActive]} onPress={() => setScreen('add')}>
-            <Text style={[styles.tabText, screen === 'add' && styles.tabTextActive]}>친구 추가</Text>
-          </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.appBarScroll}>
+            <TouchableOpacity style={[styles.tabButton, screen === 'friends' && styles.tabButtonActive]} onPress={() => setScreen('friends')}>
+              <Text style={[styles.tabText, screen === 'friends' && styles.tabTextActive]}>내 친구</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tabButton, screen === 'request' && styles.tabButtonActive]} onPress={() => setScreen('request')}>
+              <Text style={[styles.tabText, screen === 'request' && styles.tabTextActive]}>
+                받은 요청 {requestList?.length > 0 ? `(${requestList.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tabButton, screen === 'add' && styles.tabButtonActive]} onPress={() => setScreen('add')}>
+              <Text style={[styles.tabText, screen === 'add' && styles.tabTextActive]}>친구 추가</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         <View style={styles.contentArea}>
@@ -127,15 +176,17 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                 <Text style={styles.listTitle}>내 동행 친구</Text>
                 <View style={styles.countBadge}><Text style={styles.countText}>{friendsList?.length || 0}명</Text></View>
               </View>
-
               {friendsList?.length === 0 ? (
-                <View style={styles.emptyBox}><Text style={styles.emptyEmoji}>🤝</Text><Text style={styles.emptyText}>아직 등록된 친구가 없어요</Text></View>
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyEmoji}>🤝</Text>
+                  <Text style={styles.emptyText}>아직 등록된 친구가 없어요</Text>
+                </View>
               ) : (
                 friendsList?.map((friend, index) => (
                   <View key={index} style={styles.userCard}>
-                    <Image style={styles.profileImage} source={{ uri: friend.users.profile_image || 'https://via.placeholder.com/100' }} />
+                    <Image style={styles.profileImage} source={{ uri: friend.users?.profile_image || 'https://via.placeholder.com/100' }} />
                     <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{friend.users.name}</Text>
+                      <Text style={styles.userName}>{friend.users?.nickname || friend.users?.name || '알 수 없는 유저'}</Text>
                       <Text style={styles.userSubText}>함께 여행할 준비 완료! ✈️</Text>
                     </View>
                   </View>
@@ -150,20 +201,26 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                 <Text style={styles.listTitle}>받은 친구 요청</Text>
                 <View style={styles.countBadge}><Text style={styles.countText}>{requestList?.length || 0}건</Text></View>
               </View>
-
               {requestList?.length === 0 ? (
-                <View style={styles.emptyBox}><Text style={styles.emptyEmoji}>📭</Text><Text style={styles.emptyText}>새로운 친구 요청이 없습니다</Text></View>
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyEmoji}>📭</Text>
+                  <Text style={styles.emptyText}>새로운 친구 요청이 없습니다</Text>
+                </View>
               ) : (
                 requestList?.map((request, index) => (
                   <View key={index} style={styles.userCard}>
-                    <Image style={styles.profileImage} source={{ uri: request.users.profile_image || 'https://via.placeholder.com/100' }} />
+                    <Image style={styles.profileImage} source={{ uri: request.users?.profile_image || 'https://via.placeholder.com/100' }} />
                     <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{request.users.name}</Text>
+                      <Text style={styles.userName}>{request.users?.nickname || request.users?.name || '알 수 없는 유저'}</Text>
                       <Text style={styles.userSubText}>친구가 되고 싶어 해요!</Text>
                     </View>
                     <View style={styles.btnGroup}>
-                      <TouchableOpacity onPress={() => friendAccept(request)} style={styles.acceptBtn}><Text style={styles.acceptBtnText}>수락</Text></TouchableOpacity>
-                      <TouchableOpacity onPress={() => friendRefuse(request)} style={styles.refuseBtn}><Text style={styles.refuseBtnText}>거절</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => friendAccept(request)} style={styles.acceptBtn}>
+                        <Text style={styles.acceptBtnText}>수락</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => friendRefuse(request)} style={styles.refuseBtn}>
+                        <Text style={styles.refuseBtnText}>거절</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ))
@@ -176,12 +233,26 @@ export default function FriendsScreen({ setIsLoggedIn }) {
               <Text style={styles.addFriendEmoji}>🔍</Text>
               <Text style={styles.addFriendTitle}>새로운 동행 찾기</Text>
               <Text style={styles.addFriendDesc}>친구가 공유해준 영문/숫자 코드를 입력해주세요.</Text>
-
               <View style={styles.inputContainer}>
-                <TextInput value={friendCode} onChangeText={setFriendCode} placeholder="친구 코드 입력 (예: ABC123D)" placeholderTextColor="#aaa" style={styles.friendCodeInput} autoCapitalize="characters" onSubmitEditing={friendAdd} />
+                <TextInput
+                  value={friendCode}
+                  onChangeText={setFriendCode}
+                  placeholder="친구 코드 입력 (예: ABC123D)"
+                  placeholderTextColor="#aaa"
+                  style={styles.friendCodeInput}
+                  autoCapitalize="characters"
+                  onSubmitEditing={friendAdd}
+                />
               </View>
-
-              <TouchableOpacity style={styles.submitBtn} onPress={friendAdd}><Text style={styles.submitBtnText}>친구 요청 보내기</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitBtn, isSending && { backgroundColor: '#FFB5B5' }]}
+                onPress={friendAdd}
+                disabled={isSending}>
+                {isSending
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.submitBtnText}>친구 요청 보내기</Text>
+                }
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -195,7 +266,8 @@ const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: '#eef2f5' },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(245, 247, 250, 0.45)' },
   container: { flex: 1 },
-  appBar: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  appBar: { backgroundColor: 'rgba(255, 255, 255, 0.85)', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  appBarScroll: { paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 6 },
   tabButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 24, backgroundColor: 'transparent' },
   tabButtonActive: { backgroundColor: '#FF6B6B', shadowColor: '#FF6B6B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4 },
   tabText: { fontSize: 15, fontWeight: 'bold', color: '#666' },
