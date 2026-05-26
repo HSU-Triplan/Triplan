@@ -17,8 +17,8 @@ const authRouter = require('./routes/auth');
 const postsRouter = require('./routes/posts');
 const usersRouter = require('./routes/users');
 
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+//const { createClient } = require('@supabase/supabase-js');
+//const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const app = express();
 const server = http.createServer(app);

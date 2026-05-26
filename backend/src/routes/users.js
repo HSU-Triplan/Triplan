@@ -339,10 +339,10 @@ router.get('/friendsAdd', authMiddleware, async (req, res) => {
     if (error) {
       throw error;
     }
-    console.log(data)
 
-    //친구 테이블에 저장
-    error  = await supabase
+//    console.log('친구코드 데이터', data)
+
+    await supabase
       .from('friends')
       .insert({
         user_id: data.id,

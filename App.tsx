@@ -1,3 +1,4 @@
+import messaging from '@react-native-firebase/messaging';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet, ImageBackground, Dimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,8 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/pages/LoginScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 import TravelStyleGame from './TravelStyleGame';
-// 👇 1. 새로 만든 프로필 설정 화면을 불러옵니다.
 import ProfileEditScreen from './src/pages/ProfileEditScreen';
+
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  console.log('백그라운드 메시지:', remoteMessage);
+});
 
 const { width } = Dimensions.get('window');
 const Stack = createNativeStackNavigator();
@@ -93,7 +97,6 @@ const ResultScreen = ({ route, navigation }: any) => {
     } catch (error) {
       console.log('성향 저장 에러:', error);
     } finally {
-      // 👇 2. 'Main' 대신 'ProfileEdit' 화면으로 넘어가게 수정했습니다.
       navigation.replace('ProfileEdit', { isFirstTime: true });
     }
   };
