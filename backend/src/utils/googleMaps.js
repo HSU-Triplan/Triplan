@@ -35,4 +35,54 @@ const searchGooglePlace = async (query) => {
   }
 };
 
-module.exports = { searchGooglePlace };
+// 목적지 인기 장소 검색 (상위 15개)
+async function searchPopularGooglePlaces(destination) {
+  try {
+    const query = `popular tourist attractions in ${destination}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return (data.results || []).slice(0, 15).map(p => ({
+      name: p.name,
+      address: p.formatted_address,
+      lat: p.geometry?.location?.lat,
+      lng: p.geometry?.location?.lng,
+      rating: p.rating,
+      placeId: p.place_id,
+      types: p.types?.slice(0, 3).join(', '),
+    }));
+  } catch (e) {
+    console.error('[Google] 인기 장소 검색 실패:', e.message);
+    return [];
+  }
+}
+
+// 중심 장소 근처 검색
+async function searchNearbyGooglePlaces(lat, lng) {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=tourist_attraction&rankby=prominence&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const results = (data.results || []).slice(0, 2);
+    return await Promise.all(results.map(async p => {
+      let photoUrl = null;
+      if (p.photos?.[0]?.photo_reference) {
+        photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+      }
+      return {
+        name: p.name,
+        address: p.vicinity,
+        lat: p.geometry?.location?.lat,
+        lng: p.geometry?.location?.lng,
+        photoUrl,
+        placeUrl: null,
+      };
+    }));
+  } catch (e) {
+    console.error('[Google] 근처 장소 검색 실패:', e.message);
+    return [];
+  }
+}
+
+module.exports = { searchGooglePlace, searchPopularGooglePlaces, searchNearbyGooglePlaces };

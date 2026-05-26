@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { processPreference, recommendDestinations, summarizeConversation, optimizeItinerary  } = require('../utils/gemini');
 const router = express.Router();
-const { searchGooglePlace } = require('../utils/googleMaps');
-const { searchKakaoPlace } = require('../utils/kakaoMap');
+const { searchGooglePlace, searchPopularGooglePlaces, searchNearbyGooglePlaces } = require('../utils/googleMaps');
+const { searchKakaoPlace, searchPopularKakaoPlaces, searchNearbyKakaoPlaces } = require('../utils/kakaoMap');
 //firebase admin 초기화
 const {admin} = require('../utils/firebase')
 
