@@ -81,7 +81,7 @@ const handleGoogleLogin = async () => {
     const userInfo = await GoogleSignin.signIn();
     const { idToken } = userInfo.data;
 
-    const response = await fetch('http://10.0.2.2:3000/auth/google', {
+    const response = await fetch('https://triplan-backend-qwrs.onrender.com/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
@@ -140,7 +140,7 @@ const handleLogout = async () => {
 const fetchPosts = useCallback(async () => {
   setLoading(true);
   try {
-    const response = await fetch('http://10.0.2.2:3000/posts');
+    const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts');
     const result = await response.json();
     if (result.success) {
       setPosts(result.posts);
@@ -222,7 +222,7 @@ SearchScreen에서 FAB 버튼을 누르면 Modal(`animationType: 'slide'`)로 �
 const handleSubmit = async () => {
   const token = await AsyncStorage.getItem('token');
 
-  const response = await fetch('http://10.0.2.2:3000/posts', {
+  const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

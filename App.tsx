@@ -24,7 +24,7 @@ const AuthRouterScreen = ({ navigation }: any) => {
     const checkTravelStyle = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
-        const response = await fetch('http://10.0.2.2:3000/users/me', {
+        const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const result = await response.json();
@@ -83,7 +83,7 @@ const ResultScreen = ({ route, navigation }: any) => {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      const response = await fetch('http://10.0.2.2:3000/users/travel-type', {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/travel-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ travelType: result }),

@@ -24,7 +24,7 @@ export default function ChatScreen({ navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://10.0.2.2:3000/posts/my-chats', {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-chats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();

@@ -64,7 +64,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
         try {
           const token = await AsyncStorage.getItem('token');
 
-          const response = await fetch('http://10.0.2.2:3000/users/me', {
+          const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -85,7 +85,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
             setTravelStyle(user.travel_type || '테스트 미진행');
           }
 
-          const chatsRes = await fetch('http://10.0.2.2:3000/posts/my-recent-plans', {
+          const chatsRes = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-recent-plans', {
             headers: { Authorization: `Bearer ${token}` },
           });
           const chatsData = await chatsRes.json();
@@ -165,7 +165,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
             name: asset.fileName || 'avatar.jpg',
           });
 
-          const uploadRes = await fetch('http://10.0.2.2:3000/users/upload-avatar', {
+          const uploadRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/upload-avatar', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -208,7 +208,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
                 onPress={async () => {
                   try {
                     const token = await AsyncStorage.getItem('token');
-                    const response = await fetch('http://10.0.2.2:3000/users/me', {
+                    const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
                       method: 'PATCH',
                       headers: {
                         'Content-Type': 'application/json',

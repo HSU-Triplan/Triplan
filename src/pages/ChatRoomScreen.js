@@ -46,7 +46,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const fetchMembers = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/members`, {
+      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/members`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -60,7 +60,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const fetchAiPreferences = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`, {
+      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -84,7 +84,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             try {
               const token = await AsyncStorage.getItem('token');
               const res = await fetch(
-                `http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`,
+                `https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`,
                 {
                   method: 'DELETE',
                   headers: {
@@ -112,7 +112,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     setManualMemoInput('');
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-preference`, {
+      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-preference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ text: manualMemoInput.trim() }),
@@ -143,7 +143,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     setIsSummaryLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-summarize`, {
+      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
@@ -170,7 +170,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
+      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ summary: editedSummary }),
@@ -198,7 +198,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/leave`, {
+            const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/leave`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -220,14 +220,14 @@ export default function ChatRoomScreen({ route, navigation }) {
       const token = await AsyncStorage.getItem('token');
 
       // 내 userId
-      const meRes = await fetch('http://10.0.2.2:3000/users/me', {
+      const meRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const meData = await meRes.json();
       if (meData.success) setMyUserId(meData.user.id);
 
       // 기존 메시지
-      const msgRes = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`,
+      const msgRes = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/messages`,
       {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -269,7 +269,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       fetchAiPreferences();
 
       // 소켓 연결
-      const socket = io('http://10.0.2.2:3000');
+      const socket = io('https://triplan-backend-qwrs.onrender.com');
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -347,7 +347,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
             try {
               const token = await AsyncStorage.getItem('token');
-              const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-recommend`, {
+              const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-recommend`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -380,7 +380,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const sendMessage = async (text) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/messages`, {
+      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -457,7 +457,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`http://10.0.2.2:3000/posts/chat-rooms/${roomId}/ai-itinerary`, {
+      const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-itinerary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ spots: editPlan }),
