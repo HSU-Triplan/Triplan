@@ -36,7 +36,7 @@ export default function EditPostScreen({ post, onClose }) {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`http://10.0.2.2:3000/posts/${post.id}`, {
+      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${post.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

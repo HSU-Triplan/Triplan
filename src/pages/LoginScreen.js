@@ -30,7 +30,7 @@ export default function LoginScreen({ setIsLoggedIn }) {
       const userInfo = await GoogleSignin.signIn();
       const { idToken } = userInfo.data;
 
-      const response = await fetch('http://10.0.2.2:3000/auth/google', {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
@@ -55,7 +55,7 @@ export default function LoginScreen({ setIsLoggedIn }) {
             const fcmToken = await messaging().getToken();
             console.log(fcmToken);
             //fcm토큰 저장
-            await fetch('http://10.0.2.2:3000/users/saveFcmToken',{
+            await fetch('https://triplan-backend-qwrs.onrender.com/users/saveFcmToken',{
                 method : 'POST',
                 headers: { Authorization: `Bearer ${token}` , 'Content-Type' : 'application/json'},
                 body : JSON.stringify({ fcm_token : fcmToken }),

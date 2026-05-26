@@ -36,7 +36,7 @@ const ProfileEditScreen = ({ navigation, route }) => {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      const res = await fetch('http://10.0.2.2:3000/users/me', {  // ← PUT/profile → PATCH/me
+      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {  // ← PUT/profile → PATCH/me
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

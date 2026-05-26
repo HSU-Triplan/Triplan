@@ -25,7 +25,7 @@ export default function HomeScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      const meRes = await fetch('http://10.0.2.2:3000/users/me', {
+      const meRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const meData = await meRes.json();
@@ -33,13 +33,13 @@ export default function HomeScreen() {
         setUserName(meData.user.nickname || meData.user.name || '');
       }
 
-      const postsRes = await fetch('http://10.0.2.2:3000/users/my-posts', {
+      const postsRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/my-posts', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const postsData = await postsRes.json();
       if (postsData.success) setMyPosts(postsData.posts);
 
-      const chatsRes = await fetch('http://10.0.2.2:3000/posts/my-chats', {
+      const chatsRes = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-chats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const chatsData = await chatsRes.json();

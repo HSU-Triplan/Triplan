@@ -27,7 +27,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const fetchFriends = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://10.0.2.2:3000/users/friends', {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/friends', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -63,7 +63,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
     }
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://10.0.2.2:3000/users/friendsAdd?friendCode=' + friendCode, {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=' + friendCode, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -79,7 +79,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const friendAccept = async (request) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch('http://10.0.2.2:3000/users/friendsAccept?friendId=' + request.users.id, {
+      await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsAccept?friendId=' + request.users.id, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert('수락 완료', `${request.users.name}님과 친구가 되었습니다!`);
@@ -92,7 +92,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const friendRefuse = async (request) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await fetch('http://10.0.2.2:3000/users/friendsRefuse?friendId=' + request.users.id, {
+      await fetch('https://triplan-backend-qwrs.onrender.com/users/friendsRefuse?friendId=' + request.users.id, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert('거절 완료', '친구 요청을 거절했습니다.');
