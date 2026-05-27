@@ -6,6 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/pages/LoginScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 import TravelStyleGame from './TravelStyleGame';
+import messaging from '@react-native-firebase/messaging';
+import {Alert} from 'react-native';
+import FlashMessage from "react-native-flash-message";
+import {showMessage} from "react-native-flash-message";
 
 const { width } = Dimensions.get('window');
 const Stack = createNativeStackNavigator();
@@ -146,12 +150,24 @@ export default function App() {
       setIsLoggedIn(!!token);
     };
     checkToken();
+    //fcm foreground 처리하는 코드
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+        console.log("fcm 메시지 수신 : ",remoteMessage);
+
+        showMessage({
+            message :  remoteMessage.notification?.title || '알림',
+            description :
+                 remoteMessage.notification?.body || "",
+            type : "info",
+        });
+    });
   }, []);
 
   if (isLoggedIn === null) return null;
 
   return (
     <NavigationContainer>
+      <FlashMessage positon="top"/>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isLoggedIn ? (
           <Stack.Screen name="Login">
