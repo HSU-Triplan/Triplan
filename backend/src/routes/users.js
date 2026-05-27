@@ -4,8 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
-//firebase admin 초기화
-const {admin} = require('../utils/firebase')
+const { admin } = require('../utils/firebase');
 
 const router = express.Router();
 
@@ -30,12 +29,7 @@ const authMiddleware = (req, res, next) => {
 router.post('/travel-type', authMiddleware, async (req, res) => {
   try {
     const { travelType } = req.body;
-    console.log('userId:', req.user.userId);
-    console.log('travelType:', travelType);
-
-    if (!travelType) {
-      return res.status(400).json({ success: false, message: '성향 코드 없음' });
-    }
+    if (!travelType) return res.status(400).json({ success: false, message: '성향 코드 없음' });
 
     const { error } = await supabase
       .from('users')
@@ -43,14 +37,12 @@ router.post('/travel-type', authMiddleware, async (req, res) => {
       .eq('id', req.user.userId);
 
     if (error) throw error;
-
     res.json({ success: true });
   } catch (error) {
     console.error('성향 저장 에러:', error);
     res.status(500).json({ success: false, message: '성향 저장 실패' });
   }
 });
-
 
 // 내 정보 조회
 router.get('/me', authMiddleware, async (req, res) => {
@@ -62,7 +54,6 @@ router.get('/me', authMiddleware, async (req, res) => {
       .single();
 
     if (error) throw error;
-
     res.json({ success: true, user: data });
   } catch (error) {
     console.error('유저 정보 조회 에러:', error);
@@ -70,21 +61,17 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-//다른 사용자 프로필 조회
-router.get('/others',authMiddleware, async (req, res) => {
+// 다른 사용자 프로필 조회
+router.get('/others', authMiddleware, async (req, res) => {
   try {
-
     const { data, error } = await supabase
       .from('users')
       .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
-      .eq('id',req.query.id)
+      .eq('id', req.query.id)
       .single();
 
-    console.log(data);
     if (error) throw error;
-
     res.json({ success: true, user: data });
-    console.log("요청옴");
   } catch (error) {
     console.error('유저 정보 조회 에러:', error);
     res.status(500).json({ success: false, message: '유저 정보 조회 실패' });
@@ -108,7 +95,6 @@ router.patch('/me', authMiddleware, async (req, res) => {
       .eq('id', req.user.userId);
 
     if (error) throw error;
-
     res.json({ success: true });
   } catch (error) {
     console.error('프로필 수정 에러:', error);
@@ -116,7 +102,7 @@ router.patch('/me', authMiddleware, async (req, res) => {
   }
 });
 
-// 홈 화면용 — 내가 작성한 게시글 조회
+// 내가 작성한 게시글 조회
 router.get('/my-posts', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -126,7 +112,6 @@ router.get('/my-posts', authMiddleware, async (req, res) => {
       .order('departure_date', { ascending: true });
 
     if (error) throw error;
-
     res.json({ success: true, posts: data });
   } catch (error) {
     console.error('내 게시글 조회 에러:', error);
@@ -137,38 +122,25 @@ router.get('/my-posts', authMiddleware, async (req, res) => {
 // 프로필 이미지 업로드
 router.post('/upload-avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: '이미지 없음' });
-    }
+    if (!req.file) return res.status(400).json({ success: false, message: '이미지 없음' });
 
     const fileName = `${req.user.userId}.jpg`;
 
-    // Supabase Storage에 업로드
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('avatars')
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true,
-      });
+      .upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
 
     if (error) throw error;
 
-    // 공개 URL 가져오기
-    const { data: urlData } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
     const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-    console.log('publicUrl:', publicUrl);
 
-    // DB에 저장
     const { error: updateError } = await supabase
       .from('users')
       .update({ profile_image: publicUrl })
       .eq('id', req.user.userId);
 
     if (updateError) throw updateError;
-
     res.json({ success: true, profile_image: publicUrl });
   } catch (error) {
     console.error('이미지 업로드 에러:', error);
@@ -176,21 +148,18 @@ router.post('/upload-avatar', authMiddleware, upload.single('avatar'), async (re
   }
 });
 
-
-// 매칭 유저 목록 조회 (점수 계산)
+// 매칭 유저 목록 조회
 router.get('/matching', authMiddleware, async (req, res) => {
   try {
     const { destination } = req.query;
     const myId = req.user.userId;
 
-    // 내 정보 조회
     const { data: me } = await supabase
       .from('users')
       .select('travel_type, birth_year')
       .eq('id', myId)
       .single();
 
-    // 나를 제외한 모든 유저 조회
     const { data: users, error } = await supabase
       .from('users')
       .select('id, name, nickname, profile_image, travel_type, birth_year, bio, gender, friend_code')
@@ -199,7 +168,6 @@ router.get('/matching', authMiddleware, async (req, res) => {
 
     if (error) throw error;
 
-    // 여행지 겹침 확인용 내 게시글 조회
     const { data: myPosts } = await supabase
       .from('posts')
       .select('destination')
@@ -207,21 +175,18 @@ router.get('/matching', authMiddleware, async (req, res) => {
 
     const myDestinations = myPosts?.map(p => p.destination?.trim().toLowerCase()) || [];
 
-    // 점수 계산
     const scored = await Promise.all(users.map(async (user) => {
       let score = 0;
 
-      // 1. 여행타입 점수 (75점)
       if (me.travel_type && user.travel_type) {
         const myType = me.travel_type;
         const theirType = user.travel_type;
-        if (myType[0] === theirType[0]) score += 18.75; // T/C
-        if (myType[1] === theirType[1]) score += 18.75; // U/N
-        if (myType[2] === theirType[2]) score += 18.75; // A/R
-        if (myType[3] === theirType[3]) score += 18.75; // J/P
+        if (myType[0] === theirType[0]) score += 18.75;
+        if (myType[1] === theirType[1]) score += 18.75;
+        if (myType[2] === theirType[2]) score += 18.75;
+        if (myType[3] === theirType[3]) score += 18.75;
       }
 
-      // 2. 나이 점수 (25점)
       if (me.birth_year && user.birth_year) {
         const myYear = new Date(me.birth_year).getFullYear();
         const theirYear = new Date(user.birth_year).getFullYear();
@@ -231,7 +196,6 @@ router.get('/matching', authMiddleware, async (req, res) => {
         else if (diff <= 10) score += 10;
       }
 
-      // 3. 여행지 겹침 (입력한 여행지 기준)
       if (destination) {
         const { data: theirPosts } = await supabase
           .from('posts')
@@ -240,18 +204,13 @@ router.get('/matching', authMiddleware, async (req, res) => {
 
         const theirDestinations = theirPosts?.map(p => p.destination?.trim().toLowerCase()) || [];
         const dest = destination.trim().toLowerCase();
-
-        if (theirDestinations.includes(dest) || myDestinations.includes(dest)) {
-          score += 10; // 보너스 점수
-        }
+        if (theirDestinations.includes(dest) || myDestinations.includes(dest)) score += 10;
       }
 
       return { ...user, score: Math.round(score) };
     }));
 
-    // 점수 높은 순 정렬
     scored.sort((a, b) => b.score - a.score);
-
     res.json({ success: true, users: scored });
   } catch (error) {
     console.error('매칭 에러:', error);
@@ -265,7 +224,6 @@ router.post('/matching/swipe', authMiddleware, async (req, res) => {
     const { receiverId, status } = req.body;
     const senderId = req.user.userId;
 
-    // 상대방이 나한테 이미 오른쪽 스와이프 했는지 확인
     const { data: existing } = await supabase
       .from('matches')
       .select('*')
@@ -274,33 +232,12 @@ router.post('/matching/swipe', authMiddleware, async (req, res) => {
       .single();
 
     if (existing && status === 'accepted') {
-      // 양쪽 다 수락 → 매칭 성립
-      await supabase
-        .from('matches')
-        .update({ status: 'accepted' })
-        .eq('id', existing.id);
-
-      // 내 스와이프도 저장
-      await supabase
-        .from('matches')
-        .upsert({
-          sender_id: senderId,
-          receiver_id: receiverId,
-          status: 'accepted',
-        });
-
+      await supabase.from('matches').update({ status: 'accepted' }).eq('id', existing.id);
+      await supabase.from('matches').upsert({ sender_id: senderId, receiver_id: receiverId, status: 'accepted' });
       return res.json({ success: true, matched: true });
     }
 
-    // 스와이프 저장
-    await supabase
-      .from('matches')
-      .upsert({
-        sender_id: senderId,
-        receiver_id: receiverId,
-        status,
-      });
-
+    await supabase.from('matches').upsert({ sender_id: senderId, receiver_id: receiverId, status });
     res.json({ success: true, matched: false });
   } catch (error) {
     console.error('스와이프 에러:', error);
@@ -308,16 +245,15 @@ router.post('/matching/swipe', authMiddleware, async (req, res) => {
   }
 });
 
-// 사용자 친구 목록 조회
+// 친구 목록 조회
 router.get('/friends', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('friends')
-      .select('status,users:friend_id(name,profile_image,id)')
+      .select('status, users:friend_id(id, name, nickname, profile_image)')
       .eq('user_id', req.user.userId);
 
     if (error) throw error;
-    console.log(data)
     res.json({ success: true, friends: data });
   } catch (error) {
     console.error('친구목록 조회 에러:', error);
@@ -325,139 +261,103 @@ router.get('/friends', authMiddleware, async (req, res) => {
   }
 });
 
-//친구 초대 요청
-
+// 친구 초대 요청
 router.get('/friendsAdd', authMiddleware, async (req, res) => {
   try {
-    //친구 id 가져오기
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .select('id')
       .eq('friend_code', req.query.friendCode)
       .single();
 
-    if (error) {
-      throw error;
-    }
-    console.log(data)
+    if (error) throw error;
 
-    //친구 테이블에 저장
-    error  = await supabase
+    await supabase
       .from('friends')
-      .insert({
-        user_id: data.id,
-        friend_id: req.user.userId,
-        status: 'request',
-      });
+      .insert({ user_id: data.id, friend_id: req.user.userId, status: 'request' });
+
+    res.json({ success: true });
   } catch (error) {
     console.error('친구 요청 에러:', req.query.friendCode);
     res.status(500).json({ success: false, message: '친구 요청 실패' });
   }
 });
 
-//친구 초대 수락
-
+// 친구 초대 수락
 router.get('/friendsAccept', authMiddleware, async (req, res) => {
   try {
-    console.log("수락 요청 옴1")
-    //친구 수락 정보 저장을 위해서 status를 accept로 변경
-    let { data, error } = await supabase
+    // 1. status를 accept로 변경
+    const { error: updateError } = await supabase
       .from('friends')
-      .update({status : 'accept'})
+      .update({ status: 'accept' })
       .eq('user_id', req.user.userId)
-      .eq('friend_id',req.query.friendId)
-      .single();
+      .eq('friend_id', req.query.friendId);
 
-    if (error) {
-      throw error;
-    }
-    console.log(data)
+    if (updateError) throw updateError;
 
-    //친구 테이블에 저장
-    error  = await supabase
+    // 2. 반대 방향 친구 관계 추가
+    await supabase
       .from('friends')
-      .insert({
-        user_id: req.query.friendId,
-        friend_id: req.user.userId,
-        status: 'accept',
-      });
-  } catch (error) {
-    console.error('친구 수락 에러:');
-    res.status(500).json({ success: false, message: '친구 수락 실패' });
-  }try{
- //친구 요청 수락 푸쉬 알람 보내기
-    let {data : friendData, error : friendError} = await supabase
+      .insert({ user_id: req.query.friendId, friend_id: req.user.userId, status: 'accept' });
+
+    res.json({ success: true });
+
+    // 3. 푸시 알림 (응답 이후 비동기로 처리)
+    try {
+      const { data: friendData } = await supabase
         .from('users')
         .select('fcm_token')
-        .eq('id',req.query.friendId);
-    console.log("friendData"+JSON.stringify(friendData)+"req.query.friednId : "+req.query.friendId);
-    let fcm_token = friendData[0].fcm_token
-    console.log("token : ",fcm_token)
-    const res = await admin.messaging().send({
-        token : fcm_token,
+        .eq('id', req.query.friendId)
+        .single();
 
-        notification : {
-            title : '친구 요청 수락',
-            body : '친구 요청이 수락되었습니다.'
-        },
-
-        android: {
-            priority: 'high'
-        },
-
-        data : {
-            type : 'friend_accept'
-        }
-    });
-    console.log("알람 보내기 완료: "+ res)
-  }catch(error){
-    console.error('알람 보내기 에러: ',error);
-
+      if (friendData?.fcm_token) {
+        await admin.messaging().send({
+          token: friendData.fcm_token,
+          notification: { title: '친구 요청 수락', body: '친구 요청이 수락되었습니다.' },
+          android: { priority: 'high' },
+          data: { type: 'friend_accept' },
+        });
+      }
+    } catch (pushError) {
+      console.error('푸시 알림 에러:', pushError);
+    }
+  } catch (error) {
+    console.error('친구 수락 에러:', error);
+    res.status(500).json({ success: false, message: '친구 수락 실패' });
   }
 });
 
-//친구 초대 거절
-
+// 친구 초대 거절
 router.get('/friendsRefuse', authMiddleware, async (req, res) => {
   try {
-    console.log("수락 거절 요청 옴1")
-    //친구 수락 정보를 db에서 삭제
-    let { data, error } = await supabase
+    const { error } = await supabase
       .from('friends')
       .delete()
       .eq('user_id', req.user.userId)
-      .eq('friend_id',req.query.friendId);
+      .eq('friend_id', req.query.friendId);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
-    console.error('친구 초대 거절 에러:');
+    console.error('친구 거절 에러:', error);
     res.status(500).json({ success: false, message: '친구 초대 거절 실패' });
   }
 });
 
-//사용자 fcm_token 저장
-
+// FCM 토큰 저장
 router.post('/saveFcmToken', authMiddleware, async (req, res) => {
   try {
-    console.log("fcm 토큰 저장 요청 옴")
-    console.log("fcm 토큰 :" + req.body.fcm_token)
-    //친구 수락 정보를 db에서 삭제
-    let { data, error } = await supabase
+    const { error } = await supabase
       .from('users')
-      .update({fcm_token : req.body.fcm_token})
+      .update({ fcm_token: req.body.fcm_token })
       .eq('id', req.user.userId);
 
-
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
-    console.error('fcm 토큰 저장 에러:');
+    console.error('fcm 토큰 저장 에러:', error);
     res.status(500).json({ success: false, message: 'fcm 토큰 저장 에러' });
   }
 });
-
 
 module.exports = router;

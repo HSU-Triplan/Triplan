@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { processPreference, recommendDestinations, summarizeConversation, optimizeItinerary  } = require('../utils/gemini');
 const router = express.Router();
-const { searchGooglePlace } = require('../utils/googleMaps');
-const { searchKakaoPlace } = require('../utils/kakaoMap');
+const { searchGooglePlace, searchPopularGooglePlaces, searchNearbyGooglePlaces } = require('../utils/googleMaps');
+const { searchKakaoPlace, searchPopularKakaoPlaces, searchNearbyKakaoPlaces } = require('../utils/kakaoMap');
 //firebase admin 초기화
 const {admin} = require('../utils/firebase')
 
@@ -187,14 +187,12 @@ router.post('/:postId/join', authMiddleware, async (req, res) => {
     const { postId } = req.params;
     const userId = req.user.userId;
 
-    // 기존 채팅방 확인
     let { data: chatRoom } = await supabase
       .from('chat_rooms')
       .select('*')
       .eq('post_id', postId)
       .single();
 
-    // 없으면 채팅방 생성
     if (!chatRoom) {
       const { data: newRoom, error } = await supabase
         .from('chat_rooms')
@@ -205,7 +203,6 @@ router.post('/:postId/join', authMiddleware, async (req, res) => {
       chatRoom = newRoom;
     }
 
-    // 이미 참여 중인지 확인
     const { data: existing } = await supabase
       .from('chat_members')
       .select('*')
@@ -218,6 +215,21 @@ router.post('/:postId/join', authMiddleware, async (req, res) => {
         .from('chat_members')
         .insert({ chat_room_id: chatRoom.id, user_id: userId });
       if (error) throw error;
+
+      // 신규 참여일 때만 브로드캐스트
+      const { data: user } = await supabase
+        .from('users')
+        .select('nickname, name')
+        .eq('id', userId)
+        .single();
+
+      const displayName = user?.nickname || user?.name || '누군가';
+      const io = req.app.get('io');
+      if (io) io.to(String(chatRoom.id)).emit('receive_message', {
+        id: `system-join-${Date.now()}`,
+        type: 'system',
+        text: `${displayName}님이 여행에 참가했습니다.`,
+      });
     }
 
     res.json({ success: true, chat_room_id: chatRoom.id });
@@ -233,6 +245,13 @@ router.delete('/chat-rooms/:roomId/leave', authMiddleware, async (req, res) => {
     const { roomId } = req.params;
     const userId = req.user.userId;
 
+    // 이름 먼저 조회 (삭제 전에)
+    const { data: user } = await supabase
+      .from('users')
+      .select('nickname, name')
+      .eq('id', userId)
+      .single();
+
     const { error } = await supabase
       .from('chat_members')
       .delete()
@@ -240,6 +259,15 @@ router.delete('/chat-rooms/:roomId/leave', authMiddleware, async (req, res) => {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    // 퇴장 브로드캐스트
+    const displayName = user?.nickname || user?.name || '누군가';
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', {
+      id: `system-leave-${Date.now()}`,
+      type: 'system',
+      text: `${displayName}님이 여행에서 떠났습니다.`,
+    });
 
     res.json({ success: true });
   } catch (error) {

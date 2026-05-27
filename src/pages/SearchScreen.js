@@ -119,7 +119,7 @@ export default function SearchScreen({navigation }) {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.0.2.2:3000/posts');
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts');
       const result = await response.json();
       if (result.success) {
         setPosts(result.posts);
@@ -134,12 +134,12 @@ export default function SearchScreen({navigation }) {
   const fetchJoinedRooms = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const meRes = await fetch('http://10.0.2.2:3000/users/me', {
+      const meRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const meData = await meRes.json();
       if (meData.success) setMyUserId(meData.user.id);
-      const response = await fetch('http://10.0.2.2:3000/posts/my-chats', {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-chats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -161,7 +161,7 @@ export default function SearchScreen({navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://10.0.2.2:3000/users/others?id='+selectedPost.user_id, {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/others?id='+selectedPost.user_id, {
           headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -181,7 +181,7 @@ export default function SearchScreen({navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://10.0.2.2:3000/users/others?id='+post.user_id, {
+      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/others?id='+post.user_id, {
           headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -210,7 +210,7 @@ export default function SearchScreen({navigation }) {
     }
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`http://10.0.2.2:3000/posts/${postId}/join`, {
+      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${postId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
@@ -236,7 +236,7 @@ export default function SearchScreen({navigation }) {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`http://10.0.2.2:3000/posts/${postId}`, {
+            const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${postId}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },
             });
