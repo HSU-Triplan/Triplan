@@ -81,7 +81,11 @@ export default function FriendsScreen({ setIsLoggedIn }) {
       }
 
       const result = await response.json();
-      if (result.success) {
+      if (result.state == "duplicate"){
+        Alert.alert('친구 요청 중복!', '이미 친구 요청을 보냈습니다!');
+        setFriendCode('');
+        fetchFriends();
+      }else if (result.success) {
         Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
         setFriendCode('');
         fetchFriends();
