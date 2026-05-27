@@ -280,14 +280,14 @@ router.get('/friendsAdd', authMiddleware, async (req, res) => {
         .eq('friend_id',req.data.id)
 
     if(friendData.length==1){
-        return res.json({state : "duplicate"})
+        return res.status(200).json({state : "duplicate"})
     }
 
     await supabase
       .from('friends')
       .insert({ user_id: data.id, friend_id: req.user.userId, status: 'request' });
 
-    res.json({ success: true });
+    res.status(200).json({ success: true });
   } catch (error) {
     console.error('친구 요청 에러:', req.query.friendCode);
     res.status(500).json({ success: false, message: '친구 요청 실패' });
