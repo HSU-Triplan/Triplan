@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
   Modal, TextInput, ScrollView, StyleSheet,
-  Image, Alert, ActivityIndicator, ImageBackground,
+  Image, Alert, ActivityIndicator, ImageBackground, Clipboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,6 +41,9 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [summaryData, setSummaryData] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isTripInfoExpanded, setIsTripInfoExpanded] = useState(true);
+  const [profileVisible,setProfileVisible] = useState(false);
+  const [otherUser,setOtherUser] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -211,6 +214,30 @@ export default function ChatRoomScreen({ route, navigation }) {
         },
       },
     ]);
+  };
+
+  //사용자 프로필 정보 가져오기
+  const fetchProfile = async (senderId) => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/others?id='+senderId, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await response.json();
+        if (result.success) {
+          setProfileVisible(true);
+          setOtherUser(result.user);
+        }
+      } catch (error) {
+        console.log('다른 사용자 프로필 정보 에러:', error);
+      } finally {
+        setLoading(false);
+      }
+  };
+  //친구 코드 복사
+  const handleCopyFriendCode = () => {
+      Clipboard.setString(otherUser?.friend_code);
+      Alert.alert('복사 완료', '친구 코드가 복사되었습니다!');
   };
 
   const handleBackToList = () => navigation.goBack();
@@ -555,6 +582,9 @@ export default function ChatRoomScreen({ route, navigation }) {
               selectedSchedule={selectedSchedule}
               setSelectedSchedule={setSelectedSchedule}
               onAddSpotToSchedule={addSpotToSchedule}
+              profileVisible={profileVisible}
+              otherUser={otherUser}
+              fetchProfile={fetchProfile}
             />
           )}
         />
@@ -686,13 +716,68 @@ export default function ChatRoomScreen({ route, navigation }) {
           onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
           onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
         />
+
+         <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
+                         <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
+                           <View style={styles.profileModalBox}>
+                              <View style={styles.profileModalHeader}>
+                                <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
+                                <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
+                                {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
+                              </View>
+
+                              <View style={styles.profileCard}>
+                                <Text style={styles.cardTitle}>프로필 정보</Text>
+                                <View style={styles.infoRow}>
+                                  <Text style={styles.infoLabel}>닉네임</Text>
+                                  <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
+                                </View>
+                                <View style={styles.infoRow}>
+                                  <Text style={styles.infoLabel}>여행 타입</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
+                                      <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
+                                    </View>
+                                    {otherUser?.travel_type && (
+                                      <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                                        <Text style={{ fontSize: 16 }}>❔</Text>
+                                      </TouchableOpacity>
+                                    )}
+                                  </View>
+                                </View>
+                                <View style={styles.infoRow}>
+                                  <Text style={styles.infoLabel}>친구 코드</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
+                                    <TouchableOpacity style={styles.copyButton} onPress={handleCopyFriendCode}>
+                                      <Text style={styles.copyButtonText}>복사</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                                <View style={styles.infoRow}>
+                                  <Text style={styles.infoLabel}>생년월일</Text>
+                                  <Text style={styles.infoValue}>{otherUser?.birth_year || '미설정'}</Text>
+                                </View>
+                                <View style={styles.infoRow}>
+                                  <Text style={styles.infoLabel}>성별</Text>
+                                  <Text style={styles.infoValue}>{otherUser?.gender || '미설정'}</Text>
+                                </View>
+                                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                                  <Text style={styles.infoLabel}>소개</Text>
+                                  <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
+                                </View>
+                              </View>
+                           </View>
+                        </TouchableOpacity>
+                   </Modal>
+
       </SafeAreaView>
     </ImageBackground>
   );
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule }) => {
+const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule ,fetchProfile}) => {
 
   if (message.type === 'ai_summary') {
     const summaryData = message.data
@@ -773,10 +858,12 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
     <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginHorizontal: 12, marginVertical: 6 }}>
       {!isMe && (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-          <Image
-            source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
-          />
+          <TouchableOpacity onPress={()=>{fetchProfile(message.senderId)}}>
+              <Image
+                source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
+                style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
+              />
+          </TouchableOpacity>
           <View>
             <Text style={{ fontSize: 11, color: '#666', marginBottom: 4, marginLeft: 2 }}>{message.senderName}</Text>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: 220, elevation: 2 }}>
@@ -958,4 +1045,24 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     overflow: 'hidden',
   },
+   detailOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+   profileModalBox: {
+       backgroundColor: '#fff',
+       borderTopLeftRadius: 30,
+       borderTopRightRadius: 30,
+       paddingBottom: 40,
+     },
+     profileModalHeader: { alignItems: 'center', backgroundColor: '#f5f7fa', paddingVertical: 30, borderTopLeftRadius: 30, borderTopRightRadius: 30 },
+     profileImageLarge: { width: 90, height: 90, borderRadius: 45, marginBottom: 12, borderWidth: 3, borderColor: '#fff' },
+     profileModalName: { fontSize: 22, fontWeight: '900', color: '#222' },
+     bioPreview: { fontSize: 14, color: '#666', marginTop: 6, fontWeight: '500' },
+
+     profileCard: { padding: 24 },
+     cardTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16, color: '#333' },
+     infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+     infoLabel: { fontSize: 15, color: '#777', fontWeight: 'bold' },
+     infoValue: { fontSize: 15, fontWeight: 'bold', color: '#333' },
+     copyButton: { backgroundColor: '#f0f0f0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, marginLeft: 10 },
+     copyButtonText: { fontSize: 12, color: '#555', fontWeight: 'bold' },
+
 });
