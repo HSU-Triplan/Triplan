@@ -280,7 +280,8 @@ router.get('/friendsAdd', authMiddleware, async (req, res) => {
         .eq('friend_id',req.data.id)
 
     if(friendData.length==1){
-        return res.status(200).json({state : "duplicate"})
+        console.log("이미 존재하는 친구 요청입니다.");
+        return res.status(200).json({state : "duplicate"});
     }
 
     await supabase
