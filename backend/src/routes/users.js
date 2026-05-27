@@ -273,16 +273,16 @@ router.get('/friendsAdd', authMiddleware, async (req, res) => {
     if (error) throw error;
 
     //친구 요청 이미 했는지 확인
-//    const {data:friendData , error : friendError} = await supabase
-//        .from('friends')
-//        .select('*')
-//        .eq('user_id',req.query.friendCode)
-//        .eq('friend_id',req.data.id)
-//
-//    if(friendData.length==1){
-//        console.log("이미 존재하는 친구 요청입니다.");
-//        return res.json({state : "duplicate"});
-//    }
+    const {data:friendData , error : friendError} = await supabase
+        .from('friends')
+        .select('*')
+        .eq('user_id',data.id)
+        .eq('friend_id',req.user.userId)
+
+    if(friendData.length>=1){
+        console.log("이미 존재하는 친구 요청입니다.");
+        return res.json({state : "duplicate"});
+    }
 
     await supabase
       .from('friends')
