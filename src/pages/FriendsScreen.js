@@ -43,6 +43,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
         let sent = [];
         let userId = result.userId;
         console.log("user id : "+ userId);
+        console.log("data : "+ JSON.stringify(result.friends))
         for (let i = 0; i < result.friends.length; i++) {
           if (result.friends[i].status === 'accept' && result.friends[i].user_id == userId) {
             friends.push(result.friends[i]);
@@ -51,11 +52,12 @@ export default function FriendsScreen({ setIsLoggedIn }) {
           }else if (result.friends[i].status === 'request' && result.friends[i].friend_id == userId) {
             sent.push(result.friends[i]);
         }
-        setFriendsList(friends);
-        setRequestList(request);
-        setSentList(sent);
       }
-    } catch (e) {
+          setFriendsList(friends);
+          setRequestList(request);
+          setSentList(sent);
+      }
+    }catch (e) {
       console.log('친구 정보 불러오기 실패:', e);
     }
   };
