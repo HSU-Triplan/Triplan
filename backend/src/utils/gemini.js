@@ -56,6 +56,11 @@ function checkIsKorea(destination) {
 async function recommendDestinations(preferences, roomInfo) {
   console.log('[Gemini] 추천 시작');
 
+  // ── 성향 비율 계산 ──────────────────────────
+  const urbanRatio  = roomInfo.urbanRatio  ?? 50;
+  const activeRatio = roomInfo.activeRatio ?? 50;
+  const natureRatio = 100 - urbanRatio;
+  const restRatio   = 100 - activeRatio;
   const isKorea = checkIsKorea(roomInfo.destination || '');
 
   // ── Step 1: 인기 장소 15개 검색 ──────────────
@@ -85,11 +90,7 @@ async function recommendDestinations(preferences, roomInfo) {
     .map((p, i) => `${i}. ${p.name} | ${p.address || ''} | ${p.category || p.types || ''}`)
     .join('\n');
 
-  // ── 성향 비율 계산 ──────────────────────────
-  const urbanRatio  = roomInfo.urbanRatio  ?? 50;
-  const activeRatio = roomInfo.activeRatio ?? 50;
-  const natureRatio = 100 - urbanRatio;
-  const restRatio   = 100 - activeRatio;
+
 
   // 도심/자연 3곳 구성 결정
   let spotDistribution;
