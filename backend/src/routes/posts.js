@@ -731,7 +731,7 @@ router.post('/chat-rooms/:roomId/ai-summarize-approve', authMiddleware, async (r
       .single();
 
     const overlapKeywords = {
-    who: ['명', '인원', '사람', '명이서'],
+    who: ['명', '인원/성향', '사람', '명이서'],
     when: ['박', '일', '날짜', '출발', '월', '주', '기간'],
     where: ['여행지', '장소'],
     how: ['렌트', '드라이브', '도보', '버스', '기차', '비행기', '이동'],
