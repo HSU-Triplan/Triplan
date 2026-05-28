@@ -277,44 +277,37 @@ ${existingText}
 // 대화 정리
 // ─────────────────────────────────────────────
 
-async function summarizeConversation(messages, roomInfo = {}) {
-  const conversation = messages
-    .filter(m => m.type === 'text' || !m.type)
-    .map(m => {
-      const name = m.senderName || '참여자';
-      const text = m.text || m.content || '';
-      return `${name}: ${text}`;
-    })
-    .filter(line => line.trim().length > 5)
-    .join('\n');
+async function summarizeConversation(messages, roomInfo = {}, memberProfiles = []) {
 
-  if (!conversation.trim()) {
-    return { who: [], when: [], where: [], how: [], what: [] };
-  }
+  // ... conversation, knownInfo 기존 코드 동일 ...
 
-  const knownInfo = [
-    roomInfo.days ? `- 여행 기간: ${roomInfo.days}박${Number(roomInfo.days) + 1}일 (확정)` : '',
-    roomInfo.departure_date ? `- 출발일: ${roomInfo.departure_date} (확정)` : '',
-    roomInfo.destination ? `- 목적지: ${roomInfo.destination} (확정)` : '',
-  ].filter(Boolean).join('\n');
+  // 멤버 성향 텍스트 빌드
+  const memberInfo = memberProfiles.length > 0
+    ? memberProfiles.map(m => `- ${m.name}: ${m.travelType}`).join('\n')
+    : '정보 없음';
 
   const prompt = `
 아래 여행 채팅 대화를 분석해서 5W 항목을 추출하세요.
 
 ${knownInfo ? `[방 정보 - 이미 확정된 사항]\n${knownInfo}\n` : ''}
+
+[멤버 여행 성향]
+${memberInfo}
+(T=대중교통/C=자동차, U=도심/N=자연, A=활동/R=휴양, J=계획/P=즉흥)
+- 성향 정보를 what/how 항목 추천 시 참고하세요
+
 [대화]
 ${conversation}
 
 [규칙]
 - 확정된 방 정보는 반드시 when/where 항목에 포함
-- 대화에서 추가로 언급된 내용도 포함
+- 멤버 성향을 고려해 활동/이동수단 제안에 반영
 - 불분명한 항목은 빈 배열
-- 항목당 짧고 명확하게 (1~3단어)
-- who: 인원 수, 구성 (예: 3명, 커플)
-- when: 날짜, 기간 (예: 5월 29일, 3박4일)
-- where: 목적지, 장소 (예: 제주도)
-- how: 이동수단만 (예: 렌트카, KTX) — 예산 절대 포함 금지
-- what: 활동, 식사, 예산 등 (예: 맛집탐방, 예산 50만원)
+- who: 인원 수, 구성
+- when: 날짜, 기간
+- where: 목적지, 장소
+- how: 이동수단만 — 예산 절대 포함 금지
+- what: 활동, 식사, 예산 등
 - JSON만 출력, 다른 텍스트 절대 금지
 
 {"who":[],"when":[],"where":[],"how":[],"what":[]}

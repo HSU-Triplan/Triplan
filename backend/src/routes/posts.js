@@ -654,12 +654,11 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
   const { roomId } = req.params;
 
   try {
-    // 채팅방 전체 메시지 조회
     const { data: messages, error } = await supabase
       .from('messages')
       .select('content, type, users(nickname, name)')
       .eq('chat_room_id', roomId)
-      .eq('type', 'text')  // 일반 텍스트 메시지만
+      .eq('type', 'text')
       .order('created_at', { ascending: true });
 
     const { data: room } = await supabase
@@ -667,6 +666,12 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       .select('posts(days, departure_date, destination)')
       .eq('id', roomId)
       .single();
+
+    // ↓ 멤버 성향 조회 추가
+    const { data: members } = await supabase
+      .from('chat_members')
+      .select('users(nickname, name, travel_type)')
+      .eq('chat_room_id', roomId);
 
     if (error) throw error;
     if (!messages || messages.length === 0) {
@@ -680,12 +685,18 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
     }));
 
     const roomInfo = {
-      days: room.posts?.days,
-      departure_date: room.posts?.departure_date,
-      destination: room.posts?.destination,
+      days: room?.posts?.days,
+      departure_date: room?.posts?.departure_date,
+      destination: room?.posts?.destination,
     };
 
-    const summary = await summarizeConversation(formatted, roomInfo);
+    // ↓ memberProfiles 추가
+    const memberProfiles = (members || []).map(m => ({
+      name: m.users?.nickname || m.users?.name || '멤버',
+      travelType: m.users?.travel_type || '미설정',
+    }));
+
+    const summary = await summarizeConversation(formatted, roomInfo, memberProfiles);
 
     res.json({ success: true, summary });
   } catch (error) {
