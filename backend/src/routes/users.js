@@ -251,10 +251,11 @@ router.get('/friends', authMiddleware, async (req, res) => {
     const { data, error } = await supabase
       .from('friends')
       .select('status, users:friend_id(id, name, nickname, profile_image)')
-      .eq('user_id', req.user.userId);
+      .or(`user_id.eq.${req.user.userId},friend_id.eq.${req.user.userId}`);
 
     if (error) throw error;
-    res.json({ success: true, friends: data });
+    console.log("friends 목록 : "+data);
+    res.json({ success: true, friends: data , userId : req.user.userId});
   } catch (error) {
     console.error('친구목록 조회 에러:', error);
     res.status(500).json({ success: false, message: '친구 목록 조회 실패' });

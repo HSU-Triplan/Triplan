@@ -24,6 +24,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const [requestList, setRequestList] = useState([]);
   const [friendCode, setFriendCode] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [sentList,setSentList] = useState([]);
 
   const fetchFriends = async () => {
     try {
@@ -39,15 +40,20 @@ export default function FriendsScreen({ setIsLoggedIn }) {
       if (result.success && !isUploadingRef.current) {
         let friends = [];
         let request = [];
+        let sent = [];
+        let userId = result.userId;
+        console.log("user id : "+ userId);
         for (let i = 0; i < result.friends.length; i++) {
-          if (result.friends[i].status === 'accept') {
+          if (result.friends[i].status === 'accept' && result.friends[i].user_id == userId) {
             friends.push(result.friends[i]);
-          } else if (result.friends[i].status === 'request') {
+          } else if (result.friends[i].status === 'request' && result.friends[i].user_id == userId) {
             request.push(result.friends[i]);
-          }
+          }else if (result.friends[i].status === 'request' && result.friends[i].friend_id == userId) {
+            sent.push(result.friends[i]);
         }
         setFriendsList(friends);
         setRequestList(request);
+        setSentList(sent);
       }
     } catch (e) {
       console.log('친구 정보 불러오기 실패:', e);
@@ -166,6 +172,9 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                 받은 요청 {requestList?.length > 0 ? `(${requestList.length})` : ''}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity style={[styles.tabButton, screen === 'sent' && styles.tabButtonActive]} onPress={() => setScreen('sent')}>
+                <Text style={[styles.tabText, screen === 'sent' && styles.tabTextActive]}>보낸 요청</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={[styles.tabButton, screen === 'add' && styles.tabButtonActive]} onPress={() => setScreen('add')}>
               <Text style={[styles.tabText, screen === 'add' && styles.tabTextActive]}>친구 추가</Text>
             </TouchableOpacity>
@@ -232,6 +241,31 @@ export default function FriendsScreen({ setIsLoggedIn }) {
             </ScrollView>
           )}
 
+          {screen === 'sent' && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.headerRow}>
+                  <Text style={styles.listTitle}>보낸 친구 요청</Text>
+                  <View style={styles.countBadge}><Text style={styles.countText}>{sentList?.length || 0}건</Text></View>
+                </View>
+                {sentList?.length === 0 ? (
+                  <View style={styles.emptyBox}>
+                    <Text style={styles.emptyEmoji}>🛩️️</Text>
+                    <Text style={styles.emptyText}>보낸 친구 요청이 없습니다</Text>
+                  </View>
+                ) : (
+                  sentList?.map((request, index) => (
+                    <View key={index} style={styles.userCard}>
+                      <Image style={styles.profileImage} source={{ uri: request.users?.profile_image || 'https://via.placeholder.com/100' }} />
+                      <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{request.users?.nickname || request.users?.name || '알 수 없는 유저'}</Text>
+                        <Text style={styles.userSubText}>친구 요청을 보냈어요!</Text>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+          )}
+
           {screen === 'add' && (
             <View style={styles.addFriendBox}>
               <Text style={styles.addFriendEmoji}>🔍</Text>
@@ -272,7 +306,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   appBar: { backgroundColor: 'rgba(255, 255, 255, 0.85)', borderBottomWidth: 1, borderBottomColor: '#eee' },
   appBarScroll: { paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 6 },
-  tabButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 24, backgroundColor: 'transparent' },
+  tabButton: { paddingVertical: 10, paddingHorizontal: 15, borderRadius: 24, backgroundColor: 'transparent' },
   tabButtonActive: { backgroundColor: '#FF6B6B', shadowColor: '#FF6B6B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4 },
   tabText: { fontSize: 15, fontWeight: 'bold', color: '#666' },
   tabTextActive: { color: '#fff' },
