@@ -579,6 +579,8 @@ export default function ChatRoomScreen({ route, navigation }) {
             <MessageItem
               message={item}
               myUserId={myUserId}
+              currentSpotCount={pendingSpots.length}
+              days={days}
               selectedSchedule={selectedSchedule}
               setSelectedSchedule={setSelectedSchedule}
               onAddSpotToSchedule={addSpotToSchedule}
@@ -831,7 +833,13 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
         </View>
       );
     }
-    return <AIMessageCard data={recData} onAddSpotToSchedule={onAddSpotToSchedule} />;
+     return (
+       <AIMessageCard
+         data={recData}
+         onAddSpotToSchedule={onAddSpotToSchedule}
+         currentSpotCount={currentSpotCount}
+         days={days}
+       />
   }
 
   if (message.type === 'ai') {

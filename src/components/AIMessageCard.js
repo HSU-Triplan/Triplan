@@ -6,7 +6,12 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 // onAddSpotToSchedule: (spot) => void  ← ChatRoomScreen에서 주입
-export default function AIMessageCard({ data, onAddSpotToSchedule }) {
+export default function AIMessageCard({
+  data,
+  onAddSpotToSchedule,
+  currentSpotCount,
+  days
+}) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [selectedSpot, setSelectedSpot] = useState(0);
   const mapRef = useRef(null);
@@ -53,30 +58,45 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
 
   // 일정 추가 버튼
   const handleAddToSchedule = (spot) => {
-    Alert.alert(
-      '일정에 추가',
-      `"${spot.name}" 을 일정에 추가할까요?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '추가',
-          onPress: () => {
-            if (onAddSpotToSchedule) {
-              onAddSpotToSchedule({
-                time: '',
-                place: spot.name,
-                detail: spot.description || '',
-                photoUrl : spot.photoUrl,
-                mapUrl : spot.placeUrl
-              });
-              Alert.alert('✅ 추가됐어요', `"${spot.name}" 이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
-              console.log("aimessagecard에서 추가한 정보 : " + JSON.stringify(spot))
-            }
+      // n박 -> (n+1)일
+      // 하루 2개 기준 추천
+      const maxSpots = (Number(days) + 1) * 2;
+      const isOverLimit = currentSpotCount >= maxSpots;
+
+      Alert.alert(
+        isOverLimit ? '⚠️ 일정이 많아요' : '일정에 추가',
+        isOverLimit
+          ? `${days}박${Number(days) + 1}일 여행 권장 일정(${maxSpots}곳)을 초과했어요.\n그래도 "${spot.name}"을 추가할까요?`
+          : `"${spot.name}" 을 일정에 추가할까요?`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '추가',
+            onPress: () => {
+              if (onAddSpotToSchedule) {
+                onAddSpotToSchedule({
+                  time: '',
+                  place: spot.name,
+                  detail: spot.description || '',
+                  photoUrl: spot.photoUrl,
+                  mapUrl: spot.placeUrl,
+                });
+
+                Alert.alert(
+                  '✅ 추가됐어요',
+                  `"${spot.name}" 이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`
+                );
+
+                console.log(
+                  'aimessagecard에서 추가한 정보 : ' +
+                    JSON.stringify(spot)
+                );
+              }
+            },
           },
-        },
-      ]
-    );
-  };
+        ]
+      );
+    };
 
   const region = getRegion();
 

@@ -578,17 +578,41 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
   const { roomId } = req.params;
 
   try {
-    // 선호사항 + 채팅방 정보 조회
     const { data: room, error } = await supabase
       .from('chat_rooms')
-      .select(`ai_preferences, posts (destination, days, departure_date, max_people)`)
+      .select(`ai_preferences, posts(destination, days, departure_date, max_people)`)
       .eq('id', roomId)
       .single();
 
     if (error) throw error;
 
+    const { data: members } = await supabase
+      .from('chat_members')
+      .select('users(travel_type)')
+      .eq('chat_room_id', roomId);
+
+    // U/N, A/R 비율 계산
+    let urbanCount = 0, natureCount = 0;
+    let activeCount = 0, restCount = 0;
+    const totalMembers = members?.length || 0;
+
+    members?.forEach(m => {
+      const type = m.users?.travel_type || '';
+      if (type[1] === 'U') urbanCount++;
+      else if (type[1] === 'N') natureCount++;
+      if (type[2] === 'A') activeCount++;
+      else if (type[2] === 'R') restCount++;
+    });
+
+    const urbanRatio  = totalMembers > 0 ? Math.round(urbanCount  / totalMembers * 100) : 50;
+    const activeRatio = totalMembers > 0 ? Math.round(activeCount / totalMembers * 100) : 50;
+
     const preferences = room.ai_preferences || [];
-    const roomInfo = room.posts || {};
+    const roomInfo = {
+      ...room.posts,
+      urbanRatio,
+      activeRatio,
+    };
 
     // 1. Gemini에서 JSON 구조로 추천 받기
     const parsed = await recommendDestinations(preferences, roomInfo);
