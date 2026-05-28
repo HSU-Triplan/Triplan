@@ -278,10 +278,26 @@ ${existingText}
 // ─────────────────────────────────────────────
 
 async function summarizeConversation(messages, roomInfo = {}, memberProfiles = []) {
+  const conversation = messages
+    .filter(m => m.type === 'text' || !m.type)
+    .map(m => {
+      const name = m.senderName || '참여자';
+      const text = m.text || m.content || '';
+      return `${name}: ${text}`;
+    })
+    .filter(line => line.trim().length > 5)
+    .join('\n');
 
-  // ... conversation, knownInfo 기존 코드 동일 ...
+  if (!conversation.trim()) {
+    return { who: [], when: [], where: [], how: [], what: [] };
+  }
 
-  // 멤버 성향 텍스트 빌드
+  const knownInfo = [
+    roomInfo.days ? `- 여행 기간: ${roomInfo.days}박${Number(roomInfo.days) + 1}일 (확정)` : '',
+    roomInfo.departure_date ? `- 출발일: ${roomInfo.departure_date} (확정)` : '',
+    roomInfo.destination ? `- 목적지: ${roomInfo.destination} (확정)` : '',
+  ].filter(Boolean).join('\n');
+
   const memberInfo = memberProfiles.length > 0
     ? memberProfiles.map(m => `- ${m.name}: ${m.travelType}`).join('\n')
     : '정보 없음';
@@ -303,6 +319,7 @@ ${conversation}
 - 확정된 방 정보는 반드시 when/where 항목에 포함
 - 멤버 성향을 고려해 활동/이동수단 제안에 반영
 - 불분명한 항목은 빈 배열
+- 항목당 짧고 명확하게 (1~3단어)
 - who: 인원 수, 구성
 - when: 날짜, 기간
 - where: 목적지, 장소
