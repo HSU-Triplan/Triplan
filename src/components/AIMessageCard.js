@@ -6,7 +6,12 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 // onAddSpotToSchedule: (spot) => void  ← ChatRoomScreen에서 주입
-export default function AIMessageCard({ data, onAddSpotToSchedule }) {
+export default function AIMessageCard({
+ data,
+ onAddSpotToSchedule,
+ currentSpotCount = 0,
+ days = 1
+}) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [selectedSpot, setSelectedSpot] = useState(0);
   const mapRef = useRef(null);
@@ -53,9 +58,14 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
 
   // 일정 추가 버튼
   const handleAddToSchedule = (spot) => {
+    const maxSpots = (Number(days) + 1) * 2;
+    const willExceed = (currentSpotCount + 1) > maxSpots;
+
     Alert.alert(
-      '일정에 추가',
-      `"${spot.name}" 을 일정에 추가할까요?`,
+      willExceed ? '⚠️ 일정이 많아요' : '일정에 추가',
+      willExceed
+        ? `${days}박${Number(days) + 1}일 여행 권장 일정(${maxSpots}곳)을 초과해요.\n그래도 "${spot.name}"을 추가할까요?`
+        : `"${spot.name}"을 일정에 추가할까요?`,
       [
         { text: '취소', style: 'cancel' },
         {
@@ -66,11 +76,8 @@ export default function AIMessageCard({ data, onAddSpotToSchedule }) {
                 time: '',
                 place: spot.name,
                 detail: spot.description || '',
-                photoUrl : spot.photoUrl,
-                mapUrl : spot.placeUrl
               });
-              Alert.alert('✅ 추가됐어요', `"${spot.name}" 이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
-              console.log("aimessagecard에서 추가한 정보 : " + JSON.stringify(spot))
+              Alert.alert('✅ 추가됐어요', `"${spot.name}"이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
             }
           },
         },

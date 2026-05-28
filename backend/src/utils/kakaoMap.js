@@ -35,14 +35,44 @@ const searchKakaoPlace = async (query) => {
 };
 
 // 목적지 인기 장소 검색 (상위 15개)
-async function searchPopularKakaoPlaces(destination) {
+// searchPopularKakaoPlaces — urbanRatio 파라미터 추가
+async function searchPopularKakaoPlaces(destination, urbanRatio = 50) {
   try {
-    const query = `${destination} 관광지`;
+    let query;
+    if (urbanRatio >= 70) query = `${destination} 관광명소`;
+    else if (urbanRatio <= 30) query = `${destination} 자연`;
+    else query = `${destination} 관광`;
+
+    console.log('[Kakao] 검색 쿼리:', query);
+
     const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=15&sort=accuracy`;
     const res = await fetch(url, {
       headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
     });
     const data = await res.json();
+
+    console.log('[Kakao] 응답 상태:', res.status);
+    console.log('[Kakao] 결과 수:', data.documents?.length);
+
+    // 결과 없으면 기본 쿼리로 재시도
+    if (!data.documents || data.documents.length === 0) {
+      console.log('[Kakao] 결과 없음 → 기본 쿼리로 재시도');
+      const retryUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(destination)}&size=15&sort=accuracy`;
+      const retryRes = await fetch(retryUrl, {
+        headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
+      });
+      const retryData = await retryRes.json();
+      console.log('[Kakao] 재시도 결과 수:', retryData.documents?.length);
+      return (retryData.documents || []).map(p => ({
+        name: p.place_name,
+        address: p.road_address_name || p.address_name,
+        lat: parseFloat(p.y),
+        lng: parseFloat(p.x),
+        placeUrl: p.place_url,
+        category: p.category_name,
+      }));
+    }
+
     return (data.documents || []).map(p => ({
       name: p.place_name,
       address: p.road_address_name || p.address_name,
@@ -57,16 +87,15 @@ async function searchPopularKakaoPlaces(destination) {
   }
 }
 
-// 중심 장소 근처 검색
-async function searchNearbyKakaoPlaces(lat, lng, centerName) {
+// searchNearbyKakaoPlaces — keyword 파라미터로 검색
+async function searchNearbyKakaoPlaces(lat, lng, keyword) {
   try {
-    const query = `${centerName} 근처 명소`;
-    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=2000&size=5&sort=distance`;
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword)}&x=${lng}&y=${lat}&radius=3000&size=3&sort=distance`;
     const res = await fetch(url, {
       headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
     });
     const data = await res.json();
-    return (data.documents || []).slice(0, 2).map(p => ({
+    return (data.documents || []).map(p => ({
       name: p.place_name,
       address: p.road_address_name || p.address_name,
       lat: parseFloat(p.y),

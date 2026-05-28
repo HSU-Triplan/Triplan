@@ -578,17 +578,41 @@ router.post('/chat-rooms/:roomId/ai-recommend', authMiddleware, async (req, res)
   const { roomId } = req.params;
 
   try {
-    // 선호사항 + 채팅방 정보 조회
     const { data: room, error } = await supabase
       .from('chat_rooms')
-      .select(`ai_preferences, posts (destination, days, departure_date, max_people)`)
+      .select(`ai_preferences, posts(destination, days, departure_date, max_people)`)
       .eq('id', roomId)
       .single();
 
     if (error) throw error;
 
+    const { data: members } = await supabase
+      .from('chat_members')
+      .select('users(travel_type)')
+      .eq('chat_room_id', roomId);
+
+    // U/N, A/R 비율 계산
+    let urbanCount = 0, natureCount = 0;
+    let activeCount = 0, restCount = 0;
+    const totalMembers = members?.length || 0;
+
+    members?.forEach(m => {
+      const type = m.users?.travel_type || '';
+      if (type[1] === 'U') urbanCount++;
+      else if (type[1] === 'N') natureCount++;
+      if (type[2] === 'A') activeCount++;
+      else if (type[2] === 'R') restCount++;
+    });
+
+    const urbanRatio  = totalMembers > 0 ? Math.round(urbanCount  / totalMembers * 100) : 50;
+    const activeRatio = totalMembers > 0 ? Math.round(activeCount / totalMembers * 100) : 50;
+
     const preferences = room.ai_preferences || [];
-    const roomInfo = room.posts || {};
+    const roomInfo = {
+      ...room.posts,
+      urbanRatio,
+      activeRatio,
+    };
 
     // 1. Gemini에서 JSON 구조로 추천 받기
     const parsed = await recommendDestinations(preferences, roomInfo);
@@ -654,12 +678,11 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
   const { roomId } = req.params;
 
   try {
-    // 채팅방 전체 메시지 조회
     const { data: messages, error } = await supabase
       .from('messages')
       .select('content, type, users(nickname, name)')
       .eq('chat_room_id', roomId)
-      .eq('type', 'text')  // 일반 텍스트 메시지만
+      .eq('type', 'text')
       .order('created_at', { ascending: true });
 
     const { data: room } = await supabase
@@ -667,6 +690,12 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
       .select('posts(days, departure_date, destination)')
       .eq('id', roomId)
       .single();
+
+    // ↓ 멤버 성향 조회 추가
+    const { data: members } = await supabase
+      .from('chat_members')
+      .select('users(nickname, name, travel_type)')
+      .eq('chat_room_id', roomId);
 
     if (error) throw error;
     if (!messages || messages.length === 0) {
@@ -680,12 +709,18 @@ router.post('/chat-rooms/:roomId/ai-summarize', authMiddleware, async (req, res)
     }));
 
     const roomInfo = {
-      days: room.posts?.days,
-      departure_date: room.posts?.departure_date,
-      destination: room.posts?.destination,
+      days: room?.posts?.days,
+      departure_date: room?.posts?.departure_date,
+      destination: room?.posts?.destination,
     };
 
-    const summary = await summarizeConversation(formatted, roomInfo);
+    // ↓ memberProfiles 추가
+    const memberProfiles = (members || []).map(m => ({
+      name: m.users?.nickname || m.users?.name || '멤버',
+      travelType: m.users?.travel_type || '미설정',
+    }));
+
+    const summary = await summarizeConversation(formatted, roomInfo, memberProfiles);
 
     res.json({ success: true, summary });
   } catch (error) {
@@ -720,7 +755,7 @@ router.post('/chat-rooms/:roomId/ai-summarize-approve', authMiddleware, async (r
       .single();
 
     const overlapKeywords = {
-    who: ['명', '인원', '사람', '명이서'],
+    who: ['명', '인원/성향', '사람', '명이서'],
     when: ['박', '일', '날짜', '출발', '월', '주', '기간'],
     where: ['여행지', '장소'],
     how: ['렌트', '드라이브', '도보', '버스', '기차', '비행기', '이동'],

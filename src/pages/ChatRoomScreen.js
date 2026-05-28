@@ -365,12 +365,28 @@ export default function ChatRoomScreen({ route, navigation }) {
             setIsAILoading(true);
 
             const loadingId = 'ai-loading-' + Date.now();
+            const loadingMessages = [
+              'AI가 인기 장소를 검색하는 중...',
+              'AI가 여행 성향을 분석하는 중...',
+              'AI가 최적 장소를 선정하는 중...',
+              '주변 장소 정보를 수집하는 중...',
+            ];
+            let msgIdx = 0;
+
             setMessages(prev => [...prev, {
               id: loadingId,
               type: 'ai_loading',
-              text: 'AI가 여행지를 고르는 중...',
+              text: loadingMessages[0],
             }]);
             flatListRef.current?.scrollToEnd({ animated: true });
+
+            // 3초마다 메시지 변경
+            const loadingInterval = setInterval(() => {
+              msgIdx = (msgIdx + 1) % loadingMessages.length;
+              setMessages(prev => prev.map(m =>
+                m.id === loadingId ? { ...m, text: loadingMessages[msgIdx] } : m
+              ));
+            }, 3000);
 
             try {
               const token = await AsyncStorage.getItem('token');
@@ -383,12 +399,14 @@ export default function ChatRoomScreen({ route, navigation }) {
               });
               const data = await res.json();
 
+              clearInterval(loadingInterval);
               setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== loadingId);
                 if (data.success) return [...filtered, data.message];
                 return filtered;
               });
             } catch (error) {
+              clearInterval(loadingInterval);
               console.log('AI 추천 에러:', error);
               setMessages(prev => prev.filter(m => m.id !== loadingId));
               Alert.alert('오류', 'AI 추천 중 문제가 발생했습니다.');
@@ -579,6 +597,8 @@ export default function ChatRoomScreen({ route, navigation }) {
             <MessageItem
               message={item}
               myUserId={myUserId}
+              currentSpotCount={pendingSpots.length}
+              days={days}
               selectedSchedule={selectedSchedule}
               setSelectedSchedule={setSelectedSchedule}
               onAddSpotToSchedule={addSpotToSchedule}
@@ -777,7 +797,16 @@ export default function ChatRoomScreen({ route, navigation }) {
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule ,fetchProfile}) => {
+const MessageItem = ({
+    message,
+    myUserId,
+    selectedSchedule,
+    setSelectedSchedule,
+    onAddSpotToSchedule,
+    fetchProfile,
+    currentSpotCount,
+    days
+    }) => {
 
   if (message.type === 'ai_summary') {
     const summaryData = message.data
@@ -831,7 +860,14 @@ const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule,
         </View>
       );
     }
-    return <AIMessageCard data={recData} onAddSpotToSchedule={onAddSpotToSchedule} />;
+     return (
+       <AIMessageCard
+         data={recData}
+         onAddSpotToSchedule={onAddSpotToSchedule}
+         currentSpotCount={currentSpotCount}
+         days={days}
+       />
+     );
   }
 
   if (message.type === 'ai') {

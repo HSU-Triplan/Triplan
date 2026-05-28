@@ -56,6 +56,11 @@ function checkIsKorea(destination) {
 async function recommendDestinations(preferences, roomInfo) {
   console.log('[Gemini] 추천 시작');
 
+  // ── 성향 비율 계산 ──────────────────────────
+  const urbanRatio  = roomInfo.urbanRatio  ?? 50;
+  const activeRatio = roomInfo.activeRatio ?? 50;
+  const natureRatio = 100 - urbanRatio;
+  const restRatio   = 100 - activeRatio;
   const isKorea = checkIsKorea(roomInfo.destination || '');
 
   // ── Step 1: 인기 장소 15개 검색 ──────────────
@@ -63,9 +68,9 @@ async function recommendDestinations(preferences, roomInfo) {
   let popularPlaces = [];
 
   if (isKorea) {
-    popularPlaces = await searchPopularKakaoPlaces(roomInfo.destination);
+    popularPlaces = await searchPopularKakaoPlaces(roomInfo.destination, urbanRatio);
   } else {
-    popularPlaces = await searchPopularGooglePlaces(roomInfo.destination);
+    popularPlaces = await searchPopularGooglePlaces(roomInfo.destination, urbanRatio);
   }
 
   if (popularPlaces.length === 0) {
@@ -85,6 +90,39 @@ async function recommendDestinations(preferences, roomInfo) {
     .map((p, i) => `${i}. ${p.name} | ${p.address || ''} | ${p.category || p.types || ''}`)
     .join('\n');
 
+
+
+  // 도심/자연 3곳 구성 결정
+  let spotDistribution;
+  if (urbanRatio === 100) {
+    spotDistribution = '주요 도시 지점 3곳 (자연 없음)';
+  } else if (natureRatio === 100) {
+    spotDistribution = '자연 지점 3곳 (도심 없음)';
+  } else if (urbanRatio >= 67) {
+    spotDistribution = '도심 지점 2곳 + 자연 지점 1곳';
+  } else if (natureRatio >= 67) {
+    spotDistribution = '자연 지점 2곳 + 도심 지점 1곳';
+  } else {
+    spotDistribution = '도심 지점 2곳 + 자연 지점 1곳';
+  }
+
+  // 장소 5곳 활동/휴양 비율 설명
+  let activityDistribution;
+  if (activeRatio === 100) {
+    activityDistribution = '액티비티/체험/관광 중심 장소 5곳';
+  } else if (restRatio === 100) {
+    activityDistribution = '휴양/힐링/여유 중심 장소 5곳';
+  } else if (activeRatio >= 67) {
+    activityDistribution = '액티비티 장소 3곳 + 휴양 장소 2곳';
+  } else if (restRatio >= 67) {
+    activityDistribution = '휴양 장소 3곳 + 액티비티 장소 2곳';
+  } else {
+    activityDistribution = '액티비티 장소 3곳 + 휴양 장소 2곳';
+  }
+
+  console.log(`[Gemini] 도심 ${urbanRatio}% / 자연 ${natureRatio}% → ${spotDistribution}`);
+  console.log(`[Gemini] 활동 ${activeRatio}% / 휴양 ${restRatio}% → ${activityDistribution}`);
+
   const prompt = `
 당신은 여행 큐레이터입니다. 아래 인기 장소 목록에서 그룹 조건에 맞는 3곳을 선정하세요.
 
@@ -94,6 +132,10 @@ async function recommendDestinations(preferences, roomInfo) {
 - 출발일: ${roomInfo.departure_date || '미정'}
 - 인원: ${roomInfo.max_people || '미정'}명
 
+[그룹 여행 성향 비율]
+- 도심(U) vs 자연(N): 도심 ${urbanRatio}% / 자연 ${natureRatio}%
+- 활동(A) vs 휴양(R): 활동 ${activeRatio}% / 휴양 ${restRatio}%
+
 [그룹 선호사항]
 ${prefText}
 
@@ -102,10 +144,17 @@ ${placeList}
 
 [선정 기준]
 - 반드시 위 목록에 있는 장소만 선정 (목록에 없는 장소 추가 금지)
+- 3곳 구성: 반드시 ${spotDistribution}
 - 그룹 선호사항에 부합하는 곳 우선
-- 3곳은 서로 성격이 다른 곳으로 구성 (자연/문화/체험/쇼핑 등)
 - 이동 동선 고려 (지나치게 먼 조합 지양)
 - 각 장소마다 짧고 명확한 추천 이유 작성
+
+[각 장소별 spotKeywords 작성 기준]
+- 각 선정 장소 주변에서 검색할 장소 키워드 5개 작성
+- 구성: ${activityDistribution}
+- 도심/자연 비율도 동일하게 적용: ${spotDistribution}
+- 키워드는 실제 검색에 쓸 구체적인 장소 유형으로 작성 (예: "경복궁 근처 한복체험", "북촌 카페")
+- 식당/맛집도 포함 가능하나 1~2개로 제한
 
 [응답 형식 - JSON만 출력, 다른 텍스트 절대 금지]
 {
@@ -116,21 +165,24 @@ ${placeList}
       "listIndex": 0,
       "name": "장소명",
       "reason": "추천 이유 1~2줄",
-      "travelTime": "이동 시간 (예: 차로 30분)"
+      "travelTime": "이동 시간 (예: 차로 30분)",
+      "spotKeywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"]
     },
     {
       "rank": 2,
       "listIndex": 3,
       "name": "장소명",
       "reason": "추천 이유 1~2줄",
-      "travelTime": "이동 시간"
+      "travelTime": "이동 시간",
+      "spotKeywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"]
     },
     {
       "rank": 3,
       "listIndex": 7,
       "name": "장소명",
       "reason": "추천 이유 1~2줄",
-      "travelTime": "이동 시간"
+      "travelTime": "이동 시간",
+      "spotKeywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"]
     }
   ]
 }
@@ -143,8 +195,8 @@ ${placeList}
     throw new Error('Gemini 선정 결과가 없습니다.');
   }
 
-  // ── Step 3: 선정된 3곳 근처 장소 병렬 검색 ──────
-  console.log('[Gemini] Step 3 - 근처 장소 검색 (명소 3 + 식당 2)');
+  // ── Step 3: spotKeywords 기반 근처 장소 병렬 검색 ──────
+  console.log('[Gemini] Step 3 - spotKeywords 기반 장소 검색');
 
   // 선정된 3곳 이름 Set (중복 방지용)
   const selectedNames = new Set(
@@ -159,25 +211,30 @@ ${placeList}
         return null;
       }
 
-      let nearbyAttractions = [];
-      let nearbyRestaurants = [];
+      const keywords = sel.spotKeywords || [];
+      console.log(`[Gemini] ${center.name} 주변 키워드:`, keywords);
 
-      if (isKorea) {
-        [nearbyAttractions, nearbyRestaurants] = await Promise.all([
-          searchNearbyKakaoPlaces(center.lat, center.lng, center.name, 'attraction'),
-          searchNearbyKakaoPlaces(center.lat, center.lng, center.name, 'restaurant'),
-        ]);
-      } else {
-        [nearbyAttractions, nearbyRestaurants] = await Promise.all([
-          searchNearbyGooglePlaces(center.lat, center.lng, 'tourist_attraction'),
-          searchNearbyGooglePlaces(center.lat, center.lng, 'restaurant'),
-        ]);
-      }
-
-      // 선정된 3곳과 이름 겹치는 항목 제거
-      const dedupe = (spots) => spots.filter(
-        s => !selectedNames.has(s.name.trim().toLowerCase())
+      // spotKeywords 각각으로 근처 검색 (병렬)
+      const nearbyResults = await Promise.all(
+        keywords.map(async (keyword) => {
+          try {
+            if (isKorea) {
+              return await searchNearbyKakaoPlaces(center.lat, center.lng, keyword);
+            } else {
+              return await searchNearbyGooglePlaces(center.lat, center.lng, keyword);
+            }
+          } catch (e) {
+            return [];
+          }
+        })
       );
+
+      // null 제거 + 선정 3곳과 중복 제거 + 자체 중복 제거
+      const dedupedNearby = nearbyResults
+        .flat()
+        .filter(Boolean)
+        .filter(s => !selectedNames.has(s.name.trim().toLowerCase()))
+        .filter((s, idx, arr) => arr.findIndex(x => x.name === s.name) === idx);
 
       const spots = [
         {
@@ -190,7 +247,7 @@ ${placeList}
           placeUrl: center.placeUrl || null,
           tag: '🏛 중심',
         },
-        ...dedupe(nearbyAttractions).slice(0, 3).map(s => ({
+        ...dedupedNearby.slice(0, 5).map(s => ({
           name: s.name,
           description: s.address || '',
           lat: s.lat,
@@ -198,17 +255,7 @@ ${placeList}
           address: s.address || '',
           photoUrl: s.photoUrl || null,
           placeUrl: s.placeUrl || null,
-          tag: '📍 명소',
-        })),
-        ...dedupe(nearbyRestaurants).slice(0, 2).map(s => ({
-          name: s.name,
-          description: s.address || '',
-          lat: s.lat,
-          lng: s.lng,
-          address: s.address || '',
-          photoUrl: s.photoUrl || null,
-          placeUrl: s.placeUrl || null,
-          tag: '🍽 식당',
+          tag: '📍 장소',
         })),
       ];
 
@@ -277,7 +324,7 @@ ${existingText}
 // 대화 정리
 // ─────────────────────────────────────────────
 
-async function summarizeConversation(messages, roomInfo = {}) {
+async function summarizeConversation(messages, roomInfo = {}, memberProfiles = []) {
   const conversation = messages
     .filter(m => m.type === 'text' || !m.type)
     .map(m => {
@@ -298,23 +345,34 @@ async function summarizeConversation(messages, roomInfo = {}) {
     roomInfo.destination ? `- 목적지: ${roomInfo.destination} (확정)` : '',
   ].filter(Boolean).join('\n');
 
+  const memberInfo = memberProfiles.length > 0
+    ? memberProfiles.map(m => `- ${m.name}: ${m.travelType}`).join('\n')
+    : '정보 없음';
+
   const prompt = `
 아래 여행 채팅 대화를 분석해서 5W 항목을 추출하세요.
 
 ${knownInfo ? `[방 정보 - 이미 확정된 사항]\n${knownInfo}\n` : ''}
+
+[멤버 여행 성향]
+${memberInfo}
+(T=대중교통/C=자동차, U=도심/N=자연, A=활동/R=휴양, J=계획/P=즉흥)
+- 성향 정보를 what/how 항목 추천 시 참고하세요
+
 [대화]
 ${conversation}
 
 [규칙]
 - 확정된 방 정보는 반드시 when/where 항목에 포함
-- 대화에서 추가로 언급된 내용도 포함
+- 멤버 성향을 고려해 활동/이동수단 제안에 반영
 - 불분명한 항목은 빈 배열
 - 항목당 짧고 명확하게 (1~3단어)
-- who: 인원 수, 구성 (예: 3명, 커플)
-- when: 날짜, 기간 (예: 5월 29일, 3박4일)
-- where: 목적지, 장소 (예: 제주도)
-- how: 이동수단만 (예: 렌트카, KTX) — 예산 절대 포함 금지
-- what: 활동, 식사, 예산 등 (예: 맛집탐방, 예산 50만원)
+- who: 인원 수, 구성, 멤버 성향 코드 포함 (예: 3명, TUAJ/TNAP/CUAJ)
+       위의 [멤버 여행 성향] 섹션 정보를 반드시 포함할 것
+- when: 날짜, 기간
+- where: 목적지, 장소
+- how: 이동수단만 — 예산 절대 포함 금지
+- what: 활동, 식사, 예산 등
 - JSON만 출력, 다른 텍스트 절대 금지
 
 {"who":[],"when":[],"where":[],"how":[],"what":[]}
