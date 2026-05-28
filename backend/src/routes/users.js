@@ -250,7 +250,7 @@ router.get('/friends', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('friends')
-      .select('user_id,friend_id,status, users:friend_id(id, name, nickname, profile_image)')
+      .select('user_id,friend_id,status, users:friend_id(id, name, nickname, profile_image),sentUsers:user_id(id, name, nickname, profile_image)')
       .or(`user_id.eq.${req.user.userId},friend_id.eq.${req.user.userId}`);
 
     if (error) throw error;

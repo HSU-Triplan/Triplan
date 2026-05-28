@@ -257,9 +257,9 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                 ) : (
                   sentList?.map((request, index) => (
                     <View key={index} style={styles.userCard}>
-                      <Image style={styles.profileImage} source={{ uri: request.users?.profile_image || 'https://via.placeholder.com/100' }} />
+                      <Image style={styles.profileImage} source={{ uri: request.sentUsers?.profile_image || 'https://via.placeholder.com/100' }} />
                       <View style={styles.userInfo}>
-                        <Text style={styles.userName}>{request.users?.nickname || request.users?.name || '알 수 없는 유저'}</Text>
+                        <Text style={styles.userName}>{request.sentUsers?.nickname || request.sentUsers?.name || '알 수 없는 유저'}</Text>
                         <Text style={styles.userSubText}>친구 요청을 보냈어요!</Text>
                       </View>
                     </View>
