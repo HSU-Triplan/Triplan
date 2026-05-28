@@ -43,11 +43,18 @@ async function searchPopularKakaoPlaces(destination, urbanRatio = 50) {
     else if (urbanRatio <= 30) query = `${destination} 자연 힐링 명소`;
     else query = `${destination} 관광지`;
 
+
+    console.log('[Kakao] 검색 쿼리:', query);
+
     const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=15&sort=accuracy`;
     const res = await fetch(url, {
       headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
     });
     const data = await res.json();
+
+     console.log('[Kakao] 응답 상태:', res.status);
+     console.log('[Kakao] 결과 수:', data.documents?.length);
+
     return (data.documents || []).map(p => ({
       name: p.place_name,
       address: p.road_address_name || p.address_name,

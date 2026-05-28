@@ -44,9 +44,15 @@ async function searchPopularGooglePlaces(destination, urbanRatio = 50) {
     else if (urbanRatio <= 30) query = `popular nature spots in ${destination}`;
     else query = `popular tourist attractions in ${destination}`;
 
+    console.log('[Kakao] 검색 쿼리:', query);
+
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
+
+    console.log('[Kakao] 응답 상태:', res.status);
+    console.log('[Kakao] 결과 수:', data.documents?.length);
+
     return (data.results || []).slice(0, 15).map(p => ({
       name: p.name,
       address: p.formatted_address,
@@ -56,6 +62,7 @@ async function searchPopularGooglePlaces(destination, urbanRatio = 50) {
       placeId: p.place_id,
       types: p.types?.slice(0, 3).join(', '),
     }));
+
   } catch (e) {
     console.error('[Google] 인기 장소 검색 실패:', e.message);
     return [];
