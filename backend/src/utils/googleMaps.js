@@ -36,9 +36,14 @@ const searchGooglePlace = async (query) => {
 };
 
 // 목적지 인기 장소 검색 (상위 15개)
-async function searchPopularGooglePlaces(destination) {
+// searchPopularGooglePlaces — urbanRatio 파라미터 추가
+async function searchPopularGooglePlaces(destination, urbanRatio = 50) {
   try {
-    const query = `popular tourist attractions in ${destination}`;
+    let query;
+    if (urbanRatio >= 70) query = `popular city attractions in ${destination}`;
+    else if (urbanRatio <= 30) query = `popular nature spots in ${destination}`;
+    else query = `popular tourist attractions in ${destination}`;
+
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
@@ -57,28 +62,29 @@ async function searchPopularGooglePlaces(destination) {
   }
 }
 
-// 중심 장소 근처 검색
-async function searchNearbyGooglePlaces(lat, lng) {
+// searchNearbyGooglePlaces — keyword 파라미터로 검색
+async function searchNearbyGooglePlaces(lat, lng, keyword) {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2000&type=tourist_attraction&rankby=prominence&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(keyword)}&location=${lat},${lng}&radius=3000&key=${process.env.GOOGLE_MAPS_API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
 
-    const results = (data.results || []).slice(0, 2);
-    return await Promise.all(results.map(async p => {
-      let photoUrl = null;
-      if (p.photos?.[0]?.photo_reference) {
-        photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
-      }
-      return {
-        name: p.name,
-        address: p.vicinity,
-        lat: p.geometry?.location?.lat,
-        lng: p.geometry?.location?.lng,
-        photoUrl,
-        placeUrl: null,
-      };
-    }));
+    return await Promise.all(
+      (data.results || []).slice(0, 3).map(async p => {
+        let photoUrl = null;
+        if (p.photos?.[0]?.photo_reference) {
+          photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+        }
+        return {
+          name: p.name,
+          address: p.formatted_address || p.vicinity,
+          lat: p.geometry?.location?.lat,
+          lng: p.geometry?.location?.lng,
+          photoUrl,
+          placeUrl: null,
+        };
+      })
+    );
   } catch (e) {
     console.error('[Google] 근처 장소 검색 실패:', e.message);
     return [];

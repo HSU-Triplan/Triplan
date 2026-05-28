@@ -849,6 +849,7 @@ const MessageItem = ({
          currentSpotCount={currentSpotCount}
          days={days}
        />
+     );
   }
 
   if (message.type === 'ai') {

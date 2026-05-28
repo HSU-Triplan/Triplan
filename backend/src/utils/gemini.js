@@ -63,9 +63,9 @@ async function recommendDestinations(preferences, roomInfo) {
   let popularPlaces = [];
 
   if (isKorea) {
-    popularPlaces = await searchPopularKakaoPlaces(roomInfo.destination);
+    popularPlaces = await searchPopularKakaoPlaces(roomInfo.destination, urbanRatio);
   } else {
-    popularPlaces = await searchPopularGooglePlaces(roomInfo.destination);
+    popularPlaces = await searchPopularGooglePlaces(roomInfo.destination, urbanRatio);
   }
 
   if (popularPlaces.length === 0) {
@@ -218,21 +218,19 @@ ${placeList}
         keywords.map(async (keyword) => {
           try {
             if (isKorea) {
-              const results = await searchNearbyKakaoPlaces(center.lat, center.lng, keyword);
-              return results?.[0] || null;
+              return await searchNearbyKakaoPlaces(center.lat, center.lng, keyword);
             } else {
-              const results = await searchNearbyGooglePlaces(center.lat, center.lng, keyword);
-              return results?.[0] || null;
+              return await searchNearbyGooglePlaces(center.lat, center.lng, keyword);
             }
           } catch (e) {
-            console.warn(`[Gemini] 키워드 검색 실패 (${keyword}):`, e.message);
-            return null;
+            return [];
           }
         })
       );
 
       // null 제거 + 선정 3곳과 중복 제거 + 자체 중복 제거
       const dedupedNearby = nearbyResults
+        .flat()
         .filter(Boolean)
         .filter(s => !selectedNames.has(s.name.trim().toLowerCase()))
         .filter((s, idx, arr) => arr.findIndex(x => x.name === s.name) === idx);
