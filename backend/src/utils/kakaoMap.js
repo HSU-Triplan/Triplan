@@ -39,10 +39,9 @@ const searchKakaoPlace = async (query) => {
 async function searchPopularKakaoPlaces(destination, urbanRatio = 50) {
   try {
     let query;
-    if (urbanRatio >= 70) query = `${destination} 시내 도심 명소`;
-    else if (urbanRatio <= 30) query = `${destination} 자연 힐링 명소`;
-    else query = `${destination} 관광지`;
-
+    if (urbanRatio >= 70) query = `${destination} 관광명소`;
+    else if (urbanRatio <= 30) query = `${destination} 자연`;
+    else query = `${destination} 관광`;
 
     console.log('[Kakao] 검색 쿼리:', query);
 
@@ -52,8 +51,27 @@ async function searchPopularKakaoPlaces(destination, urbanRatio = 50) {
     });
     const data = await res.json();
 
-     console.log('[Kakao] 응답 상태:', res.status);
-     console.log('[Kakao] 결과 수:', data.documents?.length);
+    console.log('[Kakao] 응답 상태:', res.status);
+    console.log('[Kakao] 결과 수:', data.documents?.length);
+
+    // 결과 없으면 기본 쿼리로 재시도
+    if (!data.documents || data.documents.length === 0) {
+      console.log('[Kakao] 결과 없음 → 기본 쿼리로 재시도');
+      const retryUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(destination)}&size=15&sort=accuracy`;
+      const retryRes = await fetch(retryUrl, {
+        headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
+      });
+      const retryData = await retryRes.json();
+      console.log('[Kakao] 재시도 결과 수:', retryData.documents?.length);
+      return (retryData.documents || []).map(p => ({
+        name: p.place_name,
+        address: p.road_address_name || p.address_name,
+        lat: parseFloat(p.y),
+        lng: parseFloat(p.x),
+        placeUrl: p.place_url,
+        category: p.category_name,
+      }));
+    }
 
     return (data.documents || []).map(p => ({
       name: p.place_name,

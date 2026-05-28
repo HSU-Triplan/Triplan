@@ -40,18 +40,35 @@ const searchGooglePlace = async (query) => {
 async function searchPopularGooglePlaces(destination, urbanRatio = 50) {
   try {
     let query;
-    if (urbanRatio >= 70) query = `popular city attractions in ${destination}`;
-    else if (urbanRatio <= 30) query = `popular nature spots in ${destination}`;
-    else query = `popular tourist attractions in ${destination}`;
+    if (urbanRatio >= 70) query = `tourist attractions in ${destination}`;
+    else if (urbanRatio <= 30) query = `nature spots in ${destination}`;
+    else query = `attractions in ${destination}`;
 
-    console.log('[Kakao] 검색 쿼리:', query);
+    console.log('[Google] 검색 쿼리:', query);
 
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
 
-    console.log('[Kakao] 응답 상태:', res.status);
-    console.log('[Kakao] 결과 수:', data.documents?.length);
+    console.log('[Google] 결과 수:', data.results?.length);
+
+    // 결과 없으면 기본 쿼리로 재시도
+    if (!data.results || data.results.length === 0) {
+      console.log('[Google] 결과 없음 → 기본 쿼리로 재시도');
+      const retryUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(destination)}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+      const retryRes = await fetch(retryUrl);
+      const retryData = await retryRes.json();
+      console.log('[Google] 재시도 결과 수:', retryData.results?.length);
+      return (retryData.results || []).slice(0, 15).map(p => ({
+        name: p.name,
+        address: p.formatted_address,
+        lat: p.geometry?.location?.lat,
+        lng: p.geometry?.location?.lng,
+        rating: p.rating,
+        placeId: p.place_id,
+        types: p.types?.slice(0, 3).join(', '),
+      }));
+    }
 
     return (data.results || []).slice(0, 15).map(p => ({
       name: p.name,
@@ -62,7 +79,6 @@ async function searchPopularGooglePlaces(destination, urbanRatio = 50) {
       placeId: p.place_id,
       types: p.types?.slice(0, 3).join(', '),
     }));
-
   } catch (e) {
     console.error('[Google] 인기 장소 검색 실패:', e.message);
     return [];
