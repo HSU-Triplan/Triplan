@@ -779,7 +779,16 @@ export default function ChatRoomScreen({ route, navigation }) {
 }
 
 // ── 메시지 아이템 ─────────────────────────────────────────────
-const MessageItem = ({ message, myUserId, selectedSchedule, setSelectedSchedule, onAddSpotToSchedule ,fetchProfile}) => {
+const MessageItem = ({
+    message,
+    myUserId,
+    selectedSchedule,
+    setSelectedSchedule,
+    onAddSpotToSchedule,
+    fetchProfile,
+    currentSpotCount,
+    days
+    }) => {
 
   if (message.type === 'ai_summary') {
     const summaryData = message.data
