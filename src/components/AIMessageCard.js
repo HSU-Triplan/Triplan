@@ -20,22 +20,49 @@ export default function AIMessageCard({
   if (!data?.destinations?.length) return null;
   const dest = data.destinations[selectedIdx] ?? data.destinations[0];
 
-  const validSpots = dest.spots?.filter(s => s.lat && s.lng) ?? [];
+
+  const anchorSpot = dest.spots.find(s => s.lat && s.lng); //중심기준
+
+  const validSpots = anchorSpot
+    ? dest.spots.filter(s =>
+        s.lat && s.lng &&
+        Math.abs(s.lat - anchorSpot.lat) < 0.3 &&
+        Math.abs(s.lng - anchorSpot.lng) < 0.3
+      )
+    : [];
+
   const getRegion = () => {
     if (validSpots.length === 0) return null;
+
     const lats = validSpots.map(s => s.lat);
     const lngs = validSpots.map(s => s.lng);
     const minLat = Math.min(...lats);
     const maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
+
+
+
+    console.log('=== VALID SPOTS ===');
+    console.log(validSpots);
+    console.log(
+      validSpots.map(s => ({
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+      }))
+    );
+
     return {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,
-      latitudeDelta: Math.max((maxLat - minLat) * 1.5, 0.05),
-      longitudeDelta: Math.max((maxLng - minLng) * 1.5, 0.05),
+      latitudeDelta: Math.max((maxLat - minLat) * 1.8, 0.15),
+      longitudeDelta: Math.max((maxLng - minLng) * 1.8, 0.15),
     };
   };
+  const region = getRegion();
+  console.log('=== REGION ===');
+  console.log(region);
 
   const handleDestChange = (idx) => {
     setSelectedIdx(idx);
@@ -51,7 +78,7 @@ export default function AIMessageCard({
     if (spot.lat && spot.lng && mapRef.current) {
       mapRef.current.animateToRegion({
         latitude: spot.lat, longitude: spot.lng,
-        latitudeDelta: 0.01, longitudeDelta: 0.01,
+        latitudeDelta: 0.15, longitudeDelta: 0.15,
       }, 500);
     }
   };
@@ -84,8 +111,6 @@ export default function AIMessageCard({
       ]
     );
   };
-
-  const region = getRegion();
 
   return (
     <View style={styles.card}>
@@ -154,9 +179,7 @@ export default function AIMessageCard({
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={PROVIDER_GOOGLE}
-//            provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
-            console.log('isKorea:', dest.isKorea); //지도 안불러와지는 원인파악용
+            provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
             initialRegion={region}>
             {validSpots.length > 1 && (
               <Polyline
@@ -186,7 +209,6 @@ export default function AIMessageCard({
           </View>
         )
       )}
-
       {/* 장소 카드 + 일정 추가 버튼 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.spotScroll}>
         <View style={styles.spotRow}>
@@ -289,7 +311,11 @@ const styles = StyleSheet.create({
   },
   reasonText: { fontSize: 13, color: '#444', lineHeight: 20 },
 
-  map: { height: 220, marginHorizontal: 12, borderRadius: 12, marginBottom: 8 },
+map: {
+  height: 220,
+  marginHorizontal: 12,
+  marginBottom: 8
+  },
   mapFallback: {
     height: 100, marginHorizontal: 12, borderRadius: 12, marginBottom: 8,
     backgroundColor: '#E8E0FF', justifyContent: 'center', alignItems: 'center',

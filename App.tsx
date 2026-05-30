@@ -11,6 +11,7 @@ import {Alert} from 'react-native';
 import FlashMessage from "react-native-flash-message";
 import {showMessage} from "react-native-flash-message";
 import ProfileEditScreen from './src/pages/ProfileEditScreen';
+import { enableLatestRenderer } from 'react-native-maps';
 
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('백그라운드 메시지:', remoteMessage);
