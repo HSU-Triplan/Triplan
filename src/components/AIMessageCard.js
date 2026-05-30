@@ -154,7 +154,9 @@ export default function AIMessageCard({
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
+            provider={PROVIDER_GOOGLE}
+//            provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
+            console.log('isKorea:', dest.isKorea); //지도 안불러와지는 원인파악용
             initialRegion={region}>
             {validSpots.length > 1 && (
               <Polyline
