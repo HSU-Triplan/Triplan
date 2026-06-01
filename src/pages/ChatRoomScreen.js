@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
   Modal, TextInput, ScrollView, StyleSheet,
-  Image, Alert, ActivityIndicator, ImageBackground, Clipboard
+  Image, Alert, ActivityIndicator, ImageBackground, Clipboard,KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -536,263 +536,264 @@ export default function ChatRoomScreen({ route, navigation }) {
   };
 
   return (
-    <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
-      <View style={styles.overlay} />
 
-      <SafeAreaView style={styles.container}>
-        <View style={{ height: 40 }} />
+        <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={6}>
+         <KeyboardAvoidingView  style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.overlay} />
+            <View style={{ height: 80 }} />
 
-        <View style={styles.tripInfo}>
-          <View style={styles.tripBioRow}>
-            <Text style={styles.tripBio}>{bio}</Text>
-            <TouchableOpacity onPress={() => setIsTripInfoExpanded(prev => !prev)}>
-              <Text style={styles.tripToggleIcon}>
-                {isTripInfoExpanded ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {isTripInfoExpanded && (
-            <View style={styles.tripTags}>
-              <Text style={styles.tag}>📍 {destination}</Text>
-              <Text style={styles.tag}>
-                🗓 {String(days).includes('박') ? days : `${days}박${Number(days) + 1}일`}
-              </Text>
-              {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
-              {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
-            </View>
-          )}
-        </View>
-
-        {isTripInfoExpanded && (
-          <View style={styles.aiTagsContainer}>
-            <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-              <View style={styles.aiTagsRow}>
-                {aiPreferences.map((pref, idx) => (
-                  <View key={idx} style={styles.aiTag}>
-                    <Text style={styles.aiTagText}>@ {pref.text}</Text>
-                    <TouchableOpacity
-                      onPress={() => handleDeletePreference(pref)}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                      <Text style={styles.aiTagDelete}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-            <TouchableOpacity style={styles.aiTagAddBtn} onPress={() => setIsAddMemoVisible(true)}>
-              <Text style={styles.aiTagAddBtnText}>＋</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          style={styles.messageList}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={({ item }) => (
-            <MessageItem
-              message={item}
-              myUserId={myUserId}
-              currentSpotCount={pendingSpots.length}
-              days={days}
-              selectedSchedule={selectedSchedule}
-              setSelectedSchedule={setSelectedSchedule}
-              onAddSpotToSchedule={addSpotToSchedule}
-              profileVisible={profileVisible}
-              otherUser={otherUser}
-              fetchProfile={fetchProfile}
-            />
-          )}
-        />
-
-        <View style={styles.actionButtonRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
-            onPress={handleAiRecommend}
-            disabled={isAILoading}>
-            {isAILoading
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.recommendButtonText}>✈️ 여행지 추천</Text>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
-            onPress={handleSummarize}
-            disabled={isSummaryLoading}>
-            {isSummaryLoading
-              ? <ActivityIndicator size="small" color="#6C5CE7" />
-              : <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
-            }
-          </TouchableOpacity>
-        </View>
-
-        <InputBar onSend={sendMessage} />
-
-        {/* 🌟 멤버 모달 */}
-        <Modal
-          visible={isMemberVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsMemberVisible(false)}>
-          <TouchableOpacity
-            style={styles.modalOverlayDark}
-            activeOpacity={1}
-            onPress={() => setIsMemberVisible(false)}>
-            <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
-              <Text style={styles.modalTitle}>참여 중인 멤버 ({members.length})</Text>
-              {members.map((m, idx) => (
-                <View key={idx} style={styles.memberItem}>
-                  <Image
-                    source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }}
-                    style={styles.memberAvatar}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.memberName}>{m.users?.nickname || m.users?.name}</Text>
-                      {m.users?.id === myUserId && (
-                        <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
-                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>나</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.memberType}>{m.users?.travel_type ?? '성향 미설정'}</Text>
-                  </View>
-                </View>
-              ))}
-              <TouchableOpacity style={styles.closeButton} onPress={() => setIsMemberVisible(false)}>
-                <Text style={styles.closeButtonText}>닫기</Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* 🌟 일정 수정 모달 */}
-        <Modal visible={isModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlayDark}>
-            <View style={styles.editBox}>
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <Text style={styles.modalTitle}>일정 수정</Text>
-                {editPlan.map((p, idx) => (
-                  <View key={idx} style={styles.planItem}>
-                    <TouchableOpacity onPress={() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}>
-                      <Text style={{color : 'red'}}>삭제</Text>
-                    </TouchableOpacity>
-                    <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
-                    <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
-                    <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
-                    {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
-                  </View>
-                ))}
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
-                    <Text style={styles.cancelButton}>취소</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleConfirmItinerary} style={styles.modalBtnSave}>
-                    <Text style={styles.saveButton}>🗓 일정 확정</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal visible={isAddMemoVisible} transparent animationType="fade">
-          <TouchableOpacity
-            style={styles.memoModalOverlay}
-            activeOpacity={1}
-            onPress={() => setIsAddMemoVisible(false)}>
-            <TouchableOpacity style={styles.memoModalBox} activeOpacity={1} onPress={() => {}}>
-              <Text style={styles.memoModalTitle}>메모 추가</Text>
-              <Text style={styles.memoModalSub}>여행 관련 선호사항을 입력해주세요</Text>
-              <TextInput
-                style={styles.memoModalInput}
-                placeholder="예) 맛집위주, 예산 30만원, 온천"
-                placeholderTextColor="#aaa"
-                value={manualMemoInput}
-                onChangeText={setManualMemoInput}
-                autoFocus
-              />
-              <View style={styles.memoModalButtons}>
-                <TouchableOpacity onPress={() => { setIsAddMemoVisible(false); setManualMemoInput(''); }}>
-                  <Text style={styles.memoModalCancel}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.memoModalConfirm} onPress={handleManualAddMemo}>
-                  <Text style={styles.memoModalConfirmText}>추가</Text>
+            <View style={styles.tripInfo}>
+              <View style={styles.tripBioRow}>
+                <Text style={styles.tripBio}>{bio}</Text>
+                <TouchableOpacity onPress={() => setIsTripInfoExpanded(prev => !prev)}>
+                  <Text style={styles.tripToggleIcon}>
+                    {isTripInfoExpanded ? '▲' : '▼'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
 
-        <SummaryModal
-          visible={isSummaryVisible}
-          summary={summaryData}
-          onApprove={handleSummaryApprove}
-          onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
-          onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
-        />
+              {isTripInfoExpanded && (
+                <View style={styles.tripTags}>
+                  <Text style={styles.tag}>📍 {destination}</Text>
+                  <Text style={styles.tag}>
+                    🗓 {String(days).includes('박') ? days : `${days}박${Number(days) + 1}일`}
+                  </Text>
+                  {departure_date ? <Text style={styles.tag}>🛫 {departure_date}</Text> : null}
+                  {max_people ? <Text style={styles.tag}>👥 최대 {max_people}명</Text> : null}
+                </View>
+              )}
+            </View>
 
-         <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
-                         <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
-                           <View style={styles.profileModalBox}>
-                              <View style={styles.profileModalHeader}>
-                                <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
-                                <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
-                                {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
-                              </View>
-
-                              <View style={styles.profileCard}>
-                                <Text style={styles.cardTitle}>프로필 정보</Text>
-                                <View style={styles.infoRow}>
-                                  <Text style={styles.infoLabel}>닉네임</Text>
-                                  <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
-                                </View>
-                                <View style={styles.infoRow}>
-                                  <Text style={styles.infoLabel}>여행 타입</Text>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                                      <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
-                                    </View>
-                                    {otherUser?.travel_type && (
-                                      <TouchableOpacity onPress={() => setInfoVisible(true)}>
-                                        <Text style={{ fontSize: 16 }}>❔</Text>
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                  <Text style={styles.infoLabel}>친구 코드</Text>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
-                                    <TouchableOpacity style={styles.copyButton} onPress={handleCopyFriendCode}>
-                                      <Text style={styles.copyButtonText}>복사</Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                  <Text style={styles.infoLabel}>생년월일</Text>
-                                  <Text style={styles.infoValue}>{otherUser?.birth_year || '미설정'}</Text>
-                                </View>
-                                <View style={styles.infoRow}>
-                                  <Text style={styles.infoLabel}>성별</Text>
-                                  <Text style={styles.infoValue}>{otherUser?.gender || '미설정'}</Text>
-                                </View>
-                                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                                  <Text style={styles.infoLabel}>소개</Text>
-                                  <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
-                                </View>
-                              </View>
-                           </View>
+            {isTripInfoExpanded && (
+              <View style={styles.aiTagsContainer}>
+                <Text style={styles.aiTagsLabel}>🤖 AI 메모</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                  <View style={styles.aiTagsRow}>
+                    {aiPreferences.map((pref, idx) => (
+                      <View key={idx} style={styles.aiTag}>
+                        <Text style={styles.aiTagText}>@ {pref.text}</Text>
+                        <TouchableOpacity
+                          onPress={() => handleDeletePreference(pref)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                          <Text style={styles.aiTagDelete}>✕</Text>
                         </TouchableOpacity>
-                   </Modal>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+                <TouchableOpacity style={styles.aiTagAddBtn} onPress={() => setIsAddMemoVisible(true)}>
+                  <Text style={styles.aiTagAddBtnText}>＋</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-      </SafeAreaView>
-    </ImageBackground>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              style={styles.messageList}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              renderItem={({ item }) => (
+                <MessageItem
+                  message={item}
+                  myUserId={myUserId}
+                  currentSpotCount={pendingSpots.length}
+                  days={days}
+                  selectedSchedule={selectedSchedule}
+                  setSelectedSchedule={setSelectedSchedule}
+                  onAddSpotToSchedule={addSpotToSchedule}
+                  profileVisible={profileVisible}
+                  otherUser={otherUser}
+                  fetchProfile={fetchProfile}
+                />
+              )}
+            />
+
+            <View style={styles.actionButtonRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
+                onPress={handleAiRecommend}
+                disabled={isAILoading}>
+                {isAILoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.recommendButtonText}>✈️ 여행지 추천</Text>
+                }
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
+                onPress={handleSummarize}
+                disabled={isSummaryLoading}>
+                {isSummaryLoading
+                  ? <ActivityIndicator size="small" color="#6C5CE7" />
+                  : <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
+                }
+              </TouchableOpacity>
+            </View>
+
+            <InputBar onSend={sendMessage} />
+
+            {/* 🌟 멤버 모달 */}
+            <Modal
+              visible={isMemberVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setIsMemberVisible(false)}>
+              <TouchableOpacity
+                style={styles.modalOverlayDark}
+                activeOpacity={1}
+                onPress={() => setIsMemberVisible(false)}>
+                <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
+                  <Text style={styles.modalTitle}>참여 중인 멤버 ({members.length})</Text>
+                  {members.map((m, idx) => (
+                    <View key={idx} style={styles.memberItem}>
+                      <Image
+                        source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }}
+                        style={styles.memberAvatar}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.memberName}>{m.users?.nickname || m.users?.name}</Text>
+                          {m.users?.id === myUserId && (
+                            <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>나</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.memberType}>{m.users?.travel_type ?? '성향 미설정'}</Text>
+                      </View>
+                    </View>
+                  ))}
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setIsMemberVisible(false)}>
+                    <Text style={styles.closeButtonText}>닫기</Text>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
+
+            {/* 🌟 일정 수정 모달 */}
+            <Modal visible={isModalVisible} transparent animationType="fade">
+              <View style={styles.modalOverlayDark}>
+                <View style={styles.editBox}>
+                  <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                    <Text style={styles.modalTitle}>일정 수정</Text>
+                    {editPlan.map((p, idx) => (
+                      <View key={idx} style={styles.planItem}>
+                        <TouchableOpacity onPress={() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}>
+                          <Text style={{color : 'red'}}>삭제</Text>
+                        </TouchableOpacity>
+                        <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
+                        <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
+                        <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
+                        {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
+                      </View>
+                    ))}
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
+                        <Text style={styles.cancelButton}>취소</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={handleConfirmItinerary} style={styles.modalBtnSave}>
+                        <Text style={styles.saveButton}>🗓 일정 확정</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+
+            <Modal visible={isAddMemoVisible} transparent animationType="fade">
+              <TouchableOpacity
+                style={styles.memoModalOverlay}
+                activeOpacity={1}
+                onPress={() => setIsAddMemoVisible(false)}>
+                <TouchableOpacity style={styles.memoModalBox} activeOpacity={1} onPress={() => {}}>
+                  <Text style={styles.memoModalTitle}>메모 추가</Text>
+                  <Text style={styles.memoModalSub}>여행 관련 선호사항을 입력해주세요</Text>
+                  <TextInput
+                    style={styles.memoModalInput}
+                    placeholder="예) 맛집위주, 예산 30만원, 온천"
+                    placeholderTextColor="#aaa"
+                    value={manualMemoInput}
+                    onChangeText={setManualMemoInput}
+                    autoFocus
+                  />
+                  <View style={styles.memoModalButtons}>
+                    <TouchableOpacity onPress={() => { setIsAddMemoVisible(false); setManualMemoInput(''); }}>
+                      <Text style={styles.memoModalCancel}>취소</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.memoModalConfirm} onPress={handleManualAddMemo}>
+                      <Text style={styles.memoModalConfirmText}>추가</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
+
+            <SummaryModal
+              visible={isSummaryVisible}
+              summary={summaryData}
+              onApprove={handleSummaryApprove}
+              onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
+              onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
+            />
+
+             <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
+                             <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
+                               <View style={styles.profileModalBox}>
+                                  <View style={styles.profileModalHeader}>
+                                    <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
+                                    <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
+                                    {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
+                                  </View>
+
+                                  <View style={styles.profileCard}>
+                                    <Text style={styles.cardTitle}>프로필 정보</Text>
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>닉네임</Text>
+                                      <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>여행 타입</Text>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
+                                          <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
+                                        </View>
+                                        {otherUser?.travel_type && (
+                                          <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                                            <Text style={{ fontSize: 16 }}>❔</Text>
+                                          </TouchableOpacity>
+                                        )}
+                                      </View>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>친구 코드</Text>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
+                                        <TouchableOpacity style={styles.copyButton} onPress={handleCopyFriendCode}>
+                                          <Text style={styles.copyButtonText}>복사</Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>생년월일</Text>
+                                      <Text style={styles.infoValue}>{otherUser?.birth_year || '미설정'}</Text>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>성별</Text>
+                                      <Text style={styles.infoValue}>{otherUser?.gender || '미설정'}</Text>
+                                    </View>
+                                    <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                                      <Text style={styles.infoLabel}>소개</Text>
+                                      <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
+                                    </View>
+                                  </View>
+                               </View>
+                            </TouchableOpacity>
+                       </Modal>
+         </KeyboardAvoidingView>
+        </ImageBackground>
+
   );
 }
 

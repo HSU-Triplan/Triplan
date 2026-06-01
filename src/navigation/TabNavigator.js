@@ -7,6 +7,7 @@ import ProfileScreen from '../pages/ProfileScreen';
 import MatchingScreen from '../pages/MatchingScreen';
 import FriendsScreen from '../pages/FriendsScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,7 +17,7 @@ export default function TabNavigator({ setIsLoggedIn }) {
       screenOptions={{
         tabBarActiveTintColor: '#4A90E2',
         tabBarInactiveTintColor: '#999',
-        tabBarStyle: { height: 60, paddingBottom: 8 },
+        tabBarStyle: { height: 60, paddingBottom: 85 },
         headerShown: false,
       }}>
       <Tab.Screen name="홈" component={HomeScreen}

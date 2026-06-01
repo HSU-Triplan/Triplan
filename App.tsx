@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Dimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +12,7 @@ import FlashMessage from "react-native-flash-message";
 import {showMessage} from "react-native-flash-message";
 import ProfileEditScreen from './src/pages/ProfileEditScreen';
 import { enableLatestRenderer } from 'react-native-maps';
+import { SafeAreaProvider} from 'react-native-safe-area-context';
 
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('백그라운드 메시지:', remoteMessage);
@@ -55,18 +56,20 @@ const AuthRouterScreen = ({ navigation }: any) => {
 };
 
 const TestIntroScreen = ({ navigation }: any) => (
-  <SafeAreaView style={styles.container}>
-    <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={8}>
-      <View style={styles.overlay} />
-      <View style={styles.centerContainer}>
-        <Text style={styles.questionTitle}>환영합니다! 🎉</Text>
-        <Text style={styles.subtitle}>완벽한 일정을 추천해 드리기 위해{'\n'}간단한 여행 성향 테스트를 진행합니다.</Text>
-        <TouchableOpacity style={styles.confirmButton} onPress={() => navigation.navigate('Test')}>
-          <Text style={styles.buttonText}>여행 성향 테스트 진행하기</Text>
-        </TouchableOpacity>
-      </View>
-    </ImageBackground>
-  </SafeAreaView>
+    <SafeAreaProvider>
+
+        <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={8}>
+          <View style={styles.overlay} />
+          <View style={styles.centerContainer}>
+            <Text style={styles.questionTitle}>환영합니다! 🎉</Text>
+            <Text style={styles.subtitle}>완벽한 일정을 추천해 드리기 위해{'\n'}간단한 여행 성향 테스트를 진행합니다.</Text>
+            <TouchableOpacity style={styles.confirmButton} onPress={() => navigation.navigate('Test')}>
+              <Text style={styles.buttonText}>여행 성향 테스트 진행하기</Text>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
+
+  </SafeAreaProvider>
 );
 
 const ResultScreen = ({ route, navigation }: any) => {
@@ -106,43 +109,45 @@ const ResultScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={8}>
-        <View style={styles.overlay} />
+      <SafeAreaProvider style={{flex:1}}>
 
-        <View style={styles.centerContainer}>
-          <Text style={styles.resultTitle}>성향 분석 완료!</Text>
-          <Text style={styles.questionTitle}>당신의 여행 스타일은</Text>
+          <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={8}>
+            <View style={styles.overlay} />
 
-          <View style={styles.resultCard}>
-            <Text style={styles.resultText}>{result}</Text>
+            <View style={styles.centerContainer}>
+              <Text style={styles.resultTitle}>성향 분석 완료!</Text>
+              <Text style={styles.questionTitle}>당신의 여행 스타일은</Text>
 
-            <View style={styles.descContainer}>
-              {result.split('').map((char: string, index: number) => (
-                <Text key={index} style={styles.descText}>{descriptions[char]}</Text>
-              ))}
-            </View>
+              <View style={styles.resultCard}>
+                <Text style={styles.resultText}>{result}</Text>
 
-            <View style={styles.divider} />
-            <Text style={styles.guideTitle}>[ 성향 지표 ]</Text>
-            <View style={styles.guideContainer}>
-              <View style={styles.guideRow}>
-                <Text style={styles.guideText}>T(대중교통) / C(자동차)</Text>
-                <Text style={styles.guideText}>U(도심) / N(자연)</Text>
+                <View style={styles.descContainer}>
+                  {result.split('').map((char: string, index: number) => (
+                    <Text key={index} style={styles.descText}>{descriptions[char]}</Text>
+                  ))}
+                </View>
+
+                <View style={styles.divider} />
+                <Text style={styles.guideTitle}>[ 성향 지표 ]</Text>
+                <View style={styles.guideContainer}>
+                  <View style={styles.guideRow}>
+                    <Text style={styles.guideText}>T(대중교통) / C(자동차)</Text>
+                    <Text style={styles.guideText}>U(도심) / N(자연)</Text>
+                  </View>
+                  <View style={styles.guideRow}>
+                    <Text style={styles.guideText}>A(활동) / R(휴양)</Text>
+                    <Text style={styles.guideText}>J(계획) / P(즉흥)</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.guideRow}>
-                <Text style={styles.guideText}>A(활동) / R(휴양)</Text>
-                <Text style={styles.guideText}>J(계획) / P(즉흥)</Text>
-              </View>
-            </View>
-          </View>
 
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.buttonText}>여행 시작하기</Text>
-          </TouchableOpacity>
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+                <Text style={styles.buttonText}>여행 시작하기</Text>
+              </TouchableOpacity>
+            </View>
+          </ImageBackground>
+
+    </SafeAreaProvider>
   );
 };
 
@@ -177,28 +182,31 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <FlashMessage positon="top"/>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
-          <Stack.Screen name="Login">
-            {() => <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
-          </Stack.Screen>
-        ) : (
-          <>
-            <Stack.Screen name="AuthRouter" component={AuthRouterScreen} />
-            <Stack.Screen name="TestIntro" component={TestIntroScreen} />
-            <Stack.Screen name="Test" component={TravelStyleGame} />
-            <Stack.Screen name="Result" component={ResultScreen} />
-            {/* 👇 3. 네비게이션 스택에 프로필 화면을 등록했습니다. */}
-            <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-            <Stack.Screen name="Main">
-              {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
-            </Stack.Screen>
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+      <SafeAreaProvider style={{flex:1}}>
+            <NavigationContainer>
+              <FlashMessage position="top"/>
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {!isLoggedIn ? (
+                  <Stack.Screen name="Login">
+                    {() => <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
+                  </Stack.Screen>
+                ) : (
+                  <>
+                    <Stack.Screen name="AuthRouter" component={AuthRouterScreen} />
+                    <Stack.Screen name="TestIntro" component={TestIntroScreen} />
+                    <Stack.Screen name="Test" component={TravelStyleGame} />
+                    <Stack.Screen name="Result" component={ResultScreen} />
+                    {/* 👇 3. 네비게이션 스택에 프로필 화면을 등록했습니다. */}
+                    <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+                    <Stack.Screen name="Main">
+                      {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
+                    </Stack.Screen>
+                  </>
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+
+    </SafeAreaProvider>
   );
 }
 
