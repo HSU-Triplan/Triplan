@@ -180,6 +180,7 @@ export default function AIMessageCard({
             ref={mapRef}
             style={styles.map}
             provider={dest.isKorea ? undefined : PROVIDER_GOOGLE}
+            //provider={PROVIDER_GOOGLE}
             initialRegion={region}>
             {validSpots.length > 1 && (
               <Polyline
@@ -314,7 +315,8 @@ const styles = StyleSheet.create({
 map: {
   height: 220,
   marginHorizontal: 12,
-  marginBottom: 8
+  marginBottom: 8,
+  flex : 1
   },
   mapFallback: {
     height: 100, marginHorizontal: 12, borderRadius: 12, marginBottom: 8,
