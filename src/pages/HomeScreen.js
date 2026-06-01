@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider} from 'react-native-safe-area-context';
 
 // 🌟 배경: 한국의 미, 경복궁
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
@@ -109,10 +110,11 @@ export default function HomeScreen() {
   });
 
   return (
+  <SafeAreaProvider style={{ flex: 1 }}>
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
 
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaProvider style={{ flex: 1 }}>
         <ScrollView
           style={styles.container}
           showsVerticalScrollIndicator={false}
@@ -182,8 +184,9 @@ export default function HomeScreen() {
           </View>
           <View style={{ height: 30 }} />
         </ScrollView>
-      </SafeAreaView>
+      </SafeAreaProvider>
     </ImageBackground>
+    </SafeAreaProvider>
   );
 }
 

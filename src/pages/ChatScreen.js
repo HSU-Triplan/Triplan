@@ -49,7 +49,7 @@ export default function ChatScreen({ navigation }) {
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={3}>
       <View style={styles.overlay} />
 
-      <SafeAreaView style={styles.container}>
+
         {/* 🌟 2. 고급스러운 타이틀 헤더 */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>나의 여행 채팅방</Text>
@@ -112,7 +112,7 @@ export default function ChatScreen({ navigation }) {
             })
           )}
         </ScrollView>
-      </SafeAreaView>
+
     </ImageBackground>
   );
 }
