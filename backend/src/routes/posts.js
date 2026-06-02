@@ -1057,6 +1057,9 @@ router.post('/chat-rooms/:roomId/invite', authMiddleware, async (req, res) => {
 // 투표하기
 router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, async (req, res) => {
   console.log('userId 타입:', typeof req.user.userId, '값:', req.user.userId); //test
+  console.log('messageId:', req.params.messageId, typeof req.params.messageId);
+  console.log('vote:', req.body.vote);
+
   const { roomId, messageId } = req.params;
   const { vote } = req.body; // 'agree' | 'disagree'
 
@@ -1068,6 +1071,8 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
       .eq('id', messageId)
       .single();
 
+
+        console.log('msg 조회 결과:', msg, 'error:', msgError);
     if (msg.vote_closed) {
       return res.status(400).json({ success: false, message: '이미 마감된 투표예요.' });
     }
