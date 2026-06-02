@@ -57,7 +57,8 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', data);
-    chatAlarm(data.roomId, data.senderId,data)
+    console.log(JSON.stringify(data));
+    chatAlarm(data.roomId, data.senderId,data);
   });
 
   //fcm으로 채팅 알람 보내기
