@@ -1101,7 +1101,7 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
       .eq('user_id', req.user.userId)
       .maybeSingle();
 
-    console.log('existing:', existing, 'existingError:', existingError?.message);
+//    console.log('existing:', existing, 'existingError:', existingError?.message);
 
     if (existing) {
       return res.status(400).json({ success: false, message: '이미 투표했어요.' });
