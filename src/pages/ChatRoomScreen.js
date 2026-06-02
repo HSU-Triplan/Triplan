@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
   Modal, TextInput, ScrollView, StyleSheet,
-  Image, Alert, ActivityIndicator, ImageBackground, Clipboard,KeyboardAvoidingView
+  Image, Alert, ActivityIndicator, ImageBackground, Clipboard,KeyboardAvoidingView,Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -679,7 +679,7 @@ export default function ChatRoomScreen({ route, navigation }) {
                     {isSummaryLoading ? (
                       <ActivityIndicator size="small" color="#6C5CE7" />
                     ) : canSummarize ? (
-                      <Text style={styles.summarizeButtonText}>📋 정리하기 →</Text>
+                      <Text style={styles.summarizeButtonText}>📋 정리하기 </Text>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <ActivityIndicator size="small" color="#aaa" />
@@ -703,7 +703,7 @@ export default function ChatRoomScreen({ route, navigation }) {
                 {isAILoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : isSummarized ? (
-                  <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기 →</Text>
+                  <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기 </Text>
                 ) : (
                   <Text style={styles.recommendButtonLockedText}>✈️ 여행지 추천</Text>
                 )}
@@ -757,17 +757,44 @@ export default function ChatRoomScreen({ route, navigation }) {
                 <View style={styles.editBox}>
                   <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                     <Text style={styles.modalTitle}>일정 수정</Text>
-                    {editPlan.map((p, idx) => (
-                      <View key={idx} style={styles.planItem}>
-                        <TouchableOpacity onPress={() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}>
-                          <Text style={{color : 'red'}}>삭제</Text>
-                        </TouchableOpacity>
-                        <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
-                        <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
-                        <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
-                        {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
-                      </View>
-                    ))}
+                     {editPlan.map((p, idx) => (
+                       <View key={idx} style={styles.planItem}>
+                         {/* 삭제 버튼 */}
+                         <TouchableOpacity
+                           onPress={() => setEditPlan(editPlan.filter((_, i) => i !== idx))}
+                           style={{ marginLeft: 'auto', marginBottom: 6 }}>
+                           <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 12 }}>삭제</Text>
+                         </TouchableOpacity>
+
+                         {/* 사진 */}
+                         {p.photoUrl ? (
+                           <Image source={{ uri: p.photoUrl }} style={styles.editImage} resizeMode="cover" />
+                         ) : null}
+
+                         {/* 장소명 + 주소 */}
+                         <Text style={styles.editPlaceName}>{p.place}</Text>
+                         {p.address ? (
+                           <Text style={styles.editPlaceAddress}>📍 {p.address}</Text>
+                         ) : null}
+
+                         {/* 지도 링크 */}
+                         {p.placeUrl ? (
+                           <TouchableOpacity
+                             onPress={() => Linking.openURL(p.placeUrl)}
+                             style={styles.editMapBtn}>
+                             <Text style={styles.editMapBtnText}>🗺 카카오맵에서 보기</Text>
+                           </TouchableOpacity>
+                         ) : p.lat && p.lng ? (
+                           <TouchableOpacity
+                             onPress={() => Linking.openURL(
+                               `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+                             )}
+                             style={styles.editMapBtn}>
+                             <Text style={styles.editMapBtnText}>🗺 구글맵에서 보기</Text>
+                           </TouchableOpacity>
+                         ) : null}
+                       </View>
+                     ))}
                     <View style={styles.modalButtons}>
                       <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
                         <Text style={styles.cancelButton}>취소</Text>
@@ -1265,4 +1292,25 @@ const styles = StyleSheet.create({
      borderRadius: 12,
    },
    invitedBadgeText: { color: '#aaa', fontWeight: 'bold', fontSize: 13 },
+   editPlaceName: {
+     fontSize: 15, fontWeight: '900', color: '#333', marginBottom: 4,
+   },
+   editPlaceAddress: {
+     fontSize: 12, color: '#888', marginBottom: 10,
+   },
+   editMapBtn: {
+     backgroundColor: '#E8E0FF',
+     borderRadius: 8,
+     paddingVertical: 8,
+     paddingHorizontal: 12,
+     alignItems: 'center',
+     marginTop: 6,
+   },
+   editMapBtnText: {
+     fontSize: 12, color: '#6C5CE7', fontWeight: 'bold',
+   },
+   editImage: {
+     width: '100%', height: 140,
+     borderRadius: 10, marginBottom: 10,
+   },
 });
