@@ -27,6 +27,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+
 // 게시글 작성
 router.post('/', authMiddleware, async (req, res) => {
   try {
@@ -496,17 +497,27 @@ router.post('/chat-rooms/:roomId/ai-preference', authMiddleware, async (req, res
       .update({ ai_preferences: updated })
       .eq('id', roomId);
 
+
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     // AI 확인 메시지를 messages 테이블에도 저장 (다른 멤버도 볼 수 있게)
     const { data: savedMsg } = await supabase
       .from('messages')
       .insert({
         chat_room_id: roomId,
         user_id: req.user.userId,
-        content: geminiResult.message,
-        type: 'ai_preference',
+        content: JSON.stringify(itinerary),
+        type: 'ai_itinerary',
+        vote_expires_at: expiresAt,
       })
       .select()
       .single();
+
+    const aiMsg = {
+      id: String(savedMsg.id),
+      type: 'ai_itinerary',
+      data: itinerary,
+      voteExpiresAt: expiresAt,
+    };
 
     res.json({
       success: true,
@@ -1042,5 +1053,215 @@ router.post('/chat-rooms/:roomId/invite', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: '초대 실패' });
   }
 });
+
+// 투표하기
+router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, async (req, res) => {
+  console.log('userId 타입:', typeof req.user.userId, '값:', req.user.userId); //test
+  const { roomId, messageId } = req.params;
+  const { vote } = req.body; // 'agree' | 'disagree'
+
+  try {
+    // 마감 여부 확인
+    const { data: msg } = await supabase
+      .from('messages')
+      .select('vote_closed, vote_expires_at, content')
+      .eq('id', messageId)
+      .single();
+
+    if (msg.vote_closed) {
+      return res.status(400).json({ success: false, message: '이미 마감된 투표예요.' });
+    }
+
+    if (msg.vote_expires_at && new Date() > new Date(msg.vote_expires_at)) {
+      // 만료 시 자동 마감
+      await supabase.from('messages').update({ vote_closed: true }).eq('id', messageId);
+      return res.status(400).json({ success: false, message: '투표 기간이 만료됐어요.' });
+    }
+
+    // 중복 투표 방지
+    const { data: existing } = await supabase
+      .from('itinerary_votes')
+      .select('id')
+      .eq('message_id', messageId)
+      .eq('user_id', req.user.userId)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ success: false, message: '이미 투표했어요.' });
+    }
+
+    // 투표 저장
+    await supabase.from('itinerary_votes').insert({
+      message_id: messageId,
+      user_id: req.user.userId,
+      vote,
+    });
+
+    // 전체 멤버 수 조회
+    const { count: totalMembers } = await supabase
+      .from('chat_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('chat_room_id', roomId);
+
+    // 현재 투표 집계
+    const { data: votes } = await supabase
+      .from('itinerary_votes')
+      .select('vote')
+      .eq('message_id', messageId);
+
+    const agreeCount = votes.filter(v => v.vote === 'agree').length;
+    const disagreeCount = votes.filter(v => v.vote === 'disagree').length;
+    const majority = Math.floor(totalMembers / 2) + 1;
+
+    const io = req.app.get('io');
+
+    // 과반수 찬성 → 자동 확정
+    if (agreeCount >= majority) {
+      await supabase.from('messages')
+        .update({ vote_closed: true, vote_closed_at: new Date() })
+        .eq('id', messageId);
+
+      const itinerary = JSON.parse(msg.content);
+
+      // 확정 시스템 메시지
+      if (io) io.to(String(roomId)).emit('receive_message', {
+        id: `system-confirmed-${Date.now()}`,
+        type: 'system',
+        text: `🎉 일정이 확정됐습니다! (${agreeCount}/${totalMembers}명 찬성)`,
+      });
+
+      // 확정 카드 브로드캐스트
+      const { data: confirmedMsg } = await supabase
+        .from('messages')
+        .insert({
+          chat_room_id: roomId,
+          user_id: req.user.userId,
+          content: JSON.stringify(itinerary),
+          type: 'ai_itinerary_confirmed',
+        })
+        .select()
+        .single();
+
+      if (io) io.to(String(roomId)).emit('receive_message', {
+        id: String(confirmedMsg.id),
+        type: 'ai_itinerary_confirmed',
+        data: itinerary,
+      });
+
+      return res.json({
+        success: true,
+        confirmed: true,
+        agreeCount,
+        disagreeCount,
+        totalMembers,
+      });
+    }
+
+    // 투표 현황 실시간 브로드캐스트
+    if (io) io.to(String(roomId)).emit('vote_updated', {
+      messageId,
+      agreeCount,
+      disagreeCount,
+      totalMembers,
+    });
+
+    res.json({ success: true, confirmed: false, agreeCount, disagreeCount, totalMembers });
+  } catch (error) {
+    console.log('투표 에러:', error.message);
+    res.status(500).json({ success: false, message: '투표 처리 중 오류가 발생했습니다.' });
+  }
+});
+
+// 방장 강제 마감
+router.post('/chat-rooms/:roomId/itinerary/:messageId/close', authMiddleware, async (req, res) => {
+  const { roomId, messageId } = req.params;
+
+  try {
+    // 방장 확인 (chat_rooms → posts → user_id)
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('posts(user_id)')
+      .eq('id', roomId)
+      .single();
+
+    if (room.posts.user_id !== req.user.userId) {
+      return res.status(403).json({ success: false, message: '방장만 마감할 수 있어요.' });
+    }
+
+    await supabase.from('messages')
+      .update({ vote_closed: true, vote_closed_at: new Date() })
+      .eq('id', messageId);
+
+    // 집계
+    const { data: votes } = await supabase
+      .from('itinerary_votes')
+      .select('vote')
+      .eq('message_id', messageId);
+
+    const agreeCount = votes.filter(v => v.vote === 'agree').length;
+    const disagreeCount = votes.filter(v => v.vote === 'disagree').length;
+
+    const { count: totalMembers } = await supabase
+      .from('chat_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('chat_room_id', roomId);
+
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('vote_updated', {
+      messageId, agreeCount, disagreeCount, totalMembers, closed: true,
+    });
+
+    if (io) io.to(String(roomId)).emit('receive_message', {
+      id: `system-close-${Date.now()}`,
+      type: 'system',
+      text: `방장이 투표를 마감했습니다. (찬성 ${agreeCount} / 반대 ${disagreeCount})`,
+    });
+
+    res.json({ success: true, agreeCount, disagreeCount });
+  } catch (error) {
+    console.log('마감 에러:', error.message);
+    res.status(500).json({ success: false, message: '마감 처리 중 오류가 발생했습니다.' });
+  }
+});
+
+// 투표 현황 조회
+router.get('/chat-rooms/:roomId/itinerary/:messageId/votes', authMiddleware, async (req, res) => {
+  const { messageId, roomId } = req.params;
+
+  try {
+    const { data: votes } = await supabase
+      .from('itinerary_votes')
+      .select('vote, user_id')
+      .eq('message_id', messageId);
+
+    const { data: msg } = await supabase
+      .from('messages')
+      .select('vote_closed, vote_expires_at')
+      .eq('id', messageId)
+      .single();
+
+    const { count: totalMembers } = await supabase
+      .from('chat_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('chat_room_id', roomId);
+
+    const agreeCount = votes.filter(v => v.vote === 'agree').length;
+    const disagreeCount = votes.filter(v => v.vote === 'disagree').length;
+    const myVote = votes.find(v => v.user_id === req.user.userId)?.vote || null;
+
+    res.json({
+      success: true,
+      agreeCount,
+      disagreeCount,
+      totalMembers,
+      myVote,
+      closed: msg.vote_closed,
+      expiresAt: msg.vote_expires_at,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '조회 실패' });
+  }
+});
+
 
 module.exports = router;

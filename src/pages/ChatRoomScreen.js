@@ -353,6 +353,14 @@ export default function ChatRoomScreen({ route, navigation }) {
         });
       });
 
+      socket.on('vote_updated', (data) => {
+        setMessages(prev => prev.map(m =>
+          String(m.id) === String(data.messageId)
+            ? { ...m, voteData: data }
+            : m
+        ));
+      });
+
       socket.on('receive_message', (data) => {
         console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
@@ -647,6 +655,7 @@ export default function ChatRoomScreen({ route, navigation }) {
               renderItem={({ item }) => (
                 <MessageItem
                   message={item}
+                  roomId={roomId}
                   myUserId={myUserId}
                   currentSpotCount={pendingSpots.length}
                   days={days}
@@ -975,6 +984,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 // ── 메시지 아이템 ─────────────────────────────────────────────
 const MessageItem = ({
     message,
+    roomId,
     myUserId,
     selectedSchedule,
     setSelectedSchedule,
@@ -1019,7 +1029,26 @@ const MessageItem = ({
       ? message.data
       : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
     if (!itineraryData) return null;
-    return <AIItineraryCard data={itineraryData} />;
+      return (
+        <AIItineraryCard
+          data={itineraryData}
+          messageId={message.id}
+          roomId={roomId}
+          myUserId={myUserId}
+          isConfirmed={false}
+        />
+      );
+  }
+  if (message.type === 'ai_itinerary_confirmed') {
+    const confirmedData = message.data
+      ?? (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+    if (!confirmedData) return null;
+    return (
+      <AIItineraryCard
+        data={confirmedData}
+        isConfirmed={true}
+      />
+    );
   }
 
   if (message.type === 'ai_recommend') {
