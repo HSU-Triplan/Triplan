@@ -6,8 +6,8 @@ import {
 } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import TravelTypeModal from '../components/TravelTypeModal';
 
-// 🏙️ 랜드마크 배경: 웅장한 나이아가라 폭포 (Niagara Falls)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1549492423-400259a2e574?q=80&w=800&auto=format&fit=crop';
 
 export default function MatchingScreen() {
@@ -20,10 +20,23 @@ export default function MatchingScreen() {
   const [allSwiped, setAllSwiped] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [typeModalVisible, setTypeModalVisible] = useState(false);
+  const [selectedUserType, setSelectedUserType] = useState(null);
+  const [selectedUserName, setSelectedUserName] = useState('');
+  const [myTravelType, setMyTravelType] = useState(null);
 
   const fetchMatchingData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
+
+      // 내 성향 조회
+      const meRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const meData = await meRes.json();
+      if (meData.success) setMyTravelType(meData.user.travel_type);
+
+      // 매칭 유저 조회
       const response = await fetch(
         `https://triplan-backend-qwrs.onrender.com/users/matching?destination=${encodeURIComponent(destination)}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -61,18 +74,13 @@ export default function MatchingScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      // 스와이프 저장
       const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/matching/swipe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ receiverId: user.id, status }),
       });
       const result = await response.json();
 
-      // 친구 요청도 전송
       if (status === 'accepted' && user.friend_code) {
         await fetch(`https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=${user.friend_code}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -87,10 +95,8 @@ export default function MatchingScreen() {
     }
   };
 
-  // 시작 전 화면
   if (!started) {
     return (
-      // 🌟 배경 흐림 정도는 4로 설정하여 나이아가라 폭포가 확실히 보이도록 함
       <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
         <View style={styles.overlay} />
         <SafeAreaView style={styles.startContainer}>
@@ -114,11 +120,7 @@ export default function MatchingScreen() {
               placeholderTextColor="#aaa"
             />
             <TouchableOpacity style={styles.startButton} onPress={fetchMatching}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.startButtonText}>매칭 시작하기</Text>
-              )}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.startButtonText}>매칭 시작하기</Text>}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -126,9 +128,7 @@ export default function MatchingScreen() {
     );
   }
 
-  // 매칭 리스트 화면
   return (
-    // 🌟 배경 흐림 정도는 4로 설정하여 나이아가라 폭포가 확실히 보이도록 함
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
       <SafeAreaView style={styles.container}>
@@ -146,8 +146,7 @@ export default function MatchingScreen() {
 
         <ScrollView
           contentContainerStyle={{ flex: 1 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />}
-        >
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />}>
           {!isDone ? (
             <View style={styles.swiperContainer}>
               <Swiper
@@ -165,21 +164,32 @@ export default function MatchingScreen() {
                       <View style={styles.cardBody}>
                         <View style={styles.cardHeaderRow}>
                           <Text style={styles.cardName}>{user?.nickname || user?.name}</Text>
-                          <View style={styles.scoreTag}>
-                            <Text style={styles.scoreText}>⭐ {user?.score || 0}</Text>
-                          </View>
-                        </View>
 
+                          {/* 궁합 보기 버튼 */}
+                          <TouchableOpacity
+                            style={styles.compatBtn}
+                            onPress={() => {
+                              setSelectedUserType(user?.travel_type);
+                              setSelectedUserName(user?.nickname || user?.name);
+                              setTypeModalVisible(true);
+                            }}
+                            activeOpacity={0.8}>
+                            <Text style={styles.compatBtnText}>💘 여행 궁합 보기</Text>
+                          </TouchableOpacity>
+
+                        </View>
                         <View style={styles.badgeRow}>
-                          <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{user?.travel_type ?? '성향 미설정'}</Text>
+                          <View style={styles.badgeRow}>
+                            <View style={styles.badge}>
+                              <Text style={styles.badgeText}>{user?.travel_type ?? '성향 미설정'}</Text>
+                            </View>
+                            {user?.gender && <Text style={styles.infoTag}>{user.gender}</Text>}
+                            {user?.birth_year && (
+                              <Text style={styles.infoTag}>
+                                {new Date().getFullYear() - new Date(user.birth_year).getFullYear()}세
+                              </Text>
+                            )}
                           </View>
-                          {user?.gender && <Text style={styles.infoTag}>{user.gender}</Text>}
-                          {user?.birth_year && (
-                            <Text style={styles.infoTag}>
-                              {new Date().getFullYear() - new Date(user.birth_year).getFullYear()}세
-                            </Text>
-                          )}
                         </View>
 
                         {user?.bio ? <Text style={styles.cardBio} numberOfLines={2}>{user?.bio}</Text> : null}
@@ -198,7 +208,7 @@ export default function MatchingScreen() {
                 stackSize={3}
                 animateCardOpacity
                 overlayLabels={{
-                  left: { title: 'PASS', style: { label: styles.overlayLabelLeft, wrapper: styles.overlayWrapperLeft } },
+                  left:  { title: 'PASS',   style: { label: styles.overlayLabelLeft,  wrapper: styles.overlayWrapperLeft  } },
                   right: { title: 'INVITE', style: { label: styles.overlayLabelRight, wrapper: styles.overlayWrapperRight } },
                 }}
               />
@@ -214,102 +224,66 @@ export default function MatchingScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <TravelTypeModal
+        visible={typeModalVisible}
+        onClose={() => setTypeModalVisible(false)}
+        myType={myTravelType}
+        otherType={selectedUserType}
+        otherName={selectedUserName}
+      />
+
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  // 배경이 살짝 밝게 보이도록 투명도 조절
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 255, 255, 0.4)' },
   container: { flex: 1 },
-
-  // 헤더
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: 24, paddingVertical: 16 },
   headerLabel: { fontSize: 12, color: '#555', fontWeight: '700', marginBottom: 2 },
   headerTitle: { fontSize: 24, fontWeight: '900', color: '#1a1a1a' },
   changeBtn: { backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   changeButton: { fontSize: 13, color: '#FF6B6B', fontWeight: 'bold' },
-
-  // 시작 전 화면
   startContainer: { flex: 1, justifyContent: 'center', padding: 24 },
   logoContainer: { alignItems: 'center', marginBottom: 40 },
   emoji: { fontSize: 64, marginBottom: 12 },
   startTitle: { fontSize: 30, fontWeight: '900', color: '#111', marginBottom: 10 },
   startSubtitle: { fontSize: 16, color: '#333', textAlign: 'center', lineHeight: 24, fontWeight: '500' },
-
-  // 유리 질감 폼 카드
-  formCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: 32,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  destinationInput: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  startButton: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 18,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: '#FF6B6B',
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 4 },
-  },
+  formCard: { backgroundColor: 'rgba(255, 255, 255, 0.92)', borderRadius: 32, padding: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 15, elevation: 10 },
+  destinationInput: { backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 20, paddingVertical: 18, fontSize: 16, color: '#333', marginBottom: 16, borderWidth: 1, borderColor: '#eee' },
+  startButton: { backgroundColor: '#FF6B6B', borderRadius: 18, paddingVertical: 18, alignItems: 'center', shadowColor: '#FF6B6B', shadowOpacity: 0.4, shadowOffset: { width: 0, height: 4 } },
   startButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-
-  // 매칭 카드 Swiper
   swiperContainer: { flex: 1, marginTop: -10 },
   cardWrapper: { top: 0, left: 0, bottom: 80, width: '100%' },
-  card: {
-    flex: 0.82,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
-    overflow: 'hidden',
-  },
+  card: { flex: 0.82, backgroundColor: '#fff', borderRadius: 30, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20, elevation: 12, overflow: 'hidden' },
   cardImage: { width: '100%', height: '62%', backgroundColor: '#f0f0f0' },
   cardBody: { padding: 22, flex: 1, justifyContent: 'center' },
-  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardName: { fontSize: 26, fontWeight: '900', color: '#222' },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  cardName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#222',
+    flex: 1,
+  },
   scoreTag: { backgroundColor: '#FFF3CD', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 },
   scoreText: { fontSize: 14, color: '#856404', fontWeight: 'bold' },
-
-  // 성향 배지 (산호색)
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
   badge: { backgroundColor: '#FF6B6B', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   badgeText: { fontSize: 12, color: '#fff', fontWeight: 'bold' },
   infoTag: { fontSize: 12, color: '#666', backgroundColor: '#f5f5f5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   cardBio: { fontSize: 15, color: '#444', lineHeight: 22, fontWeight: '400' },
-
-  // 스와이프 오버레이
   overlayLabelLeft: { backgroundColor: '#FF3B30', color: '#fff', fontSize: 28, fontWeight: 'bold', padding: 12, borderRadius: 10 },
   overlayWrapperLeft: { alignItems: 'flex-end', justifyContent: 'flex-start', marginTop: 40, marginLeft: -40 },
   overlayLabelRight: { backgroundColor: '#34C759', color: '#fff', fontSize: 28, fontWeight: 'bold', padding: 12, borderRadius: 10 },
   overlayWrapperRight: { alignItems: 'flex-start', justifyContent: 'flex-start', marginTop: 40, marginRight: 40 },
-
-  // 기타 상태
   allSwipedBanner: { backgroundColor: '#FFF0F0', padding: 14, borderRadius: 14, marginBottom: 16, alignItems: 'center' },
   allSwipedText: { color: '#FF6B6B', fontWeight: 'bold', fontSize: 14 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80, backgroundColor: 'rgba(255,255,255,0.85)', margin: 20, borderRadius: 20, padding: 30 },
@@ -317,4 +291,25 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 18, color: '#444', fontWeight: '700', marginBottom: 24 },
   retryButton: { backgroundColor: '#FF6B6B', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 18 },
   retryButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  compatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    elevation: 3,
+    shadowColor: '#FF6B6B',
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+  },
+  compatBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
 });
