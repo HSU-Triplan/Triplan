@@ -951,4 +951,96 @@ router.post('/chat-rooms/:roomId/ai-memo-approve', authMiddleware, async (req, r
   }
 });
 
+// 친구 초대
+router.post('/chat-rooms/:roomId/invite', authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+  const { userId } = req.body;
+
+  try {
+    // 채팅방 + 정원 조회
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('id, posts(max_people)')
+      .eq('id', roomId)
+      .single();
+
+    if (!room) return res.status(404).json({ success: false, message: '채팅방 없음' });
+
+    // 현재 인원 조회
+    const { count } = await supabase
+      .from('chat_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('chat_room_id', roomId);
+
+    const maxPeople = room.posts?.max_people || 999;
+    if (count >= maxPeople) {
+      return res.status(400).json({ success: false, message: '정원이 가득 찼습니다.' });
+    }
+
+    // 이미 참여 중인지 확인
+    const { data: existing } = await supabase
+      .from('chat_members')
+      .select('id')
+      .eq('chat_room_id', roomId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ success: false, message: '이미 참여 중인 멤버입니다.' });
+    }
+
+    // 초대할 친구 정보 조회
+    const { data: invitedUser } = await supabase
+      .from('users')
+      .select('nickname, name, fcm_token')
+      .eq('id', userId)
+      .single();
+
+    // 초대한 사람 정보 조회
+    const { data: inviter } = await supabase
+      .from('users')
+      .select('nickname, name')
+      .eq('id', req.user.userId)
+      .single();
+
+    // 채팅방 참여
+    await supabase
+      .from('chat_members')
+      .insert({ chat_room_id: roomId, user_id: userId });
+
+    const invitedName = invitedUser?.nickname || invitedUser?.name || '누군가';
+    const inviterName = inviter?.nickname || inviter?.name || '누군가';
+
+    // 시스템 메시지 브로드캐스트
+    const io = req.app.get('io');
+    if (io) io.to(String(roomId)).emit('receive_message', {
+      id: `system-invite-${Date.now()}`,
+      type: 'system',
+      text: `${inviterName}님이 ${invitedName}님을 초대했습니다.`,
+    });
+
+    // FCM 푸시 알림 (비동기)
+    try {
+      if (invitedUser?.fcm_token) {
+        await admin.messaging().send({
+          token: invitedUser.fcm_token,
+          notification: {
+            title: '여행 초대',
+            body: `${inviterName}님이 채팅방에 초대했습니다.`,
+          },
+          android: { priority: 'high' },
+          data: { type: 'invite' },
+        });
+      }
+    } catch (pushErr) {
+      console.error('초대 푸시 실패:', pushErr.message);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.log('친구 초대 에러:', error.message);
+    res.status(500).json({ success: false, message: '초대 실패' });
+  }
+});
+
 module.exports = router;
