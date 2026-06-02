@@ -1124,6 +1124,8 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
       .select('*', { count: 'exact', head: true })
       .eq('chat_room_id', roomId);
 
+    console.log('totalMembers:', totalMembers);
+
     // 현재 투표 집계
     const { data: votes } = await supabase
       .from('itinerary_votes')
@@ -1152,16 +1154,24 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
       });
 
       // 확정 카드 브로드캐스트
-      const { data: confirmedMsg } = await supabase
+      const { data: confirmedMsg, error: confirmError } = await supabase
         .from('messages')
         .insert({
           chat_room_id: roomId,
           user_id: req.user.userId,
-          content: JSON.stringify(itinerary),
+          content: JSON.stringify(JSON.parse(msg.content)),
           type: 'ai_itinerary_confirmed',
         })
         .select()
         .single();
+
+      console.log('confirmedMsg:', confirmedMsg, 'confirmError:', confirmError?.message);
+
+      if (!confirmedMsg) {
+        console.log('확정 카드 저장 실패');
+        return res.json({ success: true, confirmed: true, agreeCount, disagreeCount, totalMembers });
+      }
+
 
       if (io) io.to(String(roomId)).emit('receive_message', {
         id: String(confirmedMsg.id),
