@@ -18,7 +18,7 @@ const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
-
+  const [isSummarized, setIsSummarized] = useState(false);
   const [messages, setMessages] = useState([]);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -170,7 +170,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const handleSummaryApprove = async (editedSummary) => {
     setIsSummaryVisible(false);
     setSummaryData(null);
-
+    setIsSummarized(true);
     try {
       const token = await AsyncStorage.getItem('token');
       const res = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/ai-summarize-approve`, {
@@ -611,25 +611,54 @@ export default function ChatRoomScreen({ route, navigation }) {
             />
 
             <View style={styles.actionButtonRow}>
+
+              {/* 왼쪽: 정리하기 or 채팅 수집 중 */}
+              {(() => {
+                const textCount = messages.filter(m => m.type === 'text').length;
+                const canSummarize = textCount >= 3;
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      canSummarize ? styles.summarizeButton : styles.summarizeButtonDisabled,
+                    ]}
+                    onPress={canSummarize ? handleSummarize : null}
+                    disabled={!canSummarize || isSummaryLoading}
+                    activeOpacity={canSummarize ? 0.8 : 1}>
+                    {isSummaryLoading ? (
+                      <ActivityIndicator size="small" color="#6C5CE7" />
+                    ) : canSummarize ? (
+                      <Text style={styles.summarizeButtonText}>📋 정리하기 →</Text>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <ActivityIndicator size="small" color="#aaa" />
+                        <Text style={styles.collectingText}>대화 수집 중 ({textCount}/3)</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })()}
+
+              {/* 오른쪽: 여행지 추천 */}
               <TouchableOpacity
-                style={[styles.actionButton, styles.recommendButton, isAILoading && styles.recommendButtonDisabled]}
-                onPress={handleAiRecommend}
-                disabled={isAILoading}>
-                {isAILoading
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.recommendButtonText}>✈️ 여행지 추천</Text>
-                }
+                style={[
+                  styles.actionButton,
+                  isSummarized ? styles.recommendButton : styles.recommendButtonLocked,
+                  isAILoading && styles.recommendButtonDisabled,
+                ]}
+                onPress={isSummarized ? handleAiRecommend : () => Alert.alert('💡 안내', '먼저 대화를 정리해주세요!\n📋 정리하기 버튼을 눌러보세요.')}
+                disabled={isAILoading}
+                activeOpacity={0.8}>
+                {isAILoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : isSummarized ? (
+                  <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기 →</Text>
+                ) : (
+                  <Text style={styles.recommendButtonLockedText}>✈️ 여행지 추천</Text>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, styles.summarizeButton, isSummaryLoading && styles.summarizeButtonDisabled]}
-                onPress={handleSummarize}
-                disabled={isSummaryLoading}>
-                {isSummaryLoading
-                  ? <ActivityIndicator size="small" color="#6C5CE7" />
-                  : <Text style={styles.summarizeButtonText}>📋 정리하기</Text>
-                }
-              </TouchableOpacity>
             </View>
 
             <InputBar onSend={sendMessage} />

@@ -79,7 +79,7 @@ export default function ChatScreen({ navigation }) {
                   activeOpacity={0.8}
                   onPress={() => navigation.navigate('ChatRoom', {
                     roomId: room?.id,
-                    title: `${post?.destination} ${post?.days} 여행`,
+                    title: `${post?.destination} 여행`,
                     destination: post?.destination,
                     days: post?.days,
                     departure_date: post?.departure_date,
@@ -94,7 +94,7 @@ export default function ChatScreen({ navigation }) {
 
                   <View style={styles.chatInfo}>
                     <Text style={styles.chatTitle}>
-                      {post?.destination} {post?.days} 여행
+                      {post?.destination} 여행
                     </Text>
 
                     <View style={styles.tagRow}>
