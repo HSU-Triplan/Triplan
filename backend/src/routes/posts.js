@@ -1094,23 +1094,29 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
     }
 
     // 중복 투표 방지
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('itinerary_votes')
       .select('id')
-      .eq('message_id', messageId)
+      .eq('message_id', Number(messageId))  // ← Number()로 타입 변환
       .eq('user_id', req.user.userId)
       .single();
+
+    console.log('existing:', existing, 'existingError:', existingError?.message);
 
     if (existing) {
       return res.status(400).json({ success: false, message: '이미 투표했어요.' });
     }
 
     // 투표 저장
-    await supabase.from('itinerary_votes').insert({
-      message_id: messageId,
-      user_id: req.user.userId,
-      vote,
-    });
+    const { data: insertData, error: insertError } = await supabase
+      .from('itinerary_votes')
+      .insert({
+        message_id: Number(messageId),   // ← Number() 추가
+        user_id: req.user.userId,
+        vote,
+      });
+
+    console.log('insert 결과:', insertData, 'insertError:', insertError?.message);
 
     // 전체 멤버 수 조회
     const { count: totalMembers } = await supabase
