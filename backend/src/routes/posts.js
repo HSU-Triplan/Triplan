@@ -1065,14 +1065,24 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
 
   try {
     // 마감 여부 확인
-    const { data: msg } = await supabase
+    const { data: msg, error: msgError } = await supabase
       .from('messages')
       .select('vote_closed, vote_expires_at, content')
       .eq('id', messageId)
       .single();
 
+    if (msgError) {
+      console.log('msg 조회 에러:', msgError.message);
+      return res.status(500).json({ success: false, message: 'msg 조회 실패' });
+    }
+    if (!msg) {
+      return res.status(404).json({ success: false, message: '메시지 없음' });
+    }
 
-        console.log('msg 조회 결과:', msg, 'error:', msgError);
+    console.log('msg 조회 성공:', msg?.vote_closed, msg?.vote_expires_at);
+
+
+    console.log('msg 조회 결과:', msg, 'error:', msgError);
     if (msg.vote_closed) {
       return res.status(400).json({ success: false, message: '이미 마감된 투표예요.' });
     }
