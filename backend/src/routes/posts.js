@@ -1094,12 +1094,12 @@ router.post('/chat-rooms/:roomId/itinerary/:messageId/vote', authMiddleware, asy
     }
 
     // 중복 투표 방지
-    const { data: existing, error: existingError } = await supabase
+    const { data: existing } = await supabase
       .from('itinerary_votes')
       .select('id')
-      .eq('message_id', Number(messageId))  // ← Number()로 타입 변환
+      .eq('message_id', Number(messageId))
       .eq('user_id', req.user.userId)
-      .single();
+      .maybeSingle();
 
     console.log('existing:', existing, 'existingError:', existingError?.message);
 
