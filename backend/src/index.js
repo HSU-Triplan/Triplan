@@ -57,12 +57,12 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', data);
-    console.log(JSON.stringify(data));
-    chatAlarm(data.roomId, data.senderId,data);
+    //console.log(JSON.stringify(data));
+    chatAlarm(data.roomId, data.senderId,data.text);
   });
 
   //fcm으로 채팅 알람 보내기
-  const chatAlarm = async (roomId,senderId,data) => {
+  const chatAlarm = async (roomId,senderId,text) => {
     let usersFcmTokens = []
     try{
         let {data , error} = await supabase
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
 
                 notification : {
                     title : data[i].users.nickname || data[i].users.name,
-                    body : data,
+                    body : text,
                     imageUrl : data[i].users.profile_image
                 },
 
