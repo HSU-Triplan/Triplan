@@ -106,7 +106,7 @@ export default function TabNavigator({ setIsLoggedIn }) {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 64,
+    height: 85,
     backgroundColor: 'rgba(255,255,255,0.97)',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
