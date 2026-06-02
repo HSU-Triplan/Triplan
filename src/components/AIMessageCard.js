@@ -43,15 +43,15 @@ export default function AIMessageCard({
 
 
 
-    console.log('=== VALID SPOTS ===');
-    console.log(validSpots);
-    console.log(
-      validSpots.map(s => ({
-        name: s.name,
-        lat: s.lat,
-        lng: s.lng,
-      }))
-    );
+//    console.log('=== VALID SPOTS ===');
+//    console.log(validSpots);
+//    console.log(
+//      validSpots.map(s => ({
+//        name: s.name,
+//        lat: s.lat,
+//        lng: s.lng,
+//      }))
+//    );
 
     return {
       latitude: (minLat + maxLat) / 2,
@@ -61,8 +61,8 @@ export default function AIMessageCard({
     };
   };
   const region = getRegion();
-  console.log('=== REGION ===');
-  console.log(region);
+//  console.log('=== REGION ===');
+//  console.log(region);
 
   const handleDestChange = (idx) => {
     setSelectedIdx(idx);
@@ -103,6 +103,11 @@ export default function AIMessageCard({
                 time: '',
                 place: spot.name,
                 detail: spot.description || '',
+                photoUrl: spot.photoUrl || null,
+                placeUrl: spot.placeUrl || null,
+                lat: spot.lat || null,
+                lng: spot.lng || null,
+                address: spot.address || '',
               });
               Alert.alert('✅ 추가됐어요', `"${spot.name}"이 일정에 추가됐어요!\n헤더의 일정 버튼에서 확인하세요.`);
             }

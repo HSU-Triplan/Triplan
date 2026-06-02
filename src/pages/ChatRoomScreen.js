@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import {
   View, FlatList, Text, TouchableOpacity,
   Modal, TextInput, ScrollView, StyleSheet,
-  Image, Alert, ActivityIndicator, ImageBackground, Clipboard,KeyboardAvoidingView
+  Image, Alert, ActivityIndicator, ImageBackground, Clipboard,KeyboardAvoidingView,Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,6 +44,53 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isInviteVisible, setIsInviteVisible] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [invitingId, setInvitingId] = useState(null);
+
+
+
+  const fetchFriends = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/friends', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFriendsList(data.friends.filter(f => f.status === 'accept'));
+      }
+    } catch (e) {
+      console.log('친구 목록 에러:', e);
+    }
+  };
+
+  const handleInviteFriend = async (friendUserId, friendName) => {
+    if (invitingId) return;
+    setInvitingId(friendUserId);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(
+        `https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/invite`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ userId: friendUserId }),
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        Alert.alert('초대 완료', `${friendName}님을 초대했어요!`);
+        fetchMembers(); // 멤버 목록 갱신
+      } else {
+        Alert.alert('알림', data.message || '초대에 실패했습니다.');
+      }
+    } catch (e) {
+      console.log('초대 에러:', e);
+    } finally {
+      setInvitingId(null);
+    }
+  };
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -306,6 +353,14 @@ export default function ChatRoomScreen({ route, navigation }) {
         });
       });
 
+      socket.on('vote_updated', (data) => {
+        setMessages(prev => prev.map(m =>
+          String(m.id) === String(data.messageId)
+            ? { ...m, voteData: data }
+            : m
+        ));
+      });
+
       socket.on('receive_message', (data) => {
         console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
@@ -469,6 +524,9 @@ export default function ChatRoomScreen({ route, navigation }) {
           <TouchableOpacity onPress={openEditModal}>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>일정</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => { fetchFriends(); setIsInviteVisible(true); }}>
+            <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>초대</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleLeaveRoom}>
             <Text style={{ color: '#aaa', fontWeight: 'bold' }}>나가기</Text>
           </TouchableOpacity>
@@ -597,6 +655,7 @@ export default function ChatRoomScreen({ route, navigation }) {
               renderItem={({ item }) => (
                 <MessageItem
                   message={item}
+                  roomId={roomId}
                   myUserId={myUserId}
                   currentSpotCount={pendingSpots.length}
                   days={days}
@@ -629,7 +688,7 @@ export default function ChatRoomScreen({ route, navigation }) {
                     {isSummaryLoading ? (
                       <ActivityIndicator size="small" color="#6C5CE7" />
                     ) : canSummarize ? (
-                      <Text style={styles.summarizeButtonText}>📋 정리하기 →</Text>
+                      <Text style={styles.summarizeButtonText}>📋 정리하기 </Text>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <ActivityIndicator size="small" color="#aaa" />
@@ -653,7 +712,7 @@ export default function ChatRoomScreen({ route, navigation }) {
                 {isAILoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : isSummarized ? (
-                  <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기 →</Text>
+                  <Text style={styles.recommendButtonText}>✈️ 여행지 추천받기 </Text>
                 ) : (
                   <Text style={styles.recommendButtonLockedText}>✈️ 여행지 추천</Text>
                 )}
@@ -707,17 +766,44 @@ export default function ChatRoomScreen({ route, navigation }) {
                 <View style={styles.editBox}>
                   <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                     <Text style={styles.modalTitle}>일정 수정</Text>
-                    {editPlan.map((p, idx) => (
-                      <View key={idx} style={styles.planItem}>
-                        <TouchableOpacity onPress={() => setEditPlan(editPlan.filter((p,i)=>i != idx))} style={{marginLeft : 'auto'}}>
-                          <Text style={{color : 'red'}}>삭제</Text>
-                        </TouchableOpacity>
-                        <TextInput value={p.time} onChangeText={(t) => { const n = [...editPlan]; n[idx].time = t; setEditPlan(n); }} placeholder="시간" style={styles.editInput} />
-                        <TextInput value={p.place} onChangeText={(t) => { const n = [...editPlan]; n[idx].place = t; setEditPlan(n); }} placeholder="장소" style={styles.editInput} />
-                        <TextInput value={p.detail} onChangeText={(t) => { const n = [...editPlan]; n[idx].detail = t; setEditPlan(n); }} placeholder="상세 내용" style={styles.editInput} />
-                        {p.photoUrl != null && <Image source={{uri : p.photoUrl }}  style={styles.editImage} /> }
-                      </View>
-                    ))}
+                     {editPlan.map((p, idx) => (
+                       <View key={idx} style={styles.planItem}>
+                         {/* 삭제 버튼 */}
+                         <TouchableOpacity
+                           onPress={() => setEditPlan(editPlan.filter((_, i) => i !== idx))}
+                           style={{ marginLeft: 'auto', marginBottom: 6 }}>
+                           <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 12 }}>삭제</Text>
+                         </TouchableOpacity>
+
+                         {/* 사진 */}
+                         {p.photoUrl ? (
+                           <Image source={{ uri: p.photoUrl }} style={styles.editImage} resizeMode="cover" />
+                         ) : null}
+
+                         {/* 장소명 + 주소 */}
+                         <Text style={styles.editPlaceName}>{p.place}</Text>
+                         {p.address ? (
+                           <Text style={styles.editPlaceAddress}>📍 {p.address}</Text>
+                         ) : null}
+
+                         {/* 지도 링크 */}
+                         {p.placeUrl ? (
+                           <TouchableOpacity
+                             onPress={() => Linking.openURL(p.placeUrl)}
+                             style={styles.editMapBtn}>
+                             <Text style={styles.editMapBtnText}>🗺 카카오맵에서 보기</Text>
+                           </TouchableOpacity>
+                         ) : p.lat && p.lng ? (
+                           <TouchableOpacity
+                             onPress={() => Linking.openURL(
+                               `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+                             )}
+                             style={styles.editMapBtn}>
+                             <Text style={styles.editMapBtnText}>🗺 구글맵에서 보기</Text>
+                           </TouchableOpacity>
+                         ) : null}
+                       </View>
+                     ))}
                     <View style={styles.modalButtons}>
                       <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.modalBtnCancel}>
                         <Text style={styles.cancelButton}>취소</Text>
@@ -766,6 +852,75 @@ export default function ChatRoomScreen({ route, navigation }) {
               onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
               onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
             />
+
+            <Modal
+              visible={isInviteVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setIsInviteVisible(false)}>
+              <TouchableOpacity
+                style={styles.modalOverlayDark}
+                activeOpacity={1}
+                onPress={() => setIsInviteVisible(false)}>
+                <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
+                  <Text style={styles.modalTitle}>친구 초대</Text>
+
+                  {friendsList.length === 0 ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <Text style={{ fontSize: 40, marginBottom: 12 }}>🤝</Text>
+                      <Text style={{ color: '#888', fontSize: 15 }}>초대할 친구가 없어요</Text>
+                    </View>
+                  ) : (
+                    friendsList.map((friend, idx) => {
+                      const isAlreadyMember = members.some(
+                        m => m.users?.id === friend.users?.id
+                      );
+                      const isInviting = invitingId === friend.users?.id;
+
+                      return (
+                        <View key={idx} style={styles.memberItem}>
+                          <Image
+                            source={{ uri: friend.users?.profile_image || 'https://via.placeholder.com/40' }}
+                            style={styles.memberAvatar}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.memberName}>
+                              {friend.users?.nickname || friend.users?.name}
+                            </Text>
+                            <Text style={styles.memberType}>
+                              {friend.users?.travel_type ?? '성향 미설정'}
+                            </Text>
+                          </View>
+
+                          {isAlreadyMember ? (
+                            <View style={styles.invitedBadge}>
+                              <Text style={styles.invitedBadgeText}>참여 중</Text>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              style={[styles.inviteBtn, isInviting && { opacity: 0.5 }]}
+                              onPress={() => handleInviteFriend(
+                                friend.users?.id,
+                                friend.users?.nickname || friend.users?.name
+                              )}
+                              disabled={isInviting}>
+                              {isInviting
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <Text style={styles.inviteBtnText}>초대</Text>
+                              }
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setIsInviteVisible(false)}>
+                    <Text style={styles.closeButtonText}>닫기</Text>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
 
              <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
                              <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
@@ -829,6 +984,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 // ── 메시지 아이템 ─────────────────────────────────────────────
 const MessageItem = ({
     message,
+    roomId,
     myUserId,
     selectedSchedule,
     setSelectedSchedule,
@@ -873,7 +1029,26 @@ const MessageItem = ({
       ? message.data
       : (() => { try { return JSON.parse(message.text); } catch { return null; } })();
     if (!itineraryData) return null;
-    return <AIItineraryCard data={itineraryData} />;
+      return (
+        <AIItineraryCard
+          data={itineraryData}
+          messageId={message.id}
+          roomId={roomId}
+          myUserId={myUserId}
+          isConfirmed={false}
+        />
+      );
+  }
+  if (message.type === 'ai_itinerary_confirmed') {
+    const confirmedData = message.data
+      ?? (() => { try { return JSON.parse(message.text); } catch { return null; } })();
+    if (!confirmedData) return null;
+    return (
+      <AIItineraryCard
+        data={confirmedData}
+        isConfirmed={true}
+      />
+    );
   }
 
   if (message.type === 'ai_recommend') {
@@ -1130,5 +1305,41 @@ const styles = StyleSheet.create({
      infoValue: { fontSize: 15, fontWeight: 'bold', color: '#333' },
      copyButton: { backgroundColor: '#f0f0f0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, marginLeft: 10 },
      copyButtonText: { fontSize: 12, color: '#555', fontWeight: 'bold' },
-
+   inviteBtn: {
+     backgroundColor: '#FF6B6B',
+     paddingHorizontal: 16,
+     paddingVertical: 8,
+     borderRadius: 12,
+     minWidth: 52,
+     alignItems: 'center',
+   },
+   inviteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+   invitedBadge: {
+     backgroundColor: '#f0f0f0',
+     paddingHorizontal: 12,
+     paddingVertical: 8,
+     borderRadius: 12,
+   },
+   invitedBadgeText: { color: '#aaa', fontWeight: 'bold', fontSize: 13 },
+   editPlaceName: {
+     fontSize: 15, fontWeight: '900', color: '#333', marginBottom: 4,
+   },
+   editPlaceAddress: {
+     fontSize: 12, color: '#888', marginBottom: 10,
+   },
+   editMapBtn: {
+     backgroundColor: '#E8E0FF',
+     borderRadius: 8,
+     paddingVertical: 8,
+     paddingHorizontal: 12,
+     alignItems: 'center',
+     marginTop: 6,
+   },
+   editMapBtnText: {
+     fontSize: 12, color: '#6C5CE7', fontWeight: 'bold',
+   },
+   editImage: {
+     width: '100%', height: 140,
+     borderRadius: 10, marginBottom: 10,
+   },
 });

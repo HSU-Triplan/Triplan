@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useRef  } from 'react';
 import {
   SafeAreaView, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ImageBackground, Dimensions, ScrollView, Alert, Image
@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +23,53 @@ const ProfileEditScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [bio, setBio] = useState('');
 
+  const [profileImage, setProfileImage] = useState(null);
+  const isUploadingRef = useRef(false);
+
+  const pickImage = () => {
+    isUploadingRef.current = true;
+    launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 }, async (response) => {
+      if (response.didCancel || response.errorCode) {
+        isUploadingRef.current = false;
+        return;
+      }
+
+      const asset = response.assets[0];
+      const uri = asset.uri;
+      setProfileImage(uri);  // 미리보기 즉시 반영
+
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('avatar', {
+          uri,
+          type: asset.type || 'image/jpeg',
+          name: asset.fileName || 'avatar.jpg',
+        });
+
+        const uploadRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/upload-avatar', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        });
+
+        const result = await uploadRes.json();
+        if (result.success) {
+          setProfileImage(result.profile_image);
+        } else {
+          Alert.alert('오류', '사진 업로드에 실패했습니다.');
+        }
+      } catch (e) {
+        console.log('업로드 에러:', e);
+        Alert.alert('오류', '업로드 중 문제가 발생했습니다.');
+      } finally {
+        isUploadingRef.current = false;
+      }
+    });
+  };
   // 날짜 표시 형식 변환 (YYYY-MM-DD)
   const formatDate = (date) => {
     return date.toISOString().split('T')[0];
@@ -36,7 +84,7 @@ const ProfileEditScreen = ({ navigation, route }) => {
     try {
       const token = await AsyncStorage.getItem('token');
 
-      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {  // ← PUT/profile → PATCH/me
+      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -50,37 +98,51 @@ const ProfileEditScreen = ({ navigation, route }) => {
         }),
       });
 
-      const data = await res.json();
-      console.log('프로필 저장 응답:', data);
+      console.log('프로필 저장 status:', res.status);
 
-      if (!data.success) {
-        Alert.alert('오류', '저장에 실패했습니다.');
+      if (res.status === 401) {
+        await AsyncStorage.removeItem('token');
+        Alert.alert('세션 만료', '다시 로그인해주세요.');
         return;
       }
 
       await AsyncStorage.setItem('nickname', nickname.trim());
 
+    } catch (error) {
+      console.log('저장 에러:', error);
+    } finally {
+      // isFirstTime 여부 관계없이 뒤로 가거나 탭으로 이동
       if (isFirstTime) {
-        navigation.replace('Main');
+        // 스택을 완전히 초기화하고 Main으로
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
       } else {
         navigation.goBack();
       }
-    } catch (error) {
-      console.log('저장 에러:', error);
-      Alert.alert('알림', '저장 중 오류가 발생했습니다.');
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={8}>
-        <View style={styles.overlay} />
+        <View style={styles.overlay} pointerEvents="none" />
 
         {/* 상단 헤더 */}
         <View style={styles.headerContainer}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={28} color="#333" />
-          </TouchableOpacity>
+         <TouchableOpacity onPress={() => {
+           if (isFirstTime) {
+             navigation.reset({
+               index: 0,
+               routes: [{ name: 'Main' }],
+             });
+           } else {
+             navigation.goBack();
+           }
+         }}>
+           <Icon name="arrow-back" size={28} color="#333" />
+         </TouchableOpacity>
           <Text style={styles.headerTitle}>프로필 설정</Text>
           <TouchableOpacity onPress={handleSave}>
             <Text style={styles.headerDone}>완료</Text>
@@ -89,15 +151,22 @@ const ProfileEditScreen = ({ navigation, route }) => {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-          {/* 프로필 이미지 영역 (사진의 빨간 원 스타일) */}
-          <View style={styles.profileImageSection}>
-            <View style={styles.imageCircle}>
+         <View style={styles.profileImageSection}>
+           <TouchableOpacity onPress={pickImage} style={styles.imageCircle}>
+             {profileImage ? (
+               <Image
+                 source={{ uri: profileImage }}
+                 style={{ width: 120, height: 120, borderRadius: 60 }}
+                 resizeMode="cover"
+               />
+             ) : (
                <Text style={styles.imageInitials}>{nickname ? nickname.charAt(0) : '?'}</Text>
-               <View style={styles.cameraBadge}>
-                 <Icon name="camera" size={18} color="#fff" />
-               </View>
-            </View>
-          </View>
+             )}
+             <View style={styles.cameraBadge}>
+               <Icon name="camera" size={18} color="#fff" />
+             </View>
+           </TouchableOpacity>
+         </View>
 
           {/* 정보 설정 카드 (사진의 화이트 카드 스타일) */}
           <View style={styles.card}>
