@@ -44,6 +44,53 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isInviteVisible, setIsInviteVisible] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [invitingId, setInvitingId] = useState(null);
+
+
+
+  const fetchFriends = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/friends', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFriendsList(data.friends.filter(f => f.status === 'accept'));
+      }
+    } catch (e) {
+      console.log('친구 목록 에러:', e);
+    }
+  };
+
+  const handleInviteFriend = async (friendUserId, friendName) => {
+    if (invitingId) return;
+    setInvitingId(friendUserId);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(
+        `https://triplan-backend-qwrs.onrender.com/posts/chat-rooms/${roomId}/invite`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ userId: friendUserId }),
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        Alert.alert('초대 완료', `${friendName}님을 초대했어요!`);
+        fetchMembers(); // 멤버 목록 갱신
+      } else {
+        Alert.alert('알림', data.message || '초대에 실패했습니다.');
+      }
+    } catch (e) {
+      console.log('초대 에러:', e);
+    } finally {
+      setInvitingId(null);
+    }
+  };
 
   // 멤버 불러오기
   const fetchMembers = async () => {
@@ -469,6 +516,9 @@ export default function ChatRoomScreen({ route, navigation }) {
           <TouchableOpacity onPress={openEditModal}>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>일정</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => { fetchFriends(); setIsInviteVisible(true); }}>
+            <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>초대</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleLeaveRoom}>
             <Text style={{ color: '#aaa', fontWeight: 'bold' }}>나가기</Text>
           </TouchableOpacity>
@@ -766,6 +816,75 @@ export default function ChatRoomScreen({ route, navigation }) {
               onReject={() => { setIsSummaryVisible(false); setSummaryData(null); }}
               onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
             />
+
+            <Modal
+              visible={isInviteVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setIsInviteVisible(false)}>
+              <TouchableOpacity
+                style={styles.modalOverlayDark}
+                activeOpacity={1}
+                onPress={() => setIsInviteVisible(false)}>
+                <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
+                  <Text style={styles.modalTitle}>친구 초대</Text>
+
+                  {friendsList.length === 0 ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <Text style={{ fontSize: 40, marginBottom: 12 }}>🤝</Text>
+                      <Text style={{ color: '#888', fontSize: 15 }}>초대할 친구가 없어요</Text>
+                    </View>
+                  ) : (
+                    friendsList.map((friend, idx) => {
+                      const isAlreadyMember = members.some(
+                        m => m.users?.id === friend.users?.id
+                      );
+                      const isInviting = invitingId === friend.users?.id;
+
+                      return (
+                        <View key={idx} style={styles.memberItem}>
+                          <Image
+                            source={{ uri: friend.users?.profile_image || 'https://via.placeholder.com/40' }}
+                            style={styles.memberAvatar}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.memberName}>
+                              {friend.users?.nickname || friend.users?.name}
+                            </Text>
+                            <Text style={styles.memberType}>
+                              {friend.users?.travel_type ?? '성향 미설정'}
+                            </Text>
+                          </View>
+
+                          {isAlreadyMember ? (
+                            <View style={styles.invitedBadge}>
+                              <Text style={styles.invitedBadgeText}>참여 중</Text>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              style={[styles.inviteBtn, isInviting && { opacity: 0.5 }]}
+                              onPress={() => handleInviteFriend(
+                                friend.users?.id,
+                                friend.users?.nickname || friend.users?.name
+                              )}
+                              disabled={isInviting}>
+                              {isInviting
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <Text style={styles.inviteBtnText}>초대</Text>
+                              }
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setIsInviteVisible(false)}>
+                    <Text style={styles.closeButtonText}>닫기</Text>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
 
              <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
                              <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
@@ -1130,5 +1249,20 @@ const styles = StyleSheet.create({
      infoValue: { fontSize: 15, fontWeight: 'bold', color: '#333' },
      copyButton: { backgroundColor: '#f0f0f0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, marginLeft: 10 },
      copyButtonText: { fontSize: 12, color: '#555', fontWeight: 'bold' },
-
+   inviteBtn: {
+     backgroundColor: '#FF6B6B',
+     paddingHorizontal: 16,
+     paddingVertical: 8,
+     borderRadius: 12,
+     minWidth: 52,
+     alignItems: 'center',
+   },
+   inviteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+   invitedBadge: {
+     backgroundColor: '#f0f0f0',
+     paddingHorizontal: 12,
+     paddingVertical: 8,
+     borderRadius: 12,
+   },
+   invitedBadgeText: { color: '#aaa', fontWeight: 'bold', fontSize: 13 },
 });
