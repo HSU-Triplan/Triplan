@@ -57,16 +57,17 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (data) => {
     io.to(data.roomId).emit('receive_message', data);
-    chatAlarm(data.roomId, data.senderId)
+    //console.log(JSON.stringify(data));
+    chatAlarm(data.roomId, data.senderId,data.text);
   });
 
   //fcm으로 채팅 알람 보내기
-  const chatAlarm = async (roomId,senderId) => {
+  const chatAlarm = async (roomId,senderId,text) => {
     let usersFcmTokens = []
     try{
         let {data , error} = await supabase
             .from('chat_members')
-            .select('user_id,users(fcm_token)')
+            .select('user_id,users(fcm_token,profile_image,name,nickname)')
             .eq('chat_room_id',roomId);
         console.log("data : "+ JSON.stringify(data))
         for(let i=0 ; i<data.length ; i++){
@@ -80,8 +81,9 @@ io.on('connection', (socket) => {
                 token : data[i].users.fcm_token,
 
                 notification : {
-                    title : '메세지 알람',
-                    body : '채팅방에 새 메세지가 전송되었습니다.'
+                    title : data[i].users.nickname || data[i].users.name,
+                    body : text,
+                    imageUrl : data[i].users.profile_image
                 },
 
                 android: {
