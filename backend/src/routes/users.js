@@ -156,13 +156,13 @@ router.get('/matching', authMiddleware, async (req, res) => {
 
     const { data: me } = await supabase
       .from('users')
-      .select('travel_type, birth_year')
+      .select('travel_type, birth_year, preferred_destination')
       .eq('id', myId)
       .single();
 
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, name, nickname, profile_image, travel_type, birth_year, bio, gender, friend_code')
+      .select('id, name, nickname, profile_image, travel_type, birth_year, bio, gender, friend_code, preferred_destination')
       .neq('id', myId)
       .not('travel_type', 'is', null);
 
@@ -196,6 +196,17 @@ router.get('/matching', authMiddleware, async (req, res) => {
         else if (diff <= 10) score += 10;
       }
 
+      // 선호 여행지 일치 가산점 추가
+      const myPreferred = me.preferred_destination
+        ? me.preferred_destination.split(',').map(d => d.trim().toLowerCase())
+        : [];
+      const theirPreferred = user.preferred_destination
+        ? user.preferred_destination.split(',').map(d => d.trim().toLowerCase())
+        : [];
+
+      const commonDestinations = myPreferred.filter(d => theirPreferred.includes(d));
+      score += commonDestinations.length * 5; // 겹치는 여행지 1개당 5점
+
       if (destination) {
         const { data: theirPosts } = await supabase
           .from('posts')
@@ -210,7 +221,19 @@ router.get('/matching', authMiddleware, async (req, res) => {
       return { ...user, score: Math.round(score) };
     }));
 
-    scored.sort((a, b) => b.score - a.score);
+    // 선호 여행지 선 정렬
+    scored.sort((a, b) => {
+      const aHasCommon = myPreferred.some(d =>
+        (a.preferred_destination || '').toLowerCase().includes(d)
+      );
+      const bHasCommon = myPreferred.some(d =>
+        (b.preferred_destination || '').toLowerCase().includes(d)
+      );
+      if (aHasCommon && !bHasCommon) return -1;
+      if (!aHasCommon && bHasCommon) return 1;
+      return b.score - a.score;
+    });
+
     res.json({ success: true, users: scored });
   } catch (error) {
     console.error('매칭 에러:', error);
