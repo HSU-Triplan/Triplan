@@ -631,17 +631,20 @@ export default function SearchScreen({ navigation }) {
         <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
           <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
             <View style={styles.profileModalBox}>
+
               <View style={styles.profileModalHeader}>
                 <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
                 <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
                 {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
               </View>
+
               <View style={styles.profileCard}>
                 <Text style={styles.cardTitle}>프로필 정보</Text>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>닉네임</Text>
                   <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
                 </View>
+
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>여행 타입</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -655,6 +658,20 @@ export default function SearchScreen({ navigation }) {
                     )}
                   </View>
                 </View>
+
+                {otherUser?.preferred_destination && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>선호 여행지</Text>
+                    <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6 }}>
+                      {otherUser.preferred_destination.split(',').map((dest, idx) => (
+                        <View key={idx} style={[styles.badge, { backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
+                          <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>📍 {dest}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>친구 코드</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
