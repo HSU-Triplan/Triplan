@@ -212,6 +212,14 @@ export default function MatchingScreen() {
                               <Text style={styles.infoTagText}>{age}세</Text>
                             </View>
                           )}
+                          {user?.preferred_destination && (
+                            <View style={styles.preferredTag}>
+                              <Text style={styles.preferredTagText}>
+                                🗺 {user.preferred_destination.split(',').slice(0, 2).join(' · ')}
+                                {user.preferred_destination.split(',').length > 2 ? ' ...' : ''}
+                              </Text>
+                            </View>
+                          )}
                         </View>
 
                         {/* 소개 */}
@@ -434,4 +442,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 18, color: '#444', fontWeight: '700', marginBottom: 24 },
   retryButton: { backgroundColor: '#FF6B6B', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 18 },
   retryButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  preferredTag: {
+    backgroundColor: 'rgba(108,92,231,0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  preferredTagText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
