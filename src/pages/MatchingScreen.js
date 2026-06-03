@@ -70,6 +70,7 @@ export default function MatchingScreen() {
 
   const handleSwipe = async (index, status) => {
     const user = users[index];
+    if (!user) return;
     try {
       const token = await AsyncStorage.getItem('token');
 
@@ -114,7 +115,7 @@ export default function MatchingScreen() {
             )}
             <TextInput
               style={styles.destinationInput}
-              placeholder="예) 두바이, 도쿄, 뉴욕"
+              placeholder="예) 국내, 아시아, 유럽"
               value={destination}
               onChangeText={setDestination}
               placeholderTextColor="#aaa"
@@ -172,11 +173,6 @@ export default function MatchingScreen() {
                       {/* 하단 그라데이션 오버레이 */}
                       <View style={styles.cardGradient} />
 
-                      {/* 점수 뱃지 — 우상단 */}
-                      <View style={styles.scoreTag}>
-                        <Text style={styles.scoreText}>⭐ {user?.score || 0}</Text>
-                      </View>
-
                       {/* 하단 정보 오버레이 */}
                       <View style={styles.cardOverlay}>
 
@@ -207,7 +203,7 @@ export default function MatchingScreen() {
                               <Text style={styles.infoTagText}>{user.gender}</Text>
                             </View>
                           )}
-                          {age && (
+                          {age != null && age > 0 && (
                             <View style={styles.infoTag}>
                               <Text style={styles.infoTagText}>{age}세</Text>
                             </View>
@@ -215,8 +211,8 @@ export default function MatchingScreen() {
                           {user?.preferred_destination && (
                             <View style={styles.preferredTag}>
                               <Text style={styles.preferredTagText}>
-                                🗺 {user.preferred_destination.split(',').slice(0, 2).join(' · ')}
-                                {user.preferred_destination.split(',').length > 2 ? ' ...' : ''}
+                                {'🗺 ' + user.preferred_destination.split(',').slice(0, 2).join(' · ') +
+                                 (user.preferred_destination.split(',').length > 2 ? ' ...' : '')}
                               </Text>
                             </View>
                           )}
