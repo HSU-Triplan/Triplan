@@ -10,8 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
 const QUICK_TABS = [
-  { label: '동행 찾기',    sub: '새로운 여행 동행을\n탐색해보세요',   emoji: '🔍', tab: '탐색' },
-  { label: '여행 매칭',    sub: '성향이 맞는 동행을\n찾아보세요',     emoji: '💘', tab: '매칭' },
+  { label: '여행 찾기',    sub: '다른 사람의 여행 계획을\n탐색해보세요',   emoji: '🔍', tab: '탐색' },
+  { label: '동행 매칭',    sub: '성향이 맞는 동행을\n찾아보세요',     emoji: '💘', tab: '매칭' },
   { label: '내 채팅방',    sub: '여행 멤버들과\n대화해보세요',        emoji: '💬', tab: '채팅' },
   { label: '친구 관리',    sub: '친구를 추가하고\n함께 여행해요',     emoji: '🤝', tab: '친구' },
 ];
