@@ -178,9 +178,6 @@ router.get('/matching', authMiddleware, async (req, res) => {
      const myPreferred = me.preferred_destination
        ? me.preferred_destination.split(',').map(d => d.trim().toLowerCase())
        : [];
-     const theirPreferred = user.preferred_destination
-       ? user.preferred_destination.split(',').map(d => d.trim().toLowerCase())
-       : [];
 
     const scored = await Promise.all(users.map(async (user) => {
       let score = 0;
@@ -203,6 +200,9 @@ router.get('/matching', authMiddleware, async (req, res) => {
         else if (diff <= 10) score += 10;
       }
 
+      const theirPreferred = user.preferred_destination
+        ? user.preferred_destination.split(',').map(d => d.trim().toLowerCase())
+        : [];
       const commonDestinations = myPreferred.filter(d => theirPreferred.includes(d));
       score += commonDestinations.length * 5; // 겹치는 여행지 1개당 5점
 
