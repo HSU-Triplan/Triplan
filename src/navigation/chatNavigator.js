@@ -13,12 +13,12 @@ const ChatStack = () => {
       <Stack.Screen
         name="ChatList"
         component={ChatScreen}
-        options={{ title: "채팅" }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ChatRoom"
         component={ChatRoomScreen}
-        options={{ title: "채팅방" }}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
