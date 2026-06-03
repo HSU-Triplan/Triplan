@@ -49,7 +49,7 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
+      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, preferred_destination, created_at')
       .eq('id', req.user.userId)
       .single();
 
@@ -370,6 +370,53 @@ router.post('/saveFcmToken', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('fcm 토큰 저장 에러:', error);
     res.status(500).json({ success: false, message: 'fcm 토큰 저장 에러' });
+  }
+});
+
+// 선호 여행지 저장
+router.post('/preferred-destination', authMiddleware, async (req, res) => {
+  try {
+    const { destinations } = req.body; // ["국내", "아시아", "유럽"]
+
+    if (!destinations || !Array.isArray(destinations) || destinations.length === 0) {
+      return res.status(400).json({ success: false, message: '여행지를 선택해주세요.' });
+    }
+
+    const destinationStr = destinations.join(','); // "국내,아시아,유럽"
+
+    const { error } = await supabase
+      .from('users')
+      .update({ preferred_destination: destinationStr })
+      .eq('id', req.user.userId);
+
+    if (error) throw error;
+
+    res.json({ success: true, preferred_destination: destinationStr });
+  } catch (error) {
+    console.error('선호 여행지 저장 에러:', error);
+    res.status(500).json({ success: false, message: '저장 실패' });
+  }
+});
+
+// 선호 여행지 조회 (내 정보에 포함되어 있어서 /users/me로도 가능하지만 별도 제공)
+router.get('/preferred-destination', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('preferred_destination')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (error) throw error;
+
+    const destinations = data.preferred_destination
+      ? data.preferred_destination.split(',')
+      : [];
+
+    res.json({ success: true, destinations });
+  } catch (error) {
+    console.error('선호 여행지 조회 에러:', error);
+    res.status(500).json({ success: false, message: '조회 실패' });
   }
 });
 
