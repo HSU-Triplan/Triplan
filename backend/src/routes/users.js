@@ -66,7 +66,7 @@ router.get('/others', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
+      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code,preferred_destination, created_at')
       .eq('id', req.query.id)
       .single();
 
@@ -156,13 +156,13 @@ router.get('/matching', authMiddleware, async (req, res) => {
 
     const { data: me } = await supabase
       .from('users')
-      .select('travel_type, birth_year')
+      .select('travel_type, birth_year, preferred_destination')
       .eq('id', myId)
       .single();
 
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, name, nickname, profile_image, travel_type, birth_year, bio, gender, friend_code')
+      .select('id, name, nickname, profile_image, travel_type, birth_year, bio, gender, friend_code, preferred_destination')
       .neq('id', myId)
       .not('travel_type', 'is', null);
 
@@ -174,6 +174,10 @@ router.get('/matching', authMiddleware, async (req, res) => {
       .eq('user_id', myId);
 
     const myDestinations = myPosts?.map(p => p.destination?.trim().toLowerCase()) || [];
+
+     const myPreferred = me.preferred_destination
+       ? me.preferred_destination.split(',').map(d => d.trim().toLowerCase())
+       : [];
 
     const scored = await Promise.all(users.map(async (user) => {
       let score = 0;
@@ -196,6 +200,12 @@ router.get('/matching', authMiddleware, async (req, res) => {
         else if (diff <= 10) score += 10;
       }
 
+      const theirPreferred = user.preferred_destination
+        ? user.preferred_destination.split(',').map(d => d.trim().toLowerCase())
+        : [];
+      const commonDestinations = myPreferred.filter(d => theirPreferred.includes(d));
+      score += commonDestinations.length * 5; // 겹치는 여행지 1개당 5점
+
       if (destination) {
         const { data: theirPosts } = await supabase
           .from('posts')
@@ -210,7 +220,19 @@ router.get('/matching', authMiddleware, async (req, res) => {
       return { ...user, score: Math.round(score) };
     }));
 
-    scored.sort((a, b) => b.score - a.score);
+    // 선호 여행지 선 정렬
+    scored.sort((a, b) => {
+      const aHasCommon = myPreferred.some(d =>
+        (a.preferred_destination || '').toLowerCase().includes(d)
+      );
+      const bHasCommon = myPreferred.some(d =>
+        (b.preferred_destination || '').toLowerCase().includes(d)
+      );
+      if (aHasCommon && !bHasCommon) return -1;
+      if (!aHasCommon && bHasCommon) return 1;
+      return b.score - a.score;
+    });
+
     res.json({ success: true, users: scored });
   } catch (error) {
     console.error('매칭 에러:', error);

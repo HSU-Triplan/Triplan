@@ -1,25 +1,26 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ImageBackground,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  RefreshControl, ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SafeAreaProvider} from 'react-native-safe-area-context';
 
-// 🌟 배경: 한국의 미, 경복궁
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
+const QUICK_TABS = [
+  { label: '여행 찾기',    sub: '다른 사람의 여행 계획을\n탐색해보세요',   emoji: '🔍', tab: '탐색' },
+  { label: '동행 매칭',    sub: '성향이 맞는 동행을\n찾아보세요',     emoji: '💘', tab: '매칭' },
+  { label: '내 채팅방',    sub: '여행 멤버들과\n대화해보세요',        emoji: '💬', tab: '채팅' },
+  { label: '친구 관리',    sub: '친구를 추가하고\n함께 여행해요',     emoji: '🤝', tab: '친구' },
+];
+
 export default function HomeScreen() {
+  const navigation = useNavigation();
   const [userName, setUserName] = useState('');
-  const [myPosts, setMyPosts] = useState([]);
   const [myChats, setMyChats] = useState([]);
+  const [myPosts, setMyPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -30,9 +31,7 @@ export default function HomeScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const meData = await meRes.json();
-      if (meData.success) {
-        setUserName(meData.user.nickname || meData.user.name || '');
-      }
+      if (meData.success) setUserName(meData.user.nickname || meData.user.name || '');
 
       const postsRes = await fetch('https://triplan-backend-qwrs.onrender.com/users/my-posts', {
         headers: { Authorization: `Bearer ${token}` },
@@ -51,11 +50,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData])
-  );
+  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -109,36 +104,44 @@ export default function HomeScreen() {
     return target >= today;
   });
 
+  // 시간대별 인사말
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 6)  return '좋은 새벽이에요 🌙';
+    if (hour < 12) return '좋은 아침이에요 ☀️';
+    if (hour < 18) return '좋은 오후예요 🌤';
+    return '좋은 저녁이에요 🌆';
+  };
+
   return (
-  <SafeAreaProvider style={{ flex: 1 }}>
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
-
-      <SafeAreaProvider style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
         <ScrollView
           style={styles.container}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />}>
 
+          {/* 인사말 */}
           <View style={styles.header}>
-            <Text style={styles.greeting}>반가워요, {userName}님! ✨</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{userName}님 👋</Text>
             <Text style={styles.subGreeting}>오늘은 어디로 떠나고 싶으신가요? ✈️</Text>
           </View>
 
+          {/* D-Day 카드 */}
           {nextTrip ? (
             <View style={styles.dDayCard}>
               <View style={styles.dDayBadge}>
-                <Text style={styles.dDayText}>
-                  {calcDDay(nextTrip.departure_date) ?? '날짜 미정'}
-                </Text>
+                <Text style={styles.dDayText}>{calcDDay(nextTrip.departure_date) ?? '날짜 미정'}</Text>
               </View>
               <Text style={styles.dDayTitle}>다가오는 여행</Text>
               <Text style={styles.dDayDestination}>📍 {nextTrip.destination}</Text>
               <View style={styles.dDayInfo}>
                 <Text style={styles.dDayInfoText}>🗓 {nextTrip.days}</Text>
-                {nextTrip.departure_date ? (
+                {nextTrip.departure_date && (
                   <Text style={styles.dDayInfoText}>🛫 {nextTrip.departure_date}</Text>
-                ) : null}
+                )}
               </View>
               <Text style={styles.dDayBio} numberOfLines={1}>{nextTrip.bio}</Text>
             </View>
@@ -149,20 +152,42 @@ export default function HomeScreen() {
             </View>
           )}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>나의 여행 지도</Text>
+          {/* 빠른 탭 이동 2x2 그리드 */}
+          <View style={styles.sectionHeader}>
+          </View>
+          <View style={styles.gridContainer}>
+            {QUICK_TABS.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.gridCard}
+                onPress={() => navigation.navigate(item.tab)}
+                activeOpacity={0.85}>
+                <Text style={styles.gridEmoji}>{item.emoji}</Text>
+                <Text style={styles.gridLabel}>{item.label}</Text>
+                <Text style={styles.gridSub}>{item.sub}</Text>
+                <View style={styles.gridArrow}>
+                  <Text style={styles.gridArrowText}>→</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-            {allTrips.length === 0 ? (
-              <View style={styles.emptyListContainer}>
-                <Text style={styles.emptyListText}>참여 중인 여행이 없습니다.</Text>
-              </View>
-            ) : (
-              allTrips.map(trip => (
+          {/* 나의 여행 리스트 */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>나의 여행</Text>
+            <Text style={styles.sectionCount}>{allTrips.length}개</Text>
+          </View>
+
+          {allTrips.length === 0 ? (
+            <View style={styles.emptyListContainer}>
+              <Text style={styles.emptyListText}>참여 중인 여행이 없습니다.</Text>
+            </View>
+          ) : (
+            <View style={styles.tripList}>
+              {allTrips.map(trip => (
                 <View key={trip.id} style={styles.tripCard}>
                   <View style={styles.tripLeft}>
-                    <Text style={styles.tripDDay}>
-                      {calcDDay(trip.departure_date) ?? '날짜 미정'}
-                    </Text>
+                    <Text style={styles.tripDDay}>{calcDDay(trip.departure_date) ?? '미정'}</Text>
                   </View>
                   <View style={styles.tripRight}>
                     <View style={styles.tripTitleRow}>
@@ -174,19 +199,19 @@ export default function HomeScreen() {
                       )}
                     </View>
                     <Text style={styles.tripInfo}>
-                      {trip.days} {trip.departure_date ? `· 🛫 ${trip.departure_date}` : ''}
+                      {trip.days}{trip.departure_date ? ` · 🛫 ${trip.departure_date}` : ''}
                     </Text>
                     <Text style={styles.tripBio} numberOfLines={1}>{trip.bio}</Text>
                   </View>
                 </View>
-              ))
-            )}
-          </View>
-          <View style={{ height: 30 }} />
+              ))}
+            </View>
+          )}
+
+          <View style={{ height: 40 }} />
         </ScrollView>
-      </SafeAreaProvider>
+      </SafeAreaView>
     </ImageBackground>
-    </SafeAreaProvider>
   );
 }
 
@@ -195,29 +220,17 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(240, 244, 248, 0.45)' },
   container: { flex: 1 },
 
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 40,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#333',
-    letterSpacing: -0.5,
-  },
-  subGreeting: {
-    fontSize: 15,
-    color: '#FF6B6B',
-    fontWeight: '700',
-    marginTop: 6,
-  },
+  // 헤더
+  header: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 36 },
+  greeting: { fontSize: 15, color: '#666', fontWeight: '700', marginBottom: 4 },
+  userName: { fontSize: 28, fontWeight: '900', color: '#222', letterSpacing: -0.5, marginBottom: 6 },
+  subGreeting: { fontSize: 14, color: '#FF6B6B', fontWeight: '700' },
 
-  // 🌟 피드백 반영: 투명도 제거하고 깔끔한 흰색(#FFFFFF)으로 통일
+  // D-Day 카드
   dDayCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -16,
     borderRadius: 24,
     padding: 24,
     elevation: 8,
@@ -225,74 +238,91 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    marginBottom: 25,
+    marginBottom: 28,
   },
-  dDayBadge: {
-    backgroundColor: '#FF6B6B',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 15,
-    marginBottom: 16,
-  },
-  dDayText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  dDayTitle: { fontSize: 13, color: '#999', fontWeight: 'bold', marginBottom: 4 },
-  dDayDestination: { fontSize: 26, fontWeight: '900', color: '#222', marginBottom: 10 },
-  dDayInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  dDayInfoText: { fontSize: 14, color: '#666', fontWeight: '600' },
-  dDayBio: { fontSize: 13, color: '#aaa', marginTop: 6, fontWeight: '500' },
+  dDayBadge: { backgroundColor: '#FF6B6B', alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 15, marginBottom: 14 },
+  dDayText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  dDayTitle: { fontSize: 12, color: '#999', fontWeight: 'bold', marginBottom: 4 },
+  dDayDestination: { fontSize: 24, fontWeight: '900', color: '#222', marginBottom: 10 },
+  dDayInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  dDayInfoText: { fontSize: 13, color: '#666', fontWeight: '600' },
+  dDayBio: { fontSize: 12, color: '#aaa', marginTop: 4, fontWeight: '500' },
 
-  // 🌟 빈 카드도 흰색 통일
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: -16,
     borderRadius: 24,
-    padding: 40,
+    padding: 36,
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 28,
+    elevation: 6,
   },
   emptyText: { fontSize: 16, color: '#555', fontWeight: 'bold', marginBottom: 8 },
   emptySubText: { fontSize: 13, color: '#FF6B6B', fontWeight: '600' },
 
-  section: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 19, fontWeight: '900', color: '#333', marginBottom: 15 },
+  // 섹션 헤더
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 14,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '900', color: '#222' },
+  sectionCount: { fontSize: 13, color: '#aaa', fontWeight: 'bold' },
 
-  // 🌟 일반 여행 카드도 흰색 통일
-  tripCard: {
-    backgroundColor: '#FFFFFF',
+  // 2x2 그리드
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 28,
+  },
+  gridCard: {
+    width: '47%',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 20,
     padding: 18,
-    marginBottom: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  gridEmoji: { fontSize: 28, marginBottom: 10 },
+  gridLabel: { fontSize: 16, fontWeight: '900', color: '#222', marginBottom: 4 },
+  gridSub: { fontSize: 11, color: '#888', lineHeight: 16, marginBottom: 12 },
+  gridArrow: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#FF6B6B',
+    width: 28, height: 28, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  gridArrowText: { color: '#fff', fontWeight: '900', fontSize: 14 },
+
+  // 나의 여행 리스트
+  tripList: { paddingHorizontal: 20, gap: 10 },
+  tripCard: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 18,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 3,
-    gap: 15,
+    gap: 14,
   },
-  tripLeft: { width: 65, alignItems: 'center' },
-  tripDDay: { fontSize: 14, fontWeight: '900', color: '#FF6B6B' },
+  tripLeft: { width: 58, alignItems: 'center' },
+  tripDDay: { fontSize: 13, fontWeight: '900', color: '#FF6B6B', textAlign: 'center' },
   tripRight: { flex: 1 },
-  tripTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  tripDestination: { fontSize: 17, fontWeight: 'bold', color: '#333' },
-  tripInfo: { fontSize: 13, color: '#777', fontWeight: '500' },
-  tripBio: { fontSize: 12, color: '#aaa', marginTop: 2 },
-
-  myPostBadge: {
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-  },
+  tripTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  tripDestination: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  tripInfo: { fontSize: 12, color: '#888', fontWeight: '500', marginBottom: 2 },
+  tripBio: { fontSize: 12, color: '#bbb' },
+  myPostBadge: { backgroundColor: 'rgba(255,107,107,0.1)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: '#FF6B6B' },
   myPostBadgeText: { fontSize: 10, color: '#FF6B6B', fontWeight: 'bold' },
 
-  // 🌟 리스트가 비어있을 때 박스도 흰색으로 통일
-  emptyListContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  emptyListText: { color: '#999', fontSize: 14, fontWeight: '600' },
+  emptyListContainer: { marginHorizontal: 20, backgroundColor: 'rgba(255,255,255,0.85)', padding: 24, borderRadius: 18, alignItems: 'center' },
+  emptyListText: { color: '#aaa', fontSize: 14, fontWeight: '600' },
 });

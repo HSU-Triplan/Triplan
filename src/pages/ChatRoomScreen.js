@@ -47,7 +47,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [isInviteVisible, setIsInviteVisible] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
   const [invitingId, setInvitingId] = useState(null);
-
+  const [tutorialVisible, setTutorialVisible] = useState(false);
 
 
   const fetchFriends = async () => {
@@ -342,6 +342,13 @@ export default function ChatRoomScreen({ route, navigation }) {
 
       fetchAiPreferences();
 
+      const tutorialKey = `tutorial_seen_${roomId}`;
+      const seen = await AsyncStorage.getItem(tutorialKey);
+      if (!seen) {
+        setTimeout(() => setTutorialVisible(true), 500); // 화면 로드 후 약간 딜레이
+        await AsyncStorage.setItem(tutorialKey, 'true');
+      }
+
       // 소켓 연결
       const socket = io('https://triplan-backend-qwrs.onrender.com');
       socketRef.current = socket;
@@ -518,6 +525,9 @@ export default function ChatRoomScreen({ route, navigation }) {
       headerTintColor: '#333',
       headerRight: () => (
         <View style={{ flexDirection: 'row', marginRight: 10, gap: 16 }}>
+          <TouchableOpacity onPress={() => setTutorialVisible(true)}>
+            <Text style={{ color: '#aaa', fontWeight: 'bold', fontSize: 16 }}>?</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => { fetchMembers(); setIsMemberVisible(true); }}>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>멤버</Text>
           </TouchableOpacity>
@@ -853,6 +863,43 @@ export default function ChatRoomScreen({ route, navigation }) {
               onClose={() => { setIsSummaryVisible(false); setSummaryData(null); }}
             />
 
+            <Modal visible={tutorialVisible} transparent animationType="fade" onRequestClose={() => setTutorialVisible(false)}>
+              <TouchableOpacity
+                style={styles.modalOverlayDark}
+                activeOpacity={1}
+                onPress={() => setTutorialVisible(false)}>
+                <TouchableOpacity style={styles.tutorialBox} activeOpacity={1} onPress={() => {}}>
+
+                  <Text style={styles.tutorialTitle}>✈️ Triplan 사용 가이드</Text>
+                  <Text style={styles.tutorialSub}>이렇게 여행을 계획해보세요!</Text>
+
+                  {[
+                    { step: '1', emoji: '💬', title: '자유롭게 대화하세요', desc: '멤버들과 여행 스타일, 예산, 선호지 등을 자유롭게 이야기해보세요.' },
+                    { step: '2', emoji: '📋', title: 'AI에게 정리를 맡기세요', desc: '대화가 3개 이상 쌓이면 "정리하기" 버튼으로 AI가 핵심을 요약해드려요.' },
+                    { step: '3', emoji: '✈️', title: '맞춤 여행지를 추천받으세요', desc: '정리가 완료되면 "여행지 추천받기"로 AI가 딱 맞는 여행지 3곳을 제안해요.' },
+                    { step: '4', emoji: '📍', title: '원하는 장소를 일정에 담으세요', desc: '추천된 장소 카드에서 마음에 드는 곳의 "일정 추가" 버튼을 눌러보세요.' },
+                    { step: '5', emoji: '🗓', title: '일정 버튼으로 여행을 완성하세요', desc: '헤더의 "일정" 버튼을 눌러 추가한 장소들을 확인하고 AI가 동선을 최적화해요.' },
+                    { step: '6', emoji: '🗳', title: '찬반투표로 최종 확정하세요', desc: '멤버 과반수가 찬성하면 일정이 확정돼요. 방장이 직접 마감할 수도 있어요.' },
+                  ].map((item) => (
+                    <View key={item.step} style={styles.tutorialItem}>
+                      <View style={styles.tutorialStepBadge}>
+                        <Text style={styles.tutorialStepText}>{item.step}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.tutorialItemTitle}>{item.emoji} {item.title}</Text>
+                        <Text style={styles.tutorialItemDesc}>{item.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  <TouchableOpacity style={styles.tutorialCloseBtn} onPress={() => setTutorialVisible(false)}>
+                    <Text style={styles.tutorialCloseBtnText}>확인했어요!</Text>
+                  </TouchableOpacity>
+
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
+
             <Modal
               visible={isInviteVisible}
               transparent
@@ -1156,7 +1203,7 @@ const styles = StyleSheet.create({
 
   tripInfo: {
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    marginHorizontal: 16, marginTop: 10, marginBottom: 15,
+    marginHorizontal: 16, marginTop: 0, marginBottom: 10,
     paddingHorizontal: 20, paddingVertical: 16,
     borderRadius: 20, elevation: 5,
   },
@@ -1342,4 +1389,36 @@ const styles = StyleSheet.create({
      width: '100%', height: 140,
      borderRadius: 10, marginBottom: 10,
    },
+   tutorialBox: {
+     backgroundColor: '#fff',
+     borderTopLeftRadius: 28,
+     borderTopRightRadius: 28,
+     padding: 24,
+     paddingBottom: 40,
+     maxHeight: '90%',
+   },
+   tutorialTitle: {
+     fontSize: 20, fontWeight: '900', color: '#333', marginBottom: 4,
+   },
+   tutorialSub: {
+     fontSize: 13, color: '#aaa', marginBottom: 20,
+   },
+   tutorialItem: {
+     flexDirection: 'row', alignItems: 'flex-start',
+     gap: 14, marginBottom: 16,
+   },
+   tutorialStepBadge: {
+     width: 28, height: 28, borderRadius: 14,
+     backgroundColor: '#FF6B6B',
+     justifyContent: 'center', alignItems: 'center',
+     flexShrink: 0, marginTop: 2,
+   },
+   tutorialStepText: { color: '#fff', fontWeight: '900', fontSize: 13 },
+   tutorialItemTitle: { fontSize: 14, fontWeight: '900', color: '#333', marginBottom: 4 },
+   tutorialItemDesc: { fontSize: 12, color: '#666', lineHeight: 18 },
+   tutorialCloseBtn: {
+     backgroundColor: '#FF6B6B', borderRadius: 16,
+     paddingVertical: 14, alignItems: 'center', marginTop: 8,
+   },
+   tutorialCloseBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
 });
