@@ -1,4 +1,4 @@
-import React, { useState,useRef  } from 'react';
+import React, { useState,useRef,useEffect   } from 'react';
 import {
   SafeAreaView, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ImageBackground, Dimensions, ScrollView, Alert, Image
@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { launchImageLibrary } from 'react-native-image-picker';
+import DestinationPicker from '../components/DestinationPicker';
 
 const { width } = Dimensions.get('window');
 
@@ -22,9 +23,28 @@ const ProfileEditScreen = ({ navigation, route }) => {
   const [birthDate, setBirthDate] = useState(new Date()); // 달력용 Date 객체
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [bio, setBio] = useState('');
+  const [preferredDestinations, setPreferredDestinations] = useState([]);
 
   const [profileImage, setProfileImage] = useState(null);
   const isUploadingRef = useRef(false);
+
+  useEffect(() => {
+    const loadPreferred = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success && data.user.preferred_destination) {
+          setPreferredDestinations(data.user.preferred_destination.split(','));
+        }
+      } catch (e) {
+        console.log('선호 여행지 불러오기 실패:', e);
+      }
+    };
+    loadPreferred();
+  }, []);
 
   const pickImage = () => {
     isUploadingRef.current = true;
@@ -180,6 +200,15 @@ const ProfileEditScreen = ({ navigation, route }) => {
                 value={nickname}
                 onChangeText={setNickname}
                 placeholder="닉네임을 입력하세요"
+              />
+            </View>
+
+
+            <View style={[styles.inputRow, { overflow: 'hidden' }]}>
+              <Text style={styles.infoLabel}>선호 여행지</Text>
+              <DestinationPicker
+                value={preferredDestinations}
+                onChange={setPreferredDestinations}
               />
             </View>
 

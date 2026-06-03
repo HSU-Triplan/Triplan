@@ -20,6 +20,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { launchImageLibrary } from 'react-native-image-picker';
+import DestinationPicker from '../components/DestinationPicker';
 
 // 🏛️ 랜드마크 배경: 이탈리아 로마 콜로세움 (Colosseum)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=800&auto=format&fit=crop';
@@ -31,6 +32,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
   const [enabled, setEnabled] = useState(false);
   const [myTrips, setMyTrips] = useState([]);
   const isUploadingRef = useRef(false);
+  const [preferredDestinations, setPreferredDestinations] = useState([]);
 
   const [userInfo, setUserInfo] = useState({
     name: '구글이름',
@@ -83,6 +85,13 @@ export default function ProfileScreen({ setIsLoggedIn }) {
               bio: user.bio || '',
             });
             setTravelStyle(user.travel_type || '테스트 미진행');
+
+            setPreferredDestinations(
+              result.user.preferred_destination
+                ? result.user.preferred_destination.split(',')
+                : []
+            );
+
           }
 
           const chatsRes = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-recent-plans', {
@@ -341,6 +350,15 @@ export default function ProfileScreen({ setIsLoggedIn }) {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>닉네임</Text>
               <Text style={styles.infoValue}>{displayName}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>선호 여행지</Text>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+              <DestinationPicker
+                value={preferredDestinations}
+                onChange={setPreferredDestinations}
+              />
+            </View>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>여행 타입</Text>
