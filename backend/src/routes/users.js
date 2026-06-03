@@ -66,7 +66,7 @@ router.get('/others', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code, created_at')
+      .select('id, email, name, nickname, profile_image, gender, birth_year, bio, travel_type, friend_code,preferred_destination, created_at')
       .eq('id', req.query.id)
       .single();
 
