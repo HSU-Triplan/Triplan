@@ -4,7 +4,6 @@ import {
   TextInput, Alert, ActivityIndicator, ScrollView, RefreshControl,
   ImageBackground, SafeAreaView, StatusBar,
 } from 'react-native';
-//LinearGradient 일단 뺌
 import Swiper from 'react-native-deck-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TravelTypeModal from '../components/TravelTypeModal';
@@ -25,7 +24,6 @@ export default function MatchingScreen() {
   const [selectedUserType, setSelectedUserType] = useState(null);
   const [selectedUserName, setSelectedUserName] = useState('');
   const [myTravelType, setMyTravelType] = useState(null);
-  const [renderKey, setRenderKey] = useState(0);
 
   const fetchMatchingData = async () => {
     try {
@@ -96,7 +94,6 @@ export default function MatchingScreen() {
     }
   };
 
-  // ── 시작 전 화면 ──────────────────────────────
   if (!started) {
     return (
       <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
@@ -130,7 +127,6 @@ export default function MatchingScreen() {
     );
   }
 
-  // ── 매칭 카드 화면 ────────────────────────────
   return (
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>
       <View style={styles.overlay} />
@@ -152,11 +148,14 @@ export default function MatchingScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B6B" />}>
           {!isDone ? (
             <View style={styles.swiperContainer}>
+
+              <View style={styles.guideContainer}>
+                <Text style={styles.guideText}>👈 패스  |  친구 요청 👉</Text>
+              </View>
+
               <Swiper
-                key={renderKey}
                 ref={swiperRef}
                 cards={users}
-                cardIndex={cardIndex}
                 cardStyle={styles.cardWrapper}
                 renderCard={(user) => {
                   if (!user) return <View style={styles.card} />;
@@ -218,16 +217,8 @@ export default function MatchingScreen() {
                     </View>
                   );
                 }}
-                onSwipedRight={(index) => {
-                  setCardIndex(index + 1);
-                  handleSwipe(index, 'accepted');
-                  setTimeout(() => setRenderKey(prev => prev + 1), 150);
-                }}
-                onSwipedLeft={(index) => {
-                  setCardIndex(index + 1);
-                  handleSwipe(index, 'rejected');
-                  setTimeout(() => setRenderKey(prev => prev + 1), 150);
-                }}
+                onSwipedRight={(index) => handleSwipe(index, 'accepted')}
+                onSwipedLeft={(index) => handleSwipe(index, 'rejected')}
                 onSwipedAll={() => {
                   setIsDone(true);
                   setAllSwiped(true);
@@ -237,8 +228,8 @@ export default function MatchingScreen() {
                 stackSize={3}
                 animateCardOpacity
                 overlayLabels={{
-                  left:  { title: '넘기기',   style: { label: styles.overlayLabelLeft,  wrapper: styles.overlayWrapperLeft  } },
-                  right: { title: '동행 신청', style: { label: styles.overlayLabelRight, wrapper: styles.overlayWrapperRight } },
+                  left:  { title: 'PASS',   style: { label: styles.overlayLabelLeft,  wrapper: styles.overlayWrapperLeft  } },
+                  right: { title: 'INVITE', style: { label: styles.overlayLabelRight, wrapper: styles.overlayWrapperRight } },
                 }}
               />
             </View>
@@ -288,9 +279,26 @@ const styles = StyleSheet.create({
   startButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 
   swiperContainer: { flex: 1, marginTop: -10 },
-  cardWrapper: { top: 0, left: 0, bottom: 80, width: '100%' },
 
-  // ── 카드 ──────────────────────────────────────
+  // 👇 가이드 문구 스타일 추가 👇
+  guideContainer: {
+    alignItems: 'center',
+    paddingTop: 10,
+    zIndex: 10,
+  },
+  guideText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#555',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+
+  cardWrapper: { top: 40, left: 0, bottom: 80, width: '100%' }, // 카드가 가이드 문구를 가리지 않도록 top 값을 40으로 수정
+
   card: {
     flex: 0.82,
     borderRadius: 30,
@@ -301,16 +309,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#111',
   },
-
-  // 이미지 전체 배경
   cardImage: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-
-  // 하단 그라데이션 (순수 View로 구현)
   cardGradient: {
     position: 'absolute',
     bottom: 0,
@@ -318,16 +322,12 @@ const styles = StyleSheet.create({
     right: 0,
     height: '55%',
     backgroundColor: 'transparent',
-    // 투명 → 어둡게 그라데이션 효과 (단색으로 근사)
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    // 여러 레이어로 그라데이션 효과
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0,
   },
-
-  // 점수 뱃지 — 우상단
   scoreTag: {
     position: 'absolute',
     top: 16,
@@ -339,8 +339,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   scoreText: { fontSize: 13, color: '#856404', fontWeight: 'bold' },
-
-  // 하단 정보 오버레이
   cardOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -353,7 +351,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
-
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -370,8 +367,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-
-  // 궁합 버튼
   compatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,8 +386,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.2,
   },
-
-  // 배지 행
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -416,20 +409,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   infoTagText: { fontSize: 12, color: '#fff', fontWeight: 'bold' },
-
   cardBio: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 19,
     fontWeight: '500',
   },
-
-  // 스와이프 오버레이
   overlayLabelLeft: { backgroundColor: '#FF3B30', color: '#fff', fontSize: 28, fontWeight: 'bold', padding: 12, borderRadius: 10 },
   overlayWrapperLeft: { alignItems: 'flex-end', justifyContent: 'flex-start', marginTop: 40, marginLeft: -40 },
   overlayLabelRight: { backgroundColor: '#34C759', color: '#fff', fontSize: 28, fontWeight: 'bold', padding: 12, borderRadius: 10 },
   overlayWrapperRight: { alignItems: 'flex-start', justifyContent: 'flex-start', marginTop: 40, marginRight: 40 },
-
   allSwipedBanner: { backgroundColor: '#FFF0F0', padding: 14, borderRadius: 14, marginBottom: 16, alignItems: 'center' },
   allSwipedText: { color: '#FF6B6B', fontWeight: 'bold', fontSize: 14 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80, backgroundColor: 'rgba(255,255,255,0.85)', margin: 20, borderRadius: 20, padding: 30 },
