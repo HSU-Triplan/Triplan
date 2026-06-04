@@ -58,7 +58,11 @@ export default function ChatRoomScreen({ route, navigation }) {
       });
       const data = await res.json();
       if (data.success) {
-        setFriendsList(data.friends.filter(f => f.status === 'accept'));
+        const myId = data.userId;
+        const filtered = data.friends.filter(
+          f => f.status === 'accept' && f.user_id == myId
+        );
+        setFriendsList(filtered);
       }
     } catch (e) {
       console.log('친구 목록 에러:', e);
@@ -372,7 +376,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
           setMessages(prev => {
-            if (prev.some(m => m.id === data.id)) return prev;
+            if (prev.some(m => String(m.id) === String(data.id))) return prev;
             return [...prev, data];
           });
         if (data.type === 'ai_preference' || data.type === 'ai_recommend') {
@@ -933,9 +937,6 @@ export default function ChatRoomScreen({ route, navigation }) {
                           <View style={{ flex: 1 }}>
                             <Text style={styles.memberName}>
                               {friend.users?.nickname || friend.users?.name}
-                            </Text>
-                            <Text style={styles.memberType}>
-                              {friend.users?.travel_type ?? '성향 미설정'}
                             </Text>
                           </View>
 
