@@ -238,8 +238,8 @@ export default function MatchingScreen() {
                 stackSize={3}
                 animateCardOpacity
                 overlayLabels={{
-                  left:  { title: 'PASS',   style: { label: styles.overlayLabelLeft,  wrapper: styles.overlayWrapperLeft  } },
-                  right: { title: 'INVITE', style: { label: styles.overlayLabelRight, wrapper: styles.overlayWrapperRight } },
+                  left:  { title: '넘기기',   style: { label: styles.overlayLabelLeft,  wrapper: styles.overlayWrapperLeft  } },
+                  right: { title: '동행 신청', style: { label: styles.overlayLabelRight, wrapper: styles.overlayWrapperRight } },
                 }}
               />
             </View>
