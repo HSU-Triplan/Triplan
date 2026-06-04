@@ -42,8 +42,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
         let request = [];
         let sent = [];
         let userId = result.userId;
-        console.log("user id : "+ userId);
-        console.log("data : "+ JSON.stringify(result.friends))
+
         for (let i = 0; i < result.friends.length; i++) {
           if (result.friends[i].status === 'accept' && result.friends[i].user_id == userId) {
             friends.push(result.friends[i]);
@@ -51,13 +50,13 @@ export default function FriendsScreen({ setIsLoggedIn }) {
             request.push(result.friends[i]);
           }else if (result.friends[i].status === 'request' && result.friends[i].friend_id == userId) {
             sent.push(result.friends[i]);
+          }
         }
+        setFriendsList(friends);
+        setRequestList(request);
+        setSentList(sent);
       }
-          setFriendsList(friends);
-          setRequestList(request);
-          setSentList(sent);
-      }
-    }catch (e) {
+    } catch (e) {
       console.log('친구 정보 불러오기 실패:', e);
     }
   };
@@ -93,7 +92,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
         Alert.alert('친구 요청 중복!', '이미 친구 요청을 보냈습니다!');
         setFriendCode('');
         fetchFriends();
-      }else if (result.success) {
+      } else if (result.success) {
         Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
         setFriendCode('');
         fetchFriends();
@@ -159,6 +158,55 @@ export default function FriendsScreen({ setIsLoggedIn }) {
     }
   };
 
+  // 💡 [수정된 기능] 친구 옵션(삭제/차단) 팝업 띄우기
+  const handleFriendOptions = (friend) => {
+    const friendName = friend.users?.nickname || friend.users?.name || '유저';
+    Alert.alert(
+      `${friendName}님 관리`,
+      '원하시는 작업을 선택해 주세요.',
+      [
+        {
+          text: '친구 삭제',
+          style: 'destructive',
+          onPress: () => confirmAction('delete', friend, friendName),
+        },
+        {
+          text: '차단하기',
+          style: 'destructive',
+          onPress: () => confirmAction('block', friend, friendName),
+        },
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  // 💡 [추가된 기능] 실제 삭제/차단 동작 처리 (현재는 프론트엔드 UI만 업데이트)
+  const confirmAction = (actionType, friend, friendName) => {
+    const actionText = actionType === 'delete' ? '삭제' : '차단';
+
+    Alert.alert(
+      `정말 ${actionText}하시겠습니까?`,
+      `${actionText} 후에는 되돌릴 수 없습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: `${actionText}하기`,
+          style: 'destructive',
+          onPress: () => {
+            // TODO: 나중에 여기에 백엔드 API 통신 코드 추가 (fetch)
+
+            // 프론트엔드 리스트에서 즉시 제거 (가짜 동작)
+            setFriendsList(prev => prev.filter(f => f.users?.id !== friend.users?.id));
+            Alert.alert('완료', `${friendName}님을 ${actionText}했습니다.`);
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4} resizeMode="cover">
       <View style={styles.overlay} />
@@ -204,6 +252,14 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                       <Text style={styles.userName}>{friend.users?.nickname || friend.users?.name || '알 수 없는 유저'}</Text>
                       <Text style={styles.userSubText}>함께 여행할 준비 완료! ✈️</Text>
                     </View>
+
+                    {/* 💡 [추가된 기능] 친구 관리 더보기 버튼 */}
+                    <TouchableOpacity
+                      style={styles.moreOptionsBtn}
+                      onPress={() => handleFriendOptions(friend)}
+                    >
+                      <Text style={styles.moreOptionsText}>⋮</Text>
+                    </TouchableOpacity>
                   </View>
                 ))
               )}
@@ -338,4 +394,6 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 24 },
   emptyEmoji: { fontSize: 50, marginBottom: 16 },
   emptyText: { fontSize: 16, fontWeight: 'bold', color: '#666' },
+  moreOptionsBtn: { padding: 8, paddingRight: 0, justifyContent: 'center', alignItems: 'center' },
+  moreOptionsText: { fontSize: 22, color: '#999', fontWeight: 'bold' },
 });
