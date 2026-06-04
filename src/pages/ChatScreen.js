@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   chatCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', // 반투명 화이트
+    backgroundColor: '#eee',
     paddingHorizontal: 18,
     paddingVertical: 18,
     borderRadius: 24, // 아주 둥글게
