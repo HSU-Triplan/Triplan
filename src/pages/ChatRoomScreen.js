@@ -58,7 +58,11 @@ export default function ChatRoomScreen({ route, navigation }) {
       });
       const data = await res.json();
       if (data.success) {
-        setFriendsList(data.friends.filter(f => f.status === 'accept'));
+        const myId = data.userId;
+        const filtered = data.friends.filter(
+          f => f.status === 'accept' && f.user_id == myId
+        );
+        setFriendsList(filtered);
       }
     } catch (e) {
       console.log('친구 목록 에러:', e);
@@ -933,9 +937,6 @@ export default function ChatRoomScreen({ route, navigation }) {
                           <View style={{ flex: 1 }}>
                             <Text style={styles.memberName}>
                               {friend.users?.nickname || friend.users?.name}
-                            </Text>
-                            <Text style={styles.memberType}>
-                              {friend.users?.travel_type ?? '성향 미설정'}
                             </Text>
                           </View>
 
