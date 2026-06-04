@@ -352,11 +352,13 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>여행 타입</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                              <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
+                            <View style={{ backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                              <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 13 }}>
+                                {otherUser?.travel_type ?? '성향 미설정'}
+                              </Text>
                             </View>
                             {otherUser?.travel_type && (
-                              <TouchableOpacity onPress={() => setInfoVisible(true)}>
+                              <TouchableOpacity onPress={() => setInfoVisible(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                                 <Text style={{ fontSize: 16 }}>❔</Text>
                               </TouchableOpacity>
                             )}
@@ -364,12 +366,12 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                         </View>
 
                         {otherUser?.preferred_destination && (
-                          <View style={styles.infoRow}>
+                          <View style={[styles.infoRow, { alignItems: 'flex-start', paddingVertical: 14 }]}>
                             <Text style={styles.infoLabel}>선호 여행지</Text>
-                            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6 }}>
+                            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, marginLeft: 8 }}>
                               {otherUser.preferred_destination.split(',').map((dest, idx) => (
-                                <View key={idx} style={[styles.badge, { backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                                  <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>📍 {dest}</Text>
+                                <View key={idx} style={{ backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                                  <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 12 }}>📍 {dest.trim()}</Text>
                                 </View>
                               ))}
                             </View>
