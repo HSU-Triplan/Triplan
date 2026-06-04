@@ -25,6 +25,7 @@ export default function MatchingScreen() {
   const [selectedUserType, setSelectedUserType] = useState(null);
   const [selectedUserName, setSelectedUserName] = useState('');
   const [myTravelType, setMyTravelType] = useState(null);
+  const [renderKey, setRenderKey] = useState(0);
 
   const fetchMatchingData = async () => {
     try {
@@ -152,8 +153,10 @@ export default function MatchingScreen() {
           {!isDone ? (
             <View style={styles.swiperContainer}>
               <Swiper
+                key={renderKey}
                 ref={swiperRef}
                 cards={users}
+                cardIndex={cardIndex}
                 cardStyle={styles.cardWrapper}
                 renderCard={(user) => {
                   if (!user) return <View style={styles.card} />;
@@ -164,19 +167,12 @@ export default function MatchingScreen() {
 
                   return (
                     <View style={styles.card}>
-                      {/* 프로필 이미지 — 카드 전체 배경 */}
                       <Image
                         source={{ uri: user?.profile_image || 'https://via.placeholder.com/400' }}
                         style={styles.cardImage}
                       />
-
-                      {/* 하단 그라데이션 오버레이 */}
                       <View style={styles.cardGradient} />
-
-                      {/* 하단 정보 오버레이 */}
                       <View style={styles.cardOverlay}>
-
-                        {/* 이름 + 궁합 버튼 */}
                         <View style={styles.cardHeaderRow}>
                           <Text style={styles.cardName}>{user?.nickname || user?.name}</Text>
                           <TouchableOpacity
@@ -190,8 +186,6 @@ export default function MatchingScreen() {
                             <Text style={styles.compatBtnText}>💘 여행 궁합 보기</Text>
                           </TouchableOpacity>
                         </View>
-
-                        {/* 배지 행 */}
                         <View style={styles.badgeRow}>
                           {user?.travel_type && (
                             <View style={styles.badge}>
@@ -217,18 +211,23 @@ export default function MatchingScreen() {
                             </View>
                           )}
                         </View>
-
-                        {/* 소개 */}
                         {user?.bio ? (
                           <Text style={styles.cardBio} numberOfLines={2}>{user.bio}</Text>
                         ) : null}
-
                       </View>
                     </View>
                   );
                 }}
-                onSwipedRight={(index) => handleSwipe(index, 'accepted')}
-                onSwipedLeft={(index) => handleSwipe(index, 'rejected')}
+                onSwipedRight={(index) => {
+                  setCardIndex(index + 1);
+                  handleSwipe(index, 'accepted');
+                  setTimeout(() => setRenderKey(prev => prev + 1), 150);
+                }}
+                onSwipedLeft={(index) => {
+                  setCardIndex(index + 1);
+                  handleSwipe(index, 'rejected');
+                  setTimeout(() => setRenderKey(prev => prev + 1), 150);
+                }}
                 onSwipedAll={() => {
                   setIsDone(true);
                   setAllSwiped(true);
