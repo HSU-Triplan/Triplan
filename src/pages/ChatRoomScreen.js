@@ -372,7 +372,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         console.log(`[Socket] 메시지 수신: type=${data.type}, id=${data.id}`);
         if (data.senderId === meData.user?.id) return;
           setMessages(prev => {
-            if (prev.some(m => m.id === data.id)) return prev;
+            if (prev.some(m => String(m.id) === String(data.id))) return prev;
             return [...prev, data];
           });
         if (data.type === 'ai_preference' || data.type === 'ai_recommend') {
