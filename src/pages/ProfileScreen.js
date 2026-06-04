@@ -12,7 +12,9 @@ import {
   Switch,
   Animated,
   ImageBackground,
-  SafeAreaView
+  SafeAreaView,
+  Linking,
+  Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -200,6 +202,12 @@ export default function ProfileScreen({ setIsLoggedIn }) {
       }
     );
   };
+
+  const openNotificationSettings = () => {
+    if (Platform.OS === 'android'){
+        Linking.openSettings();
+    }
+  }
 
   // 🌟 [수정 모드 화면]
   if (isEditing) {
@@ -394,27 +402,14 @@ export default function ProfileScreen({ setIsLoggedIn }) {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>계정 설정</Text>
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuItemLeft}>
-                <Icon name="person-outline" size={22} color="#555" />
-                <Text style={styles.menuText}>내 계정 정보</Text>
-              </View>
-              <Icon name="chevron-forward" size={20} color="#ccc" />
+            <TouchableOpacity onPress={() => openNotificationSettings()}>
+                <View style={styles.menuItem}>
+                  <View style={styles.menuItemLeft}>
+                    <Icon name="notifications-outline" size={22} color="#555" />
+                    <Text style={styles.menuText}>알림 설정</Text>
+                  </View>
+                </View>
             </TouchableOpacity>
-
-            <View style={styles.menuItem}>
-              <View style={styles.menuItemLeft}>
-                <Icon name="notifications-outline" size={22} color="#555" />
-                <Text style={styles.menuText}>알림 설정</Text>
-              </View>
-              <Switch
-                value={enabled}
-                onValueChange={(value) => setEnabled(value)}
-                trackColor={{ false: '#ddd', true: '#FFB5B5' }}
-                thumbColor={enabled ? '#FF6B6B' : '#f4f3f4'}
-              />
-            </View>
-
             <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={handleLogout}>
               <View style={styles.menuItemLeft}>
                 <Icon name="log-out-outline" size={22} color="#FF3B30" />
