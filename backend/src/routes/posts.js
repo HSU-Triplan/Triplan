@@ -864,6 +864,7 @@ router.post('/chat-rooms/:roomId/ai-itinerary', authMiddleware, async (req, res)
       id: String(savedMsg.id),
       type: 'ai_itinerary',
       data: itinerary,
+      senderId: req.user.userId,
     };
 
     // 브로드캐스트
