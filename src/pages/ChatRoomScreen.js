@@ -294,6 +294,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const handleBackToList = () => navigation.goBack();
 
   useEffect(() => {
+  let socket = null;
     const init = async () => {
       const token = await AsyncStorage.getItem('token');
 
@@ -354,7 +355,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       }
 
       // 소켓 연결
-      const socket = io('https://triplan-backend-qwrs.onrender.com');
+      socket = io('https://triplan-backend-qwrs.onrender.com');
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -394,7 +395,10 @@ export default function ChatRoomScreen({ route, navigation }) {
     };
 
     init();
-    return () => socketRef.current?.disconnect();
+    return () => {
+      socket?.disconnect();
+      socketRef.current = null;
+    };
   }, []);
 
   const handleAiRecommend = async () => {
