@@ -43,6 +43,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
     birth_year: '2000',
     gender: '여자',
     bio: '',
+    manner_temperature: '36.5', // 💡 [추가] 매너 온도 기본값 설정
   });
 
   const [travelStyle, setTravelStyle] = useState('테스트 미진행');
@@ -83,6 +84,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
               birth_year: user.birth_year ? String(user.birth_year) : '',
               gender: user.gender || '',
               bio: user.bio || '',
+              manner_temperature: user.manner_temperature ? String(user.manner_temperature) : '36.5', // 💡 [추가] 백엔드에서 매너 온도 받아오기 (없으면 36.5)
             });
             setTravelStyle(user.travel_type || '테스트 미진행');
 
@@ -351,6 +353,13 @@ export default function ProfileScreen({ setIsLoggedIn }) {
               <Text style={styles.infoLabel}>닉네임</Text>
               <Text style={styles.infoValue}>{displayName}</Text>
             </View>
+
+            {/* 💡 [추가된 기능] 내 프로필 화면에 매너 온도 표시 */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>매너 온도</Text>
+              <Text style={[styles.infoValue, { color: '#FF6B6B' }]}>{userInfo.manner_temperature}°C 🌡️</Text>
+            </View>
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>선호 여행지</Text>
               <View style={{ flex: 1, marginLeft: 12 }}>

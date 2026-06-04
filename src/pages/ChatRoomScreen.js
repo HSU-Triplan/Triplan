@@ -49,6 +49,9 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [invitingId, setInvitingId] = useState(null);
   const [tutorialVisible, setTutorialVisible] = useState(false);
 
+  // 💡 [추가된 상태] 평가 모달 노출 여부와 평가 완료된 멤버 ID 목록 관리
+  const [isRatingVisible, setIsRatingVisible] = useState(false);
+  const [ratedMembers, setRatedMembers] = useState([]);
 
   const fetchFriends = async () => {
     try {
@@ -537,6 +540,10 @@ export default function ChatRoomScreen({ route, navigation }) {
           <TouchableOpacity onPress={() => { fetchFriends(); setIsInviteVisible(true); }}>
             <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>초대</Text>
           </TouchableOpacity>
+          {/* 💡 [추가된 기능] 헤더 우측 상단에 평가 버튼 추가 */}
+          <TouchableOpacity onPress={() => { fetchMembers(); setIsRatingVisible(true); }}>
+            <Text style={{ color: '#1A73E8', fontWeight: 'bold' }}>평가</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleLeaveRoom}>
             <Text style={{ color: '#aaa', fontWeight: 'bold' }}>나가기</Text>
           </TouchableOpacity>
@@ -984,6 +991,13 @@ export default function ChatRoomScreen({ route, navigation }) {
                                       <Text style={styles.infoLabel}>닉네임</Text>
                                       <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
                                     </View>
+
+                                    {/* 💡 [추가된 기능] 프로필 모달 내 매너 온도 표시 */}
+                                    <View style={styles.infoRow}>
+                                      <Text style={styles.infoLabel}>매너 온도</Text>
+                                      <Text style={[styles.infoValue, { color: '#FF6B6B' }]}>{otherUser?.manner_temperature || '36.5'}°C 🌡️</Text>
+                                    </View>
+
                                     <View style={styles.infoRow}>
                                       <Text style={styles.infoLabel}>여행 타입</Text>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1022,6 +1036,54 @@ export default function ChatRoomScreen({ route, navigation }) {
                                </View>
                             </TouchableOpacity>
                        </Modal>
+
+              {/* 💡 [추가된 기능] 동행자 매너 평가 모달 */}
+              <Modal visible={isRatingVisible} transparent animationType="slide" onRequestClose={() => setIsRatingVisible(false)}>
+                <TouchableOpacity style={styles.modalOverlayDark} activeOpacity={1} onPress={() => setIsRatingVisible(false)}>
+                  <TouchableOpacity style={styles.memberBox} activeOpacity={1} onPress={() => {}}>
+                    <Text style={styles.modalTitle}>이번 동행은 어떠셨나요? ✈️</Text>
+                    <Text style={{color: '#888', marginBottom: 20}}>솔직한 평가는 서로의 매너 온도에 반영됩니다.</Text>
+
+                    {members.filter(m => m.users?.id !== myUserId).length === 0 ? (
+                      <Text style={{textAlign:'center', color:'#999', marginVertical: 20}}>평가할 동행자가 없습니다.</Text>
+                    ) : (
+                      members.filter(m => m.users?.id !== myUserId).map((m, idx) => {
+                        const isRated = ratedMembers.includes(m.users?.id);
+                        return (
+                          <View key={idx} style={[styles.memberItem, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                              <Image source={{ uri: m.users?.profile_image || 'https://via.placeholder.com/40' }} style={styles.memberAvatar} />
+                              <Text style={styles.memberName}>{m.users?.nickname || m.users?.name}</Text>
+                            </View>
+
+                            {isRated ? (
+                               <View style={{marginTop: 10, alignSelf:'flex-end', backgroundColor:'#f0f0f0', paddingHorizontal:12, paddingVertical:6, borderRadius:12}}>
+                                 <Text style={{color:'#888', fontSize:12, fontWeight:'bold'}}>평가 완료</Text>
+                               </View>
+                            ) : (
+                              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', width: '100%', marginTop: 10, gap: 10 }}>
+                                <TouchableOpacity style={styles.rateEmojiBtn} onPress={() => { Alert.alert('평가 완료', '좋은 평가를 남겼습니다!'); setRatedMembers(prev => [...prev, m.users?.id]); }}>
+                                  <Text style={styles.rateEmojiText}>👍 최고</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.rateEmojiBtn} onPress={() => { Alert.alert('평가 완료', '평가가 반영되었습니다.'); setRatedMembers(prev => [...prev, m.users?.id]); }}>
+                                  <Text style={styles.rateEmojiText}>😐 보통</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.rateEmojiBtn} onPress={() => { Alert.alert('평가 완료', '아쉬운 평가를 남겼습니다.'); setRatedMembers(prev => [...prev, m.users?.id]); }}>
+                                  <Text style={styles.rateEmojiText}>👎 별로</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })
+                    )}
+                    <TouchableOpacity style={styles.closeButton} onPress={() => setIsRatingVisible(false)}>
+                      <Text style={styles.closeButtonText}>닫기</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </Modal>
+
          </KeyboardAvoidingView>
         </ImageBackground>
 
@@ -1318,7 +1380,6 @@ const styles = StyleSheet.create({
   },
   aiTagStaticText: { fontSize: 12, color: '#555' },
 
-  // 🌟 시스템 메시지 전용 스타일 추가 완료 🌟
   systemMessageContainer: {
     alignItems: 'center',
     marginVertical: 12,
@@ -1421,4 +1482,19 @@ const styles = StyleSheet.create({
      paddingVertical: 14, alignItems: 'center', marginTop: 8,
    },
    tutorialCloseBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
+
+   // 💡 [추가된 기능] 평가 버튼용 스타일
+   rateEmojiBtn: {
+     backgroundColor: '#f5f7fa',
+     paddingVertical: 8,
+     paddingHorizontal: 12,
+     borderRadius: 12,
+     borderWidth: 1,
+     borderColor: '#eee'
+   },
+   rateEmojiText: {
+     fontSize: 13,
+     color: '#333',
+     fontWeight: 'bold'
+   },
 });
