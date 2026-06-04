@@ -16,6 +16,22 @@ import AIItineraryCard from '../components/AIItineraryCard';
 // 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+
+  // 한국 시간 (UTC+9) 강제 적용
+  const koreaOffset = 9 * 60; // 분 단위
+  const localOffset = date.getTimezoneOffset(); // 에뮬레이터 로컬 오프셋 (분)
+  const koreaTime = new Date(date.getTime() + (koreaOffset + localOffset) * 60 * 1000);
+
+  const h = koreaTime.getHours();
+  const m = String(koreaTime.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  const hour = h % 12 || 12;
+  return `${ampm} ${hour}:${m}`;
+};
+
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
   const [isSummarized, setIsSummarized] = useState(false);
@@ -320,6 +336,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             senderId: m.user_id,
             senderName: m.users?.nickname || m.users?.name,
             senderImage: m.users?.profile_image,
+            createdAt: m.created_at,
           };
 
           if (m.type === 'ai_recommend') {
@@ -513,6 +530,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           senderId: myUserId,
           senderName: result.message.users?.nickname || result.message.users?.name,
           senderImage: result.message.users?.profile_image,
+          createdAt: result.message.created_at || new Date().toISOString(),
         };
         setMessages(prev => [...prev, msg]);
         socketRef.current?.emit('send_message', { ...msg, roomId: String(roomId) ,senderId : myUserId });
@@ -1151,23 +1169,35 @@ const MessageItem = ({
     <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start', marginHorizontal: 12, marginVertical: 6 }}>
       {!isMe && (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-          <TouchableOpacity onPress={()=>{fetchProfile(message.senderId)}}>
-              <Image
-                source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
-                style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
-              />
+          <TouchableOpacity onPress={() => { fetchProfile(message.senderId); }}>
+            <Image
+              source={{ uri: message.senderImage || 'https://via.placeholder.com/30' }}
+              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ddd' }}
+            />
           </TouchableOpacity>
           <View>
-            <Text style={{ fontSize: 11, color: '#666', marginBottom: 4, marginLeft: 2 }}>{message.senderName}</Text>
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: 220, elevation: 2 }}>
-              <Text style={{ color: '#333' }}>{message.text}</Text>
+            <Text style={{ fontSize: 11, color: '#666', marginBottom: 4, marginLeft: 2 }}>
+              {message.senderName}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: 220, elevation: 2 }}>
+                <Text style={{ color: '#333' }}>{message.text}</Text>
+              </View>
+              <Text style={{ fontSize: 10, color: 'rgba(80,80,80,0.7)', marginBottom: 2 }}>
+                {formatTime(message.createdAt)}
+              </Text>
             </View>
           </View>
         </View>
       )}
       {isMe && (
-        <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopRightRadius: 4, maxWidth: 220, elevation: 2 }}>
-          <Text style={{ color: '#fff' }}>{message.text}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4, justifyContent: 'flex-end' }}>
+          <Text style={{ fontSize: 10, color: 'rgba(80,80,80,0.7)', marginBottom: 2 }}>
+            {formatTime(message.createdAt)}
+          </Text>
+          <View style={{ backgroundColor: '#FF6B6B', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderTopRightRadius: 4, maxWidth: 220, elevation: 2 }}>
+            <Text style={{ color: '#fff' }}>{message.text}</Text>
+          </View>
         </View>
       )}
     </View>
