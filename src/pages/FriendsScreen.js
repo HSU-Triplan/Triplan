@@ -28,6 +28,7 @@ export default function FriendsScreen({ setIsLoggedIn }) {
   const [sentList,setSentList] = useState([]);
   const [profileVisible,setProfileVisible] = useState(false);
   const [otherUser,setOtherUser] = useState([]);
+  const [infoVisible, setInfoVisible] = useState(false);
 
   const fetchFriends = async () => {
     try {
@@ -397,6 +398,25 @@ export default function FriendsScreen({ setIsLoggedIn }) {
                           <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
                         </View>
                       </View>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
+
+                <Modal visible={infoVisible} transparent animationType="fade" onRequestClose={() => setInfoVisible(false)}>
+                  <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setInfoVisible(false)}>
+                    <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, margin: 20 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+                        🧭 4가지 여행 성향 척도
+                      </Text>
+                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🥾 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>T / C</Text> : 활동형 (많이 걷기 OK) vs 여유형</Text>
+                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🏙 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>U / N</Text> : 도심파 (번화가/쇼핑) vs 자연파</Text>
+                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🏄 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>A / R</Text> : 액티브 (체험/도전) vs 힐링형</Text>
+                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 20 }}>📋 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>J / P</Text> : 계획파 (꼼꼼한 일정) vs 즉흥파</Text>
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 14, alignItems: 'center' }}
+                        onPress={() => setInfoVisible(false)}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>닫기</Text>
+                      </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
                 </Modal>
