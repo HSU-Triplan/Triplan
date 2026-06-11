@@ -22,7 +22,7 @@ GoogleSignin.configure({
   webClientId: '391196068887-pqdqp1l6c8m69po4s4as60i3pger5aip.apps.googleusercontent.com',
 });
 
-export default function LoginScreen({ setIsLoggedIn }) {
+export default function LoginScreen({ setIsLoggedIn ,navigation }) {
   const handleGoogleLogin = async () => {
     try {
       await GoogleSignin.signOut();
@@ -43,6 +43,8 @@ export default function LoginScreen({ setIsLoggedIn }) {
         const token = result.token;
 
         setIsLoggedIn(true);
+        navigation.replace('AuthRouter');
+
 
         (async () => {
 

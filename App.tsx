@@ -205,27 +205,22 @@ export default function App() {
     );
   }
 
-  return (
+return (
     <SafeAreaProvider style={{ flex: 1 }}>
       <NavigationContainer>
         <FlashMessage position="top" />
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!isLoggedIn ? (
-            <Stack.Screen name="Login">
-              {() => <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
-            </Stack.Screen>
-          ) : (
-            <>
-              <Stack.Screen name="AuthRouter" component={AuthRouterScreen} />
-              <Stack.Screen name="TestIntro" component={TestIntroScreen} />
-              <Stack.Screen name="Test" component={TravelStyleGame} />
-              <Stack.Screen name="Result" component={ResultScreen} />
-              <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-              <Stack.Screen name="Main">
-                {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
-              </Stack.Screen>
-            </>
-          )}
+          <Stack.Screen name="Login">
+            {(props) => <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+          </Stack.Screen>
+          <Stack.Screen name="AuthRouter" component={AuthRouterScreen} />
+          <Stack.Screen name="TestIntro" component={TestIntroScreen} />
+          <Stack.Screen name="Test" component={TravelStyleGame} />
+          <Stack.Screen name="Result" component={ResultScreen} />
+          <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+          <Stack.Screen name="Main">
+            {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
+          </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

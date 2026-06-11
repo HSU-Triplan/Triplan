@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import UserProfileModal from '../components/UserProfileModal';
+import TravelInfoModal from '../components/TravelInfoModal';
 
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?q=80&w=800&auto=format&fit=crop';
 
@@ -332,96 +334,16 @@ export default function FriendsScreen({ setIsLoggedIn }) {
           )}
         </View>
         {/* 프로필 모달 */}
-                <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
-                  <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
-                    <View style={styles.profileModalBox}>
-
-                      <View style={styles.profileModalHeader}>
-                        <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
-                        <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
-                        {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
-                      </View>
-
-                      <View style={styles.profileCard}>
-                        <Text style={styles.cardTitle}>프로필 정보</Text>
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>닉네임</Text>
-                          <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>여행 타입</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <View style={{ backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                              <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 13 }}>
-                                {otherUser?.travel_type ?? '성향 미설정'}
-                              </Text>
-                            </View>
-                            {otherUser?.travel_type && (
-                              <TouchableOpacity onPress={() => setInfoVisible(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                                <Text style={{ fontSize: 16 }}>❔</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        </View>
-
-                        {otherUser?.preferred_destination && (
-                          <View style={[styles.infoRow, { alignItems: 'flex-start', paddingVertical: 14 }]}>
-                            <Text style={styles.infoLabel}>선호 여행지</Text>
-                            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, marginLeft: 8 }}>
-                              {otherUser.preferred_destination.split(',').map((dest, idx) => (
-                                <View key={idx} style={{ backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 1, borderColor: '#FF6B6B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                                  <Text style={{ color: '#FF6B6B', fontWeight: 'bold', fontSize: 12 }}>📍 {dest.trim()}</Text>
-                                </View>
-                              ))}
-                            </View>
-                          </View>
-                        )}
-
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>친구 코드</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
-                            <TouchableOpacity style={styles.copyButton} onPress={handleCopyFriendCode}>
-                              <Text style={styles.copyButtonText}>복사</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>생년월일</Text>
-                          <Text style={styles.infoValue}>{otherUser?.birth_year || '미설정'}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>성별</Text>
-                          <Text style={styles.infoValue}>{otherUser?.gender || '미설정'}</Text>
-                        </View>
-                        <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                          <Text style={styles.infoLabel}>소개</Text>
-                          <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
-
-                <Modal visible={infoVisible} transparent animationType="fade" onRequestClose={() => setInfoVisible(false)}>
-                  <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setInfoVisible(false)}>
-                    <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, margin: 20 }}>
-                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#333', marginBottom: 16, textAlign: 'center' }}>
-                        🧭 4가지 여행 성향 척도
-                      </Text>
-                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🥾 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>T / C</Text> : 활동형 (많이 걷기 OK) vs 여유형</Text>
-                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🏙 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>U / N</Text> : 도심파 (번화가/쇼핑) vs 자연파</Text>
-                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 8 }}>🏄 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>A / R</Text> : 액티브 (체험/도전) vs 힐링형</Text>
-                      <Text style={{ fontSize: 14, color: '#555', lineHeight: 24, marginBottom: 20 }}>📋 <Text style={{ fontWeight: 'bold', color: '#FF6B6B' }}>J / P</Text> : 계획파 (꼼꼼한 일정) vs 즉흥파</Text>
-                      <TouchableOpacity
-                        style={{ backgroundColor: '#FF6B6B', borderRadius: 16, paddingVertical: 14, alignItems: 'center' }}
-                        onPress={() => setInfoVisible(false)}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>닫기</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
+        <UserProfileModal
+          visible={profileVisible}
+          user={otherUser}
+          onClose={() => setProfileVisible(false)}
+          onInfoPress={() => setInfoVisible(true)}
+        />
+        <TravelInfoModal
+          visible={infoVisible}
+          onClose={() => setInfoVisible(false)}
+        />
       </SafeAreaView>
     </ImageBackground>
   );

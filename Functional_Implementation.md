@@ -1,50 +1,83 @@
-# Triplan 기능 구현
+# Triplan — Functional Implementation
 
-## 목차
-- [배경 설정](#배경-설정)
-- [Client 부문](#client-부문)
-- [Server 부문](#server-부문)
-- [Database 부문](#database-부문)
+> 여행 성향 기반 동행 매칭 & AI 여행 계획 앱  
+> React Native CLI · Node.js · Supabase · Google Gemini 2.5 Flash
 
 ---
 
-## 배경 설정
+## Table of Contents
+
+- [Background](#background)
+- [Client](#client)
+    - [Screen List](#screen-list)
+    - [Login / Auto Login](#login--auto-login)
+    - [Google Login](#google-login)
+    - [Logout](#logout)
+    - [Travel Style Test](#travel-style-test)
+    - [Home Screen](#home-screen)
+    - [SNS Feed](#sns-feed-searchscreen)
+    - [Post Write / Edit](#post-write--edit)
+    - [Matching Screen](#matching-screen)
+    - [Friends Screen](#friends-screen)
+    - [Chat List](#chat-list)
+    - [Chat Room](#chat-room)
+    - [Profile / Profile Edit](#profile--profile-edit)
+- [Server](#server)
+    - [Server Config](#server-config)
+    - [Auth API](#auth-api)
+    - [User API](#user-api)
+    - [Post / Chat API](#post--chat-api)
+    - [AI API](#ai-api)
+    - [Socket.io Events](#socketio-events)
+- [Database](#database)
+    - [DB Config](#db-config)
+    - [Tables](#tables)
+
+---
+
+## Background
 
 현대 여행객들은 단순히 목적지가 같은 사람을 넘어서, 자신과 여행 스타일 및 성향이 잘 맞는 동행을 찾고자 합니다. **Triplan**은 이러한 니즈를 반영하여 기획된 맞춤형 여행 동행 매칭 플랫폼입니다.
 
-사용자의 여행 스타일을 정밀하게 분석하는 자체 성향 테스트를 제공하며, 나아가 AI 기반의 코스 기획 기능을 결합하여 여행 준비의 번거로움을 줄이고 더욱 만족스러운 동행 경험을 제공하는 것을 목표로 합니다.
+사용자의 여행 스타일을 정밀하게 분석하는 자체 성향 테스트(4축 20문항)를 제공하며, AI 기반 여행지 추천 및 일정 최적화 기능을 결합하여 여행 준비의 번거로움을 줄이고 더욱 만족스러운 동행 경험을 제공하는 것을 목표로 합니다.
+
+| 문제 | Triplan의 해결 방법 |
+|------|-------------------|
+| 여행 스타일 불일치로 인한 갈등 | 4축 성향 테스트로 사전에 궁합 확인 |
+| 단체 채팅에서의 의사결정 비효율 | AI 대화 정리(5W)로 핵심 자동 요약 |
+| 여행지 선정의 어려움 | 그룹 성향 기반 AI 여행지 3곳 추천 |
+| 일정 합의 과정의 복잡함 | 찬반투표로 민주적 일정 확정 |
 
 ---
 
-## Client 부문
+## Client
 
-### 화면 구성
+### Screen List
 
-| 클래스               | 기능                          | 파일                               |
-|-------------------|-----------------------------|----------------------------------|
-| LoginScreen       | 구글 소셜 로그인                   | `src/pages/LoginScreen.js`       |
-| ProfileScreen     | 프로필 보기, 로그아웃                | `src/pages/ProfileScreen.js`     |
-| SearchScreen      | SNS 피드, 게시글 검색/필터           | `src/pages/SearchScreen.js`      |
-| WriteScreen       | 동행 모집 글 작성                  | `src/pages/WriteScreen.js`       |
-| TabNavigator      | 하단 탭 네비게이션                  | `src/navigation/TabNavigator.js` |
-| HomeScreen        | 메인 홈 화면                     | `src/pages/HomeScreen.js`        |
-| FriendsScreen     | 친구 목록, 받은 요청 , 보낸 요청, 친구 요청 | `src/pages/FriendsScreen.js`     |
-| ProfileEditScreen | 프로필 이미지, 닉네임 , 생년월일, 성별 변경  | `src/pages/ProfileEditScreen.js` |
-| EditPostScreen    | Sns 피드에 올릴 계획 피드를 작성        | `src/pages/EditPostScreen.js`    |
-| ChatScreen        | 채팅방 목록                      | `src/pages/ChatScreen.js`        |
-| MatchingScreen    | 추천 유저 목록, 스와이프로 친구 초대       | `src/pages/MatchingScreen.js`    |
-| TravelStyleGame   | 여행 성향 테스트 진행 및 결과 도출       | `src/pages/TravelStyleGame.tsx`  |
+| Class | 기능 | 파일 |
+|-------|------|------|
+| `LoginScreen` | 구글 소셜 로그인 | `src/pages/LoginScreen.js` |
+| `HomeScreen` | 홈 화면, D-Day 카드, 빠른 탭 이동 | `src/pages/HomeScreen.js` |
+| `SearchScreen` | SNS 피드, 게시글 검색/필터/참여 | `src/pages/SearchScreen.js` |
+| `WriteScreen` | 동행 모집 글 작성 | `src/pages/WriteScreen.js` |
+| `EditPostScreen` | SNS 피드 게시글 수정 | `src/pages/EditPostScreen.js` |
+| `MatchingScreen` | 추천 유저 카드 스와이프 매칭 | `src/pages/MatchingScreen.js` |
+| `FriendsScreen` | 친구 목록, 받은/보낸 요청 관리 | `src/pages/FriendsScreen.js` |
+| `ChatScreen` | 채팅방 목록 | `src/pages/ChatScreen.js` |
+| `ChatRoomScreen` | 실시간 채팅, AI 기능 전체 | `src/pages/ChatRoomScreen.js` |
+| `ProfileScreen` | 프로필 보기, 로그아웃 | `src/pages/ProfileScreen.js` |
+| `ProfileEditScreen` | 닉네임/성별/생년월일/소개/이미지 수정 | `src/pages/ProfileEditScreen.js` |
+| `TravelStyleGame` | 여행 성향 테스트 (20문항) | `TravelStyleGame.tsx` |
+| `TabNavigator` | 하단 탭 네비게이션 (5탭) | `src/navigation/TabNavigator.js` |
 
 ---
 
-### 로그인 화면
+### Login / Auto Login
 
-**LoginScreen.js**
+앱 실행 시 `AsyncStorage`에서 JWT 토큰을 확인한다. 토큰이 존재하면 `AuthRouter`를 통해 `/users/me`를 호출하고, `travel_type`이 있으면 메인으로 진입한다. 토큰이 만료(401)되면 로그인 화면으로 이동한다.
 
-앱 실행 시 `AsyncStorage`에서 JWT 토큰을 확인한다. 토큰이 존재하면 로그인 화면을 거치지 않고 메인 탭으로 자동 진입한다.
-
-**App.tsx — 자동 로그인 처리**
-```javascript
+```js
+// App.tsx — 자동 로그인 확인
 useEffect(() => {
   const checkToken = async () => {
     const token = await AsyncStorage.getItem('token');
@@ -54,76 +87,72 @@ useEffect(() => {
 }, []);
 ```
 
-토큰이 없을 경우 로그인 화면이 표시된다. 로그인/로그아웃 시 `navigation.replace` 대신 `isLoggedIn` 상태값을 변경하는 조건부 렌더링 방식으로 화면을 전환한다.
-
-```javascript
-return (
-  <NavigationContainer>
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isLoggedIn ? (
-        <Stack.Screen name="Main">
-          {() => <TabNavigator setIsLoggedIn={setIsLoggedIn} />}
-        </Stack.Screen>
-      ) : (
-        <Stack.Screen name="Login">
-          {() => <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
-        </Stack.Screen>
-      )}
-    </Stack.Navigator>
-  </NavigationContainer>
-);
+```jsx
+// 네비게이터 구성 — 전체 스크린 항상 등록, initialRouteName으로 진입 제어
+<Stack.Navigator initialRouteName={isLoggedIn ? 'AuthRouter' : 'Login'}>
+  <Stack.Screen name="Login" ... />
+  <Stack.Screen name="AuthRouter" component={AuthRouterScreen} />
+  <Stack.Screen name="TestIntro" component={TestIntroScreen} />
+  <Stack.Screen name="Test" component={TravelStyleGame} />
+  <Stack.Screen name="Result" component={ResultScreen} />
+  <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+  <Stack.Screen name="Main" ... />
+</Stack.Navigator>
 ```
+
+> **주의:** 조건부 렌더링 방식 대신 전체 스크린 항상 등록 방식을 사용한다.  
+> `navigation.replace('Login')` 호출 시 스크린이 등록되어 있어야 에러가 발생하지 않는다.
 
 ---
 
-### 구글 로그인
+### Google Login
 
-`@react-native-google-signin/google-signin` 라이브러리를 사용한다.
-로그인 성공 시 발급된 `idToken`을 백엔드로 전달하고, 응답받은 JWT 토큰을 `AsyncStorage`에 저장한다.
+`@react-native-google-signin/google-signin` 라이브러리를 사용한다.  
+로그인 성공 시 발급된 `idToken`을 백엔드로 전달하고, 응답받은 JWT 토큰을 `AsyncStorage`에 저장한다. 이후 FCM 토큰을 서버에 비동기로 저장한다.
 
-**GoogleSignin 설정**
-```javascript
+```js
 GoogleSignin.configure({
   webClientId: 'GOOGLE_WEB_CLIENT_ID',
 });
-```
 
-**로그인 처리**
-```javascript
 const handleGoogleLogin = async () => {
-  try {
-    await GoogleSignin.signOut(); // 이전 세션 초기화
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    const { idToken } = userInfo.data;
+  await GoogleSignin.signOut(); // 이전 세션 초기화
+  await GoogleSignin.hasPlayServices();
+  const userInfo = await GoogleSignin.signIn();
+  const { idToken } = userInfo.data;
 
-    const response = await fetch('[https://triplan-backend-qwrs.onrender.com/auth/google](https://triplan-backend-qwrs.onrender.com/auth/google)', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
+  const result = await fetch('https://triplan-backend-qwrs.onrender.com/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  }).then(r => r.json());
 
-    const result = await response.json();
+  if (result.success) {
+    await AsyncStorage.setItem('token', result.token);
+    setIsLoggedIn(true);
+    navigation.replace('AuthRouter');
 
-    if (result.success) {
-      await AsyncStorage.setItem('token', result.token);
-      setIsLoggedIn(true);
-    }
-  } catch (error) {
-    console.log('로그인 에러:', error);
+    // FCM 토큰 비동기 저장
+    (async () => {
+      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      const fcmToken = await messaging().getToken();
+      await fetch('https://triplan-backend-qwrs.onrender.com/users/saveFcmToken', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${result.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fcm_token: fcmToken }),
+      });
+    })();
   }
 };
 ```
 
 ---
 
-### 로그아웃
+### Logout
 
-**ProfileScreen.js**
+프로필 탭 하단 로그아웃 버튼 → 확인 팝업 → 구글 세션 제거 → 로컬 토큰 제거 → `setIsLoggedIn(false)`.
 
-프로필 탭 하단에 로그아웃 버튼이 위치한다. 버튼 클릭 시 확인 팝업이 표시되며, 확인 시 구글 세션과 로컬 토큰을 모두 제거하고 로그인 화면으로 전환된다.
-
-```javascript
+```js
 const handleLogout = async () => {
   Alert.alert('로그아웃', '로그아웃 하시겠어요?', [
     { text: '취소', style: 'cancel' },
@@ -131,9 +160,9 @@ const handleLogout = async () => {
       text: '로그아웃',
       style: 'destructive',
       onPress: async () => {
-        await GoogleSignin.signOut();           // 구글 세션 제거
-        await AsyncStorage.removeItem('token'); // 로컬 토큰 제거
-        setIsLoggedIn(false);                   // 로그인 화면으로 자동 전환
+        await GoogleSignin.signOut();
+        await AsyncStorage.removeItem('token');
+        setIsLoggedIn(false);
       },
     },
   ]);
@@ -142,15 +171,21 @@ const handleLogout = async () => {
 
 ---
 
-### 여행 성향 테스트
+### Travel Style Test
 
-**TravelStyleGame.tsx**
+총 20문항의 질문을 통해 사용자의 여행 스타일을 4축 기준으로 분석하여 16가지 코드 중 하나로 분류한다.  
+`Animated.timing`을 활용한 슬라이드 애니메이션을 적용했다.
 
-총 20문항의 질문을 통해 사용자의 여행 스타일을 16가지(예: TUAJ, CURP 등)로 분류하는 MBTI 기반 성향 테스트 기능이다. UX를 고려하여 `Animated.timing`을 활용한 슬라이드 애니메이션을 적용했다.
+| 축 | 선택지 A | 선택지 B | 설명 |
+|----|---------|---------|------|
+| T / C | T (활동형) | C (여유형) | 많이 걷기 OK vs 편안한 이동 선호 |
+| U / N | U (도심파) | N (자연파) | 번화가/쇼핑 vs 산/바다/공원 |
+| A / R | A (액티브형) | R (힐링형) | 체험/도전 vs 느긋하게 충전 |
+| J / P | J (계획파) | P (즉흥파) | 꼼꼼한 일정 vs 자유로운 여행 |
 
-**성향 판별 및 화면 전환 로직**
-```javascript
-const handleSelect = (type: string) => {
+```js
+// 성향 판별 로직
+const handleSelect = (type) => {
   const newScores = { ...scores, [type]: scores[type] + 1 };
   setScores(newScores);
 
@@ -170,13 +205,11 @@ const handleSelect = (type: string) => {
 };
 ```
 
-테스트 완료 후 도출된 최종 결과 코드는 백엔드 API를 통해 DB의 `travel_type` 컬럼에 저장되며, 이후 유저 매칭 필터링에 활용된다.
-
-**결과 서버 전송**
-```javascript
-const saveResult = async (finalType: string) => {
+```js
+// 결과 서버 전송
+const saveResult = async (finalType) => {
   const token = await AsyncStorage.getItem('token');
-  await fetch('[https://triplan-backend-qwrs.onrender.com/users/travel-type](https://triplan-backend-qwrs.onrender.com/users/travel-type)', {
+  await fetch('https://triplan-backend-qwrs.onrender.com/users/travel-type', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ travelType: finalType }),
@@ -187,679 +220,671 @@ const saveResult = async (finalType: string) => {
 
 ---
 
-### SNS 피드 (SearchScreen)
+### Home Screen
 
-**SearchScreen.js**
+시간대별 인사말, D-Day 카드, 나의 여행 목록, 빠른 탭 이동(2×2 그리드)으로 구성된다.
 
-동행 모집 게시글 피드를 표시하는 화면이다. 상단 검색바와 필터 기능을 제공하며, 좌 하단 FAB(+) 버튼으로 글 작성 화면으로 진입한다.
+| 구성 요소 | 설명 |
+|----------|------|
+| 시간대별 인사말 | 오전/오후/저녁에 따라 다른 인사말 표시 |
+| D-Day 카드 | 출발일이 가장 가까운 여행 정보 (D-N 형태) |
+| 나의 여행 목록 | 참여 중인 채팅방 목록, 클릭 시 ChatRoom 이동 |
+| 빠른 탭 이동 | 탐색/매칭/채팅/친구 4탭으로 바로 이동하는 그리드 |
 
-#### 게시글 불러오기
+```jsx
+// D-Day 계산
+const calcDDay = (dateStr) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return 'D-Day';
+  if (diff > 0) return `D-${diff}`;
+  return `D+${Math.abs(diff)}`;
+};
+```
 
-화면 진입 시 `GET /posts` API를 호출하여 게시글 목록을 불러온다. 글 작성 완료 후 모달이 닫힐 때도 자동으로 재호출된다.
+---
 
-```javascript
+### SNS Feed (SearchScreen)
+
+동행 모집 게시글 피드를 표시하는 화면이다.  
+`useFocusEffect` 훅으로 화면 진입 시마다 데이터를 새로 불러온다.
+
+#### 게시글 로딩
+
+```js
 const fetchPosts = useCallback(async () => {
-  setLoading(true);
-  try {
-    const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts](https://triplan-backend-qwrs.onrender.com/posts)');
-    const result = await response.json();
-    if (result.success) {
-      setPosts(result.posts);
-    }
-  } catch (error) {
-    console.log('게시글 불러오기 에러:', error);
-  } finally {
-    setLoading(false);
-  }
+  const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts');
+  const result = await response.json();
+  if (result.success) setPosts(result.posts);
 }, []);
 
-useEffect(() => {
+useFocusEffect(useCallback(() => {
   fetchPosts();
-}, [fetchPosts]);
+  fetchJoinedRooms();
+}, [fetchPosts]));
 ```
 
 #### 필터 기능
 
-상단 필터 버튼 클릭 시 모달 팝업이 표시된다. 모달 내부에서 여행지와 성향을 각각 드롭다운으로 선택하고 적용 버튼을 누르면 필터가 반영된다. 필터가 적용된 상태에서는 버튼 색상이 변경되고 적용된 필터 태그가 상단에 표시된다.
+| 필터 항목 | 옵션 |
+|----------|------|
+| 여행지 | 전체 / 국내 / 아시아 / 유럽 / 아메리카 / 오세아니아·기타 |
+| 성향 코드 | 전체 / TUAJ / TURP 등 16가지 |
+| 여행 기간 | 전체 / 당일치기 / 1박2일 / 2박3일 / 3박 이상 |
+| 동행 성별 | 전체 / 동성만 / 성별 무관 |
+| 여행 테마 | 전체 / 빵지순례 / 역사문화 / 힐링/휴양 / 액티비티 / 쇼핑 |
+| 모집 중만 보기 | 현재 인원 < 최대 인원인 게시글만 표시 |
 
-```javascript
-const DESTINATION_OPTIONS = ['전체', '국내', '일본', '유럽', '동남아'];
-const TYPE_OPTIONS = ['전체', 'TUAJ', 'TUAP', 'TURJ', 'TURP', 'TNAJ', 'TNAP', 'TNRJ', 'TNRP', 'CUAJ', 'CUAP', 'CURJ', 'CURP', 'CNAJ', 'CNAP', 'CNRJ', 'CNRP'];
-```
-
-- 여행지 필터 : 드롭다운 선택
-- 성향 필터 : 드롭다운 선택 (16가지 유형, 스크롤 가능)
-- 적용 전까지 임시 상태(`tempDestination`, `tempType`)로 관리하여 취소 시 원래 값 유지
+- 필터 적용 전까지 임시 상태(`tempDestination`, `tempType` 등)로 관리하여 취소 시 원래 값 유지
+- 여행지 필터는 `REGION_KEYWORDS` 매핑으로 키워드 포함 여부 검사
 
 #### 게시글 카드
 
-각 카드에 아래 정보를 표시한다.
+- 여행지명 → Unsplash 이미지 자동 매핑 (60개 이상 키워드 매핑 테이블)
+- 배지: `내 글` / `참여 중` / `마감됨`
+- 클릭 → 상세 모달 (게시글 정보 + 참여하기 / 채팅방 이동 버튼)
 
-| 항목 | 설명 |
-|------|------|
-| 프로필 이미지 | 작성자 아바타 |
-| 이름 | 작성자 구글 계정 이름 |
-| 성향 코드 | 작성자 여행 성향 (미설정 시 '성향 미설정') |
-| 여행지 | 목적지 |
-| 여행 일수 | 예) 3박 4일 |
-| 모집 인원 | 예) 3명 모집 |
-| 한 줄 소개 | 게시글 소개 문구 |
-| 간단 계획 | 최대 2줄 표시 |
-| 참여하기 버튼 | UI만 구현 (기능 연동 예정) |
+#### 참여하기
 
-#### FAB 버튼
-
-```javascript
-<TouchableOpacity style={styles.fab} onPress={() => setWriteVisible(true)}>
-  <Text style={styles.fabText}>+</Text>
-</TouchableOpacity>
+```js
+const handleJoin = async (postId) => {
+  const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${postId}/join`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  // 성공 시 채팅방 자동 참여
+};
 ```
-
-좌 하단에 고정 위치(`position: 'absolute'`)로 표시된다. 클릭 시 WriteScreen 모달이 아래에서 위로 슬라이드되어 올라온다.
 
 ---
 
-### 동행 모집 글 작성 (WriteScreen)
-
-**WriteScreen.js**
-
-SearchScreen에서 FAB 버튼을 누르면 Modal(`animationType: 'slide'`)로 진입한다. 상단에 닫기(✕) 버튼과 완료 버튼이 있다.
-
-#### 입력 항목
+### Post Write / Edit
 
 | 항목 | 필수 여부 | 설명 |
 |------|----------|------|
-| 여행지 | 필수 | 목적지 텍스트 입력 |
-| 여행 일수 | 필수 | 예) 3박 4일 |
-| 모집 인원 | 필수 | 숫자 입력 |
+| 여행지 | 필수 | 목적지 텍스트 |
+| 여행 일수 | 필수 | 예) 3박4일 |
+| 모집 인원 | 필수 | 최대 참여 인원 |
+| 출발일 | 선택 | DatePicker로 날짜 선택 |
 | 한 줄 소개 | 필수 | 게시글 소개 문구 |
-| 간단 계획 | 선택 | 여행 계획 텍스트 (멀티라인) |
+| 간단 계획 | 선택 | 여행 계획 (멀티라인) |
 
-#### 작성 완료 처리
+```js
+// WriteScreen — 게시글 작성
+await fetch('https://triplan-backend-qwrs.onrender.com/posts', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ destination, days, max_people, bio, plan, departure_date }),
+});
 
-완료 버튼 클릭 시 필수 항목 검증 후 `POST /posts` API를 호출한다. JWT 토큰을 `Authorization` 헤더에 담아 전송하며, 성공 시 모달을 닫고 피드를 자동 새로고침한다.
-
-```javascript
-const handleSubmit = async () => {
-  const token = await AsyncStorage.getItem('token');
-
-  const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts](https://triplan-backend-qwrs.onrender.com/posts)', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      destination,
-      days,
-      max_people: parseInt(maxPeople, 10),
-      bio,
-      plan,
-    }),
-  });
-};
-```
----
-
-### 홈 화면
-
-**HomeScreen.js**
-
-홈 화면에서 바로가기 탭으로 다른 탭으로 이동한다.
-
-**바로가기 탭**
-```javascript
-{/* 빠른 탭 이동 2x2 그리드 */}
-          <View style={styles.sectionHeader}>
-          </View>
-          <View style={styles.gridContainer}>
-            {QUICK_TABS.map((item, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.gridCard}
-                onPress={() => navigation.navigate(item.tab)}
-                activeOpacity={0.85}>
-                <Text style={styles.gridEmoji}>{item.emoji}</Text>
-                <Text style={styles.gridLabel}>{item.label}</Text>
-                <Text style={styles.gridSub}>{item.sub}</Text>
-                <View style={styles.gridArrow}>
-                  <Text style={styles.gridArrowText}>→</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-```
-
-**가장 기간이 남지 않은 여행기록을 불러온다.**
-
-```javascript
-{/* D-Day 카드 */}
-          {nextTrip ? (
-            <View style={styles.dDayCard}>
-              <View style={styles.dDayBadge}>
-                <Text style={styles.dDayText}>{calcDDay(nextTrip.departure_date) ?? '날짜 미정'}</Text>
-              </View>
-              <Text style={styles.dDayTitle}>다가오는 여행</Text>
-              <Text style={styles.dDayDestination}>📍 {nextTrip.destination}</Text>
-              <View style={styles.dDayInfo}>
-                <Text style={styles.dDayInfoText}>🗓 {nextTrip.days}</Text>
-                {nextTrip.departure_date && (
-                  <Text style={styles.dDayInfoText}>🛫 {nextTrip.departure_date}</Text>
-                )}
-              </View>
-              <Text style={styles.dDayBio} numberOfLines={1}>{nextTrip.bio}</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>예정된 여행이 없어요 🗺</Text>
-              <Text style={styles.emptySubText}>탐색 탭에서 멋진 동행을 찾아보세요!</Text>
-            </View>
-          )}
-```
-
----
-
-### 친구 화면
-
-**FreindsScreen.js**
-
-페이지가 렌더링 되면 서버에서 친구 데이터를 가져온다.
-
-**친구 정보 불러오기**
-```javascript
-const fetchFriends = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch('[https://triplan-backend-qwrs.onrender.com/users/friends](https://triplan-backend-qwrs.onrender.com/users/friends)', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) return;
-
-      const result = await response.json();
-
-      if (result.success && !isUploadingRef.current) {
-        let friends = [];
-        let request = [];
-        let sent = [];
-        let userId = result.userId;
-        
-        for (let i = 0; i < result.friends.length; i++) {
-          if (result.friends[i].status === 'accept' && result.friends[i].user_id == userId) {
-            friends.push(result.friends[i]);
-          } else if (result.friends[i].status === 'request' && result.friends[i].user_id == userId) {
-            request.push(result.friends[i]);
-          }else if (result.friends[i].status === 'request' && result.friends[i].friend_id == userId) {
-            sent.push(result.friends[i]);
-        }
-      }
-          setFriendsList(friends);
-          setRequestList(request);
-          setSentList(sent);
-      }
-    }catch (e) {
-      console.log('친구 정보 불러오기 실패:', e);
-    }
-  };
-```
-
-**유저의 친구코드를 바탕으로 서버에 친구 추가 요청을 한다.**
-
-```javascript
-const friendAdd = async () => {
-    if (isSending) return;
-    if (!friendCode.trim()) {
-      Alert.alert('알림', '친구 코드를 입력해주세요!');
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(
-        '[https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=](https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=)' + friendCode.trim(),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (!response.ok) {
-        Alert.alert('오류', '서버가 요청을 처리하지 못했습니다. 코드를 확인해주세요.');
-        return;
-      }
-
-      const result = await response.json();
-      if (result.state == "duplicate"){
-        Alert.alert('친구 요청 중복!', '이미 친구 요청을 보냈습니다!');
-        setFriendCode('');
-        fetchFriends();
-      }else if (result.success) {
-        Alert.alert('친구 요청', '친구 요청을 보냈습니다!');
-        setFriendCode('');
-        fetchFriends();
-      } else {
-        Alert.alert('알림', result.message || '친구 추가에 실패했습니다.');
-      }
-    } catch (e) {
-      console.log('친구 추가 실패:', e);
-      Alert.alert('오류', '서버 연결에 실패했습니다.');
-    } finally {
-      setIsSending(false);
-    }
-  };
-```
----
-
-### 프로필 수정 화면
-
-**ProfileEditScreen.js**
-
-프로필 화면에 수정 버튼으로 프로필 정보를 수정하고 db에 저장한다.
-
-**정보를 수정하고 db에 post 방식으로 body에 닉네임 , 성별 , 생년월일 , 한 줄 소개 값을 전달해서 저장한다.**
-```javascript
- try {
-      const token = await AsyncStorage.getItem('token');
-
-      const res = await fetch('[https://triplan-backend-qwrs.onrender.com/users/me](https://triplan-backend-qwrs.onrender.com/users/me)', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          nickname: nickname.trim(),
-          gender,
-          birth_year: formatDate(birthDate),
-          bio: bio.trim(),
-        }),
-      });
-```
-
----
-
-### Sns 피드 작성 화면
-
-**EditPostScreen.js**
-
-피드 작성 폼에 사용자가 입력하면 db에 저장하도록 요청한다.
-
-```javascript
- try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${post.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          destination,
-          days,
-          max_people: parseInt(maxPeople, 10),
-          bio,
-          plan,
-          departure_date: formatDate(departureDate),
-        }),
-      });
-```
----
-
-### 채팅 화면
-
-**ChatScreen.js**
-
-**렌더링 되면 채팅방 목록 서버로부터 가져오기**
-```javascript
-const fetchChats = useCallback(async () => {
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts/my-chats](https://triplan-backend-qwrs.onrender.com/posts/my-chats)', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setChats(result.chats);
-      }
-    } catch (error) {
-      console.log('채팅방 목록 에러:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-```
-
-
-## Server 부문
-
-### 서버 구성
-
-**backend/src/index.js**
-
-Node.js + Express 기반 REST API 서버이다. 포트 3000에서 실행된다.
-
-```javascript
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use('/auth', authRouter);
-app.use('/posts', postsRouter);
-
-app.listen(3000, () => {
-  console.log('서버 실행 중: http://localhost:3000');
+// EditPostScreen — 게시글 수정
+await fetch(`https://triplan-backend-qwrs.onrender.com/posts/${post.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ destination, days, max_people, bio, plan, departure_date }),
 });
 ```
 
 ---
 
-### 구글 로그인 API
+### Matching Screen
 
-**POST /auth/google**
+여행지 입력 후 매칭 시작 → `GET /users/matching` 호출 → 추천 유저 목록 불러오기.  
+`react-native-deck-swiper` 기반 카드 스와이프 UI.
 
-클라이언트로부터 `idToken`을 받아 Google API로 토큰을 검증한다. 검증 성공 시 DB에서 유저를 조회하고, 신규 유저면 자동 가입 처리 후 JWT를 발급한다.
+#### 점수 계산 알고리즘
 
-```javascript
+| 항목 | 점수 | 기준 |
+|------|------|------|
+| 성향 코드 일치 | 최대 75점 | 4축 각 18.75점 (T/C, U/N, A/R, J/P) |
+| 나이 유사도 | 최대 25점 | ±2세: 25점 / ±5세: 18점 / ±10세: 10점 |
+| 선호 여행지 일치 | 가산점 (+5점/개) | 일치 항목당 +5점, 일치자 우선 정렬 |
+
+```js
+// 성향 점수 계산
+if (myType[0] === theirType[0]) score += 18.75; // T/C
+if (myType[1] === theirType[1]) score += 18.75; // U/N
+if (myType[2] === theirType[2]) score += 18.75; // A/R
+if (myType[3] === theirType[3]) score += 18.75; // J/P
+```
+
+#### 스와이프 동작
+
+- **오른쪽**: 동행 신청(`accepted`) → `POST /users/matching/swipe`
+- **왼쪽**: 패스(`rejected`)
+- 상호 `accepted` → 매칭 성립 + 친구 자동 추가 + Alert
+- 💘 **여행 궁합 보기** 버튼: `TravelTypeModal`로 축별 궁합 상세 확인
+
+```js
+// 카드 렌더링 버그 방지 — renderKey + cardIndex 패턴
+const [renderKey, setRenderKey] = useState(0);
+const [cardIndex, setCardIndex] = useState(0);
+
+onSwipedRight={(index) => {
+  setCardIndex(index + 1);
+  handleSwipe(index, 'accepted');
+  setTimeout(() => setRenderKey(prev => prev + 1), 150);
+}}
+
+<Swiper key={renderKey} cardIndex={cardIndex} ... />
+```
+
+---
+
+### Friends Screen
+
+내 친구 목록, 받은 친구 요청, 보낸 친구 요청을 탭으로 구분하여 표시한다.
+
+| 탭 | 조건 |
+|----|------|
+| 내 친구 | `status === 'accept'` AND `user_id === 나` |
+| 받은 요청 | `status === 'request'` AND `user_id === 나` → 수락/거절 버튼 |
+| 보낸 요청 | `status === 'request'` AND `friend_id === 나` |
+
+```js
+// 친구 코드로 친구 추가
+GET /users/friends/add?friendCode=ABCD12
+
+// 수락
+GET /users/friends/accept?friendId=123
+
+// 거절
+GET /users/friends/refuse?friendId=123
+```
+
+---
+
+### Chat List
+
+`GET /posts/my-chats` 호출 → 내가 참여 중인 채팅방 목록 표시.  
+채팅방 클릭 시 `ChatRoomScreen`으로 이동하며 아래 파라미터 전달.
+
+```js
+navigation.navigate('채팅', {
+  screen: 'ChatRoom',
+  params: {
+    roomId, title, destination, days,
+    departure_date, bio, max_people,
+  }
+});
+```
+
+---
+
+### Chat Room
+
+가장 복잡한 화면. 실시간 채팅, AI 기능 전체, 일정 관리, 투표, 멤버/초대 모달 포함.
+
+#### 소켓 연결 패턴
+
+```js
+useEffect(() => {
+  let socket = null; // 로컬 변수로 선언 — 클린업 버그 방지
+
+  const init = async () => {
+    // ... 메시지 로딩, userId 조회 등
+    socket = io('https://triplan-backend-qwrs.onrender.com');
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join_room', { roomId: String(roomId), userId: meData.user.id });
+    });
+
+    socket.on('receive_message', (data) => {
+      if (data.senderId === meData.user?.id) return; // 본인 메시지 차단
+      setMessages(prev => {
+        if (prev.some(m => String(m.id) === String(data.id))) return prev; // 중복 id 차단
+        return [...prev, data];
+      });
+    });
+
+    socket.on('vote_updated', (data) => {
+      setMessages(prev => prev.map(m =>
+        String(m.id) === String(data.messageId) ? { ...m, voteData: data } : m
+      ));
+    });
+
+    socket.on('ai_memo_updated', (newPreferences) => setAiPreferences(newPreferences));
+  };
+
+  init();
+  return () => {
+    socket?.disconnect(); // 로컬 변수로 참조 — 비동기 타이밍 무관
+    socketRef.current = null;
+  };
+}, []);
+```
+
+#### 메시지 타입별 렌더링
+
+| type | 렌더링 컴포넌트 | 설명 |
+|------|--------------|------|
+| `text` | 말풍선 | 일반 채팅 메시지 |
+| `ai_preference` | 보라색 확인 말풍선 | 메모 추가 확인 |
+| `ai_recommend` | `AIMessageCard` | 여행지 추천 결과 (JSON) |
+| `ai_itinerary` | `AIItineraryCard` | 일정 최적화 결과 + 투표 |
+| `ai_summary` | `AISummaryCard` | 5W 정리 결과 |
+| `ai_loading` | 로딩 말풍선 | AI 처리 중 상태 |
+| `system` | 중앙 텍스트 | 시스템 알림 |
+
+#### 메시지 타임스탬프
+
+```js
+// 에뮬레이터 UTC 오프셋 수동 보정
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const koreaOffset = 9 * 60;
+  const localOffset = date.getTimezoneOffset();
+  const koreaTime = new Date(date.getTime() + (koreaOffset + localOffset) * 60 * 1000);
+  const h = koreaTime.getHours();
+  const m = String(koreaTime.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  return `${ampm} ${h % 12 || 12}:${m}`;
+};
+```
+
+#### AI 메모 태그
+
+- 채팅방 상단 `@ 태그` 형태로 표시
+- `+` 버튼 → 수동 입력 → `POST /ai-preference`
+- Gemini가 카테고리 분류(예산/식사/활동 등) + 중복 감지 자동 처리
+- `✕` 버튼으로 개별 삭제
+
+#### 정리하기 (5W 분석 — Trip DNA)
+
+```
+1. 텍스트 메시지 3개 이상 → 정리하기 버튼 활성화
+2. POST /ai-summarize → SummaryModal에서 항목별 수정 가능
+3. 승인 → POST /ai-summarize-approve → 전원 브로드캐스트 + AI 메모 갱신
+4. 승인 완료 → isSummarized = true → 여행지 추천받기 버튼 활성화
+```
+
+> **Trip DNA**: 멤버 성향 코드 + 누적 AI 메모 + 멤버 구성을 구조화 페르소나로 Gemini에 주입
+
+#### 여행지 추천 (3단계 파이프라인)
+
+```
+Step 1 — 인기 장소 수집
+  Kakao Local API (국내) / Google Places API (해외)
+  → urbanRatio 기반 쿼리 조정 (도심/자연 비율)
+  → 최대 15개 인기 장소 수집
+
+Step 2 — Gemini 선정 (1회 호출)
+  → 그룹 성향 비율(urbanRatio, activeRatio) 기반 3곳 선정
+  → 환각 방지: 목록 내 장소만 선정하도록 프롬프트 제약
+  → spotKeywords 5개 생성 (활동/휴양 비율 반영)
+
+Step 3 — 주변 장소 병렬 검색
+  → spotKeywords 기반 Promise.all 병렬 요청
+  → 중복 제거 후 각 여행지: 중심 1곳 + 주변 최대 5곳
+```
+
+#### 일정 확정 및 찬반투표
+
+```
+1. 추천 카드에서 일정 추가 버튼 → pendingSpots 누적
+2. 헤더 일정 버튼 → 일정 수정 모달
+3. 일정 확정 버튼 → POST /ai-itinerary → Gemini 동선 최적화
+4. 투표 자동 시작 (24시간 만료)
+5. 과반수 찬성 or 방장 강제 마감 → 일정 확정
+6. Socket.io vote_updated 이벤트 → 실시간 반영
+```
+
+#### 모달 구성
+
+| 모달 | 기능 |
+|------|------|
+| 멤버 모달 | 참여 중인 멤버 목록, 성향 표시, '나' 배지 |
+| 초대 모달 | 친구 목록에서 채팅방 초대 (`POST /chat-rooms/:id/invite`) |
+| 튜토리얼 모달 | AsyncStorage 플래그로 최초 1회 사용 가이드 표시 |
+| 프로필 모달 | 메시지 발신자 클릭 시 `UserProfileModal` |
+
+---
+
+### Profile / Profile Edit
+
+**ProfileScreen**: `GET /users/me`로 내 정보 표시. 최근 여행 계획 목록, 친구 코드 복사, 성향 테스트 다시하기, 로그아웃 기능.
+
+**ProfileEditScreen**:
+
+```js
+// 프로필 수정
+await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ nickname, gender, birth_year: formatDate(birthDate), bio }),
+});
+
+// 이미지 업로드 (Multer → Supabase Storage)
+const formData = new FormData();
+formData.append('avatar', { uri, type: 'image/jpeg', name: 'avatar.jpg' });
+await fetch('https://triplan-backend-qwrs.onrender.com/users/upload-avatar', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: formData,
+});
+
+// 선호 여행지 저장
+await fetch('https://triplan-backend-qwrs.onrender.com/users/preferred-destination', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ destinations: ['국내', '아시아'] }),
+});
+```
+
+---
+
+## Server
+
+### Server Config
+
+```js
+// backend/src/index.js
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server, { cors: { origin: '*' } });
+
+app.set('io', io); // 라우터에서 req.app.get('io')로 브로드캐스트
+
+app.use('/auth',  authRouter);
+app.use('/posts', postsRouter);
+app.use('/users', usersRouter);
+
+server.listen(3000);
+```
+
+| 항목 | 내용 |
+|------|------|
+| 런타임 | Node.js + Express.js |
+| 포트 | 3000 |
+| 배포 | Render (7달러 플랜, 슬립 없음) |
+| 인증 | JWT 7일 만료, `authMiddleware` 공용 (`backend/src/utils/authMiddleware.js`) |
+| 파일 업로드 | Multer `memoryStorage` → Supabase Storage |
+
+---
+
+### Auth API
+
+#### `POST /auth/google`
+
+`idToken` 검증 → 신규 유저 자동 가입 → JWT 발급.
+
+```js
 router.post('/google', async (req, res) => {
   const { idToken } = req.body;
-
-  const ticket = await client.verifyIdToken({
-    idToken,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
+  const ticket = await client.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
   const { email, name, picture, sub: providerId } = ticket.getPayload();
 
   let { data: user } = await supabase
-    .from('users')
-    .select('*')
-    .eq('provider_id', providerId)
-    .single();
+    .from('users').select('*').eq('provider_id', providerId).single();
 
   if (!user) {
     const friendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const { data: newUser } = await supabase
-      .from('users')
-      .insert({ email, name, profile_image: picture, provider: 'google', provider_id: providerId, friend_code: friendCode })
-      .select()
-      .single();
+    const { data: newUser } = await supabase.from('users')
+      .insert({ email, name, profile_image: picture,
+                provider: 'google', provider_id: providerId, friend_code: friendCode })
+      .select().single();
     user = newUser;
   }
 
-  const token = jwt.sign(
-    { userId: user.id, email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-
+  const token = jwt.sign({ userId: user.id, email }, JWT_SECRET, { expiresIn: '7d' });
   res.json({ success: true, token, user });
 });
 ```
 
-**신규 / 기존 유저 분기**
+---
 
-`provider_id` 기준으로 DB를 조회하여 기존 유저면 정보를 그대로 반환하고, 신규 유저면 자동 가입 처리 후 랜덤 6자리 친구 코드를 발급한다.
+### User API
+
+| Method | 경로 | 설명 | 인증 |
+|--------|------|------|------|
+| `GET` | `/users/me` | 내 정보 조회 | ✅ |
+| `PATCH` | `/users/me` | 닉네임/성별/생년월일/소개 수정 | ✅ |
+| `POST` | `/users/travel-type` | 성향 코드 저장 | ✅ |
+| `POST` | `/users/upload-avatar` | 프로필 이미지 업로드 | ✅ |
+| `GET` | `/users/others?id=` | 다른 유저 프로필 조회 | ✅ |
+| `POST` | `/users/preferred-destination` | 선호 여행지 저장 | ✅ |
+| `GET` | `/users/matching?destination=` | 매칭 유저 목록 + 점수 계산 | ✅ |
+| `POST` | `/users/matching/swipe` | 스와이프 결과 저장 | ✅ |
+| `GET` | `/users/friends` | 친구 목록 조회 | ✅ |
+| `GET` | `/users/friends/add?friendCode=` | 친구 코드로 친구 요청 | ✅ |
+| `GET` | `/users/friends/accept?friendId=` | 친구 요청 수락 + FCM 알림 | ✅ |
+| `GET` | `/users/friends/refuse?friendId=` | 친구 요청 거절 | ✅ |
+| `POST` | `/users/saveFcmToken` | FCM 토큰 저장 | ✅ |
 
 ---
 
-### 게시글 API
+### Post / Chat API
 
-**backend/src/routes/posts.js**
+| Method | 경로 | 설명 | 인증 |
+|--------|------|------|------|
+| `GET` | `/posts` | 게시글 목록 (users JOIN) | ❌ |
+| `POST` | `/posts` | 게시글 작성 + 채팅방 자동 생성 | ✅ |
+| `PATCH` | `/posts/:postId` | 게시글 수정 (내 글만) | ✅ |
+| `DELETE` | `/posts/:postId` | 게시글 삭제 | ✅ |
+| `POST` | `/posts/:postId/join` | 채팅방 참여 | ✅ |
+| `GET` | `/posts/my-chats` | 내 채팅방 목록 | ✅ |
+| `GET` | `/posts/my-recent-plans` | 최근 여행 계획 | ✅ |
+| `DELETE` | `/posts/chat-rooms/:roomId/leave` | 채팅방 나가기 | ✅ |
+| `GET` | `/posts/chat-rooms/:roomId/members` | 멤버 조회 | ✅ |
+| `GET` | `/posts/chat-rooms/:roomId/messages` | 메시지 조회 | ✅ |
+| `POST` | `/posts/chat-rooms/:roomId/messages` | 메시지 전송 | ✅ |
+| `POST` | `/posts/chat-rooms/:roomId/invite` | 친구 초대 | ✅ |
 
-JWT 인증 미들웨어를 통해 토큰을 검증하고 유저 정보를 추출한다.
+---
 
-```javascript
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ success: false, message: '토큰 없음' });
+### AI API
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (e) {
-    return res.status(401).json({ success: false, message: '토큰 만료 또는 유효하지 않음' });
-  }
-};
+| Method | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/posts/chat-rooms/:roomId/ai-preference` | 수동 메모 추가 (Gemini 카테고리 분류) |
+| `GET` | `/posts/chat-rooms/:roomId/ai-preference` | 메모 목록 조회 |
+| `DELETE` | `/posts/chat-rooms/:roomId/ai-preference` | 메모 삭제 |
+| `POST` | `/posts/chat-rooms/:roomId/ai-recommend` | 여행지 추천 (3단계 파이프라인) |
+| `POST` | `/posts/chat-rooms/:roomId/ai-summarize` | 대화 5W 정리 (본인에게만) |
+| `POST` | `/posts/chat-rooms/:roomId/ai-summarize-approve` | 정리 승인 → 브로드캐스트 + 메모 갱신 |
+| `POST` | `/posts/chat-rooms/:roomId/ai-itinerary` | 일정 확정 + Gemini 동선 최적화 |
+
+#### Gemini 함수 구성 (`backend/src/utils/gemini.js`)
+
+| 함수 | 역할 | Gemini 호출 |
+|------|------|------------|
+| `processPreference()` | 메모 카테고리 분류 + 중복 감지 | 1회 |
+| `recommendDestinations()` | 인기 장소 수집 → 3곳 선정 → 주변 검색 | 1회 (Step 2) |
+| `summarizeConversation()` | 대화 전체 5W 분석, Trip DNA 페르소나 주입 | 1회 |
+| `optimizeItinerary()` | 장소 동선 최적화 + 날짜별 배분 | 1회 |
+
+```js
+// 공통 유틸
+function cleanJson(text) {
+  return text.replace(/```json/g, '').replace(/```/g, '').trim();
+}
+
+async function ask(prompt, label) {
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  if (!text?.trim()) throw new Error(`${label} 빈 응답`);
+  return text;
+}
 ```
 
-#### POST /posts — 게시글 작성
+---
 
-인증된 유저만 게시글을 작성할 수 있다. `req.user.userId`로 작성자를 특정한다.
+### Socket.io Events
 
-```javascript
-router.post('/', authMiddleware, async (req, res) => {
-  const { destination, days, max_people, bio, plan } = req.body;
+| 이벤트 | 방향 | 설명 |
+|--------|------|------|
+| `join_room` | 클 → 서 | 채팅방 입장 (`roomId`, `userId`) |
+| `send_message` | 클 → 서 | 메시지 전송 → DB 저장 → 전체 브로드캐스트 |
+| `receive_message` | 서 → 클 | 메시지 수신 (`senderId` 포함, 중복 방지용) |
+| `vote_updated` | 서 → 클 | 투표 현황 갱신 (`messageId`, agree/disagree 수) |
+| `ai_memo_updated` | 서 → 클 | AI 메모 태그 갱신 |
 
-  const { data, error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: req.user.userId,
-      destination,
-      days,
-      max_people,
-      bio,
-      plan,
-    })
-    .select()
-    .single();
+```js
+// index.js
+io.on('connection', (socket) => {
+  socket.on('join_room', ({ roomId }) => socket.join(roomId));
 
-  res.json({ success: true, post: data });
-});
-```
+  socket.on('send_message', async ({ roomId, content, senderId, type }) => {
+    const { data: savedMsg } = await supabase.from('messages')
+      .insert({ chat_room_id: roomId, user_id: senderId, content, type })
+      .select().single();
 
-#### GET /posts — 게시글 목록 조회
-
-인증 없이 조회 가능하다. `users` 테이블과 JOIN하여 작성자 정보를 함께 반환한다.
-
-```javascript
-router.get('/', async (req, res) => {
-  const { data, error } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      users (
-        id, name, profile_image, travel_type, friend_code
-      )
-    `)
-    .order('created_at', { ascending: false });
-
-  res.json({ success: true, posts: data });
+    io.to(String(roomId)).emit('receive_message', {
+      ...savedMsg,
+      id: String(savedMsg.id),
+      senderId,
+    });
+  });
 });
 ```
 
 ---
 
-## Database 부문
+## Database
 
-### DB 구성
+### DB Config
 
 | 항목 | 내용 |
 |------|------|
 | 서비스 | Supabase |
 | DB 종류 | PostgreSQL |
 | 리전 | Northeast Asia (Seoul) |
+| 인증 방식 | `service_role` key (RLS 우회 — `anon` key 사용 금지) |
+| Storage | `avatars` 버킷 (퍼블릭, 프로필 이미지) |
 
 ---
 
-### users 테이블
+### Tables
 
-회원 정보를 저장하는 테이블이다. 소셜 로그인 기반으로 자동 가입 처리된다.
+#### `users` — 회원 정보
 
 ```sql
 CREATE TABLE users (
-    id            SERIAL PRIMARY KEY,
-    email         VARCHAR(255) NOT NULL UNIQUE,
-    name          VARCHAR(100) NOT NULL,
-    profile_image VARCHAR(500),
-    gender        VARCHAR(10),
-    birth_year    INT,
-    bio           VARCHAR(200),
-    travel_type   VARCHAR(10),
-    friend_code   VARCHAR(20) UNIQUE,
-    provider      VARCHAR(20) NOT NULL,
-    provider_id   VARCHAR(255) NOT NULL,
-    created_at    TIMESTAMP DEFAULT NOW(),
-    updated_at    TIMESTAMP DEFAULT NOW()
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email                TEXT UNIQUE NOT NULL,
+  name                 TEXT,
+  nickname             TEXT,
+  profile_image        TEXT,
+  gender               TEXT,
+  birth_year           DATE,
+  bio                  TEXT,
+  travel_type          TEXT,
+  preferred_destination TEXT,              -- 쉼표 구분 (예: '국내,아시아')
+  friend_code          TEXT UNIQUE,        -- 6자리, 가입 시 자동 생성
+  fcm_token            TEXT,
+  provider             TEXT,
+  provider_id          TEXT,
+  created_at           TIMESTAMPTZ DEFAULT now(),
+  updated_at           TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | SERIAL PK | 자동 증가하는 유저 고유 번호 |
-| email | VARCHAR(255) | 구글 계정 이메일 (UNIQUE) |
-| name | VARCHAR(100) | 구글 계정 이름 |
-| profile_image | VARCHAR(500) | 구글 프로필 사진 URL |
-| gender | VARCHAR(10) | 성별 — 프로필 설정 시 입력 |
-| birth_year | INT | 출생년도 — 프로필 설정 시 입력 |
-| bio | VARCHAR(200) | 한 줄 소개 — 프로필 설정 시 입력 |
-| travel_type | VARCHAR(10) | 성향 코드 (ex. TUAJ) — 성향 테스트 완료 후 채워짐 |
-| friend_code | VARCHAR(20) | 고유 친구 코드 (UNIQUE) — 가입 시 자동 생성 |
-| provider | VARCHAR(20) | 로그인 제공자 (google / kakao) |
-| provider_id | VARCHAR(255) | 제공자 고유 ID — 로그인 시 유저 식별에 사용 |
-| created_at | TIMESTAMP | 가입일시 (DEFAULT NOW()) |
-| updated_at | TIMESTAMP | 수정일시 (DEFAULT NOW()) |
-
----
-
-### posts 테이블
-
-동행 모집 게시글 정보를 저장하는 테이블이다. `user_id`로 `users` 테이블과 연결된다.
+#### `posts` — 동행 모집 게시글
 
 ```sql
 CREATE TABLE posts (
-    id            SERIAL PRIMARY KEY,
-    user_id       INT NOT NULL REFERENCES users(id),
-    destination   VARCHAR(100) NOT NULL,
-    days          VARCHAR(50) NOT NULL,
-    max_people    INT NOT NULL,
-    bio           VARCHAR(200) NOT NULL,
-    plan          TEXT,
-    created_at    TIMESTAMP DEFAULT NOW(),
-    updated_at    TIMESTAMP DEFAULT NOW()
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID REFERENCES users(id) ON DELETE CASCADE,
+  destination    TEXT NOT NULL,
+  days           INT,
+  max_people     INT,
+  bio            TEXT,
+  plan           TEXT,
+  departure_date DATE,
+  created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at     TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | SERIAL PK | 게시글 고유 번호 |
-| user_id | INT FK | 작성자 ID (users.id 참조) |
-| destination | VARCHAR(100) | 여행지 |
-| days | VARCHAR(50) | 여행 일수 (예: 3박 4일) |
-| max_people | INT | 모집 인원 |
-| bio | VARCHAR(200) | 한 줄 소개 |
-| plan | TEXT | 간단 계획 (선택 입력) |
-| created_at | TIMESTAMP | 작성일시 (DEFAULT NOW()) |
-| updated_at | TIMESTAMP | 수정일시 (DEFAULT NOW()) |
-
----
-
-### friends 테이블
-
-user들끼리의 친구 관계 정보를 저장하는 db이다. `user_id` 와 'friend_id'로 `users` 테이블과 연결된다.
-status 값이 accept이면 친구 관계 , request라면 요청 상태를 의미한다.
+#### `chat_rooms` — 채팅방
 
 ```sql
-create table public.friends (
-    id bigint generated by default as identity not null,
-    created_at timestamp with time zone not null default now(),
-    user_id integer null,
-    friend_id integer null,
-    status text null,
-    constraint friends_pkey primary key (id),
-    constraint friends_friend_id_fkey foreign KEY (friend_id) references users (id),
-    constraint friends_user_id_fkey foreign KEY (user_id) references users (id)
-) TABLESPACE pg_default;
+CREATE TABLE chat_rooms (
+  id              SERIAL PRIMARY KEY,
+  post_id         INT REFERENCES posts(id) ON DELETE CASCADE,
+  ai_preferences  JSONB DEFAULT '[]',   -- AI 메모 배열
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-| 컬럼         | 타입         | 설명                    |
-|------------|------------|-----------------------|
-| id         | SERIAL PK  | 친구 고유 번호              |
-| user_id    | INT FK     | 사용자 ID (users.id 참조)  |
-| friend_id  | INT FK     | 친구 ID (user.id 참조)    |
-| status     | VARCHAR(50) | 관계 (accept, request) |
+```json
+// ai_preferences 저장 형태
+[
+  { "text": "맛집위주", "category": "식사", "addedAt": "2026-05-11T..." },
+  { "text": "예산30만원", "category": "예산", "addedAt": "2026-05-11T..." }
+]
+```
 
----
-
-### messages 테이블
-
-message의 내용은 content로 저장하고 해당 메세지가 포함된 chat_room_id 를 chat_rooms로 연결한다.
-
+#### `chat_members` — 채팅방 멤버
 
 ```sql
-create table public.messages (
-    id serial not null,
-    chat_room_id integer not null,
-    user_id integer not null,
-    content text not null,
-    type text null default 'text'::character varying,
-    created_at timestamp without time zone null default now(),
-    vote_closed boolean null default false,
-    vote_closed_at timestamp with time zone null,
-    vote_expires_at timestamp with time zone null,
-    constraint messages_pkey primary key (id),
-    constraint messages_chat_room_id_fkey foreign KEY (chat_room_id) references chat_rooms (id),
-    constraint messages_user_id_fkey foreign KEY (user_id) references users (id)
-) TABLESPACE pg_default;
+CREATE TABLE chat_members (
+  id           SERIAL PRIMARY KEY,
+  chat_room_id INT REFERENCES chat_rooms(id) ON DELETE CASCADE,
+  user_id      INT REFERENCES users(id) ON DELETE CASCADE,
+  joined_at    TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(chat_room_id, user_id)   -- 중복 참여 방지
+);
 ```
 
-| 컬럼              | 타입          | 설명                      |
-|-----------------|-------------|-------------------------|
-| id              | SERIAL PK   | 메세지 고유 번호               |
-| chat_room_id    | INT FK      | 채팅 룸 ID (chat_rooms.id 참조) |
-| user_id         | INT FK      | 사용자 ID (users.id 참조)     |
-| content         | TEXT        | 메세지 내용                  |
-| type            | VARCHAR(30) | 메세지 타입                  |
-| created_at      | TIMESTAMP   | 생성 시간                    |
-| vote_closed     | BOOLEAN     | 투표 마감 여부                |
-| vote_closed_at  | TIMESTAMP   | 투표 마감 시간                |
-| vote_expires_at | TIMESTAMP   | 투표 만료 시간                |
-
----
-
-### chat_rooms 테이블
-
-chat_room_id 로 채팅방 id를 저장하고 post_id로 채팅방과 연결된 post의 id값을 외래키로 지정한다.
-
+#### `messages` — 채팅 메시지
 
 ```sql
-create table public.chat_rooms (
-    id serial not null,
-    post_id integer not null,
-    created_at timestamp without time zone null default now(),
-    ai_preferences jsonb null default '[]'::jsonb,
-    constraint chat_rooms_pkey primary key (id),
-    constraint chat_rooms_post_id_fkey foreign KEY (post_id) references posts (id)
-    ) TABLESPACE pg_default;
+CREATE TABLE messages (
+  id              SERIAL PRIMARY KEY,
+  chat_room_id    INT REFERENCES chat_rooms(id) ON DELETE CASCADE,
+  user_id         INT REFERENCES users(id),
+  content         TEXT NOT NULL,         -- ai_recommend 등은 JSON 문자열
+  type            TEXT DEFAULT 'text',   -- text|ai_preference|ai_recommend|ai_itinerary|ai_summary|system
+  vote_closed     BOOLEAN DEFAULT false,
+  vote_closed_at  TIMESTAMPTZ,
+  vote_expires_at TIMESTAMPTZ,           -- 생성 후 24시간
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-| 컬럼              | 타입        | 설명                    |
-|-----------------|-----------|-----------------------|
-| id              | SERIAL PK | 채팅 룸 고유 번호            |
-| post_id         | INT FK    | post ID (posts.id 참조) |
-| created_at      | TIMESTAMP | 생성 날짜                 |
-| ai_preferences  | jsonb     | ai 전달 인자 값            |
-
----
-
-### chat_members 테이블
-
-chat_room_id 와 user_id 값을 통해 채팅룸 과 포함된 유저의 id값을 저장한다.
-
+#### `friends` — 친구 관계
 
 ```sql
-create table public.chat_members (
-         id serial not null,
-         chat_room_id integer not null,
-         user_id integer not null,
-         joined_at timestamp without time zone null default now(),
-         constraint chat_members_pkey primary key (id),
-         constraint chat_members_chat_room_id_user_id_key unique (chat_room_id, user_id),
-         constraint chat_members_chat_room_id_fkey foreign KEY (chat_room_id) references chat_rooms (id),
-         constraint chat_members_user_id_fkey foreign KEY (user_id) references users (id)
-) TABLESPACE pg_default;
+CREATE TABLE friends (
+  id         BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  user_id    INT REFERENCES users(id),
+  friend_id  INT REFERENCES users(id),
+  status     TEXT,    -- request | accept
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-| 컬럼           | 타입        | 설명                              |
-|--------------|-----------|---------------------------------|
-| id           | SERIAL PK | 채팅 멤버 고유 번호                     |
-| chat_room_id | INT FK    | chat_room_id (chat_rooms.id 참조) |
-| user_id      | INT FK    | user_id(users.id 참조)             |
-| joined_at    | TIMESTAMP | 멤버 합류 시간                        |
+> 수락 시 양방향 row 생성: `(A→B, accept)` + `(B→A, accept)`
+
+#### `matches` — 매칭 스와이프 이력
+
+```sql
+CREATE TABLE matches (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id   UUID REFERENCES users(id),
+  receiver_id UUID REFERENCES users(id),
+  status      TEXT DEFAULT 'pending',   -- pending | accepted | rejected
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(sender_id, receiver_id)
+);
+```
+
+#### `itinerary_votes` — 일정 찬반투표
+
+```sql
+CREATE TABLE itinerary_votes (
+  id         SERIAL PRIMARY KEY,
+  message_id INT REFERENCES messages(id) ON DELETE CASCADE,
+  user_id    INT REFERENCES users(id),
+  vote       TEXT,    -- agree | disagree
+  UNIQUE(message_id, user_id)   -- 중복 투표 방지, ON CONFLICT DO UPDATE로 변경 지원
+);
+```
+
+---
