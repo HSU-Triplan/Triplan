@@ -1,9 +1,18 @@
 # Triplan 기능 구현
 
 ## 목차
+- [배경 설정](#배경-설정)
 - [Client 부문](#client-부문)
 - [Server 부문](#server-부문)
 - [Database 부문](#database-부문)
+
+---
+
+## 배경 설정
+
+현대 여행객들은 단순히 목적지가 같은 사람을 넘어서, 자신과 여행 스타일 및 성향이 잘 맞는 동행을 찾고자 합니다. **Triplan**은 이러한 니즈를 반영하여 기획된 맞춤형 여행 동행 매칭 플랫폼입니다.
+
+사용자의 여행 스타일을 정밀하게 분석하는 자체 성향 테스트를 제공하며, 나아가 AI 기반의 코스 기획 기능을 결합하여 여행 준비의 번거로움을 줄이고 더욱 만족스러운 동행 경험을 제공하는 것을 목표로 합니다.
 
 ---
 
@@ -24,6 +33,7 @@
 | EditPostScreen    | Sns 피드에 올릴 계획 피드를 작성        | `src/pages/EditPostScreen.js`    |
 | ChatScreen        | 채팅방 목록                      | `src/pages/ChatScreen.js`        |
 | MatchingScreen    | 추천 유저 목록, 스와이프로 친구 초대       | `src/pages/MatchingScreen.js`    |
+| TravelStyleGame   | 여행 성향 테스트 진행 및 결과 도출       | `src/pages/TravelStyleGame.tsx`  |
 
 ---
 
@@ -87,7 +97,7 @@ const handleGoogleLogin = async () => {
     const userInfo = await GoogleSignin.signIn();
     const { idToken } = userInfo.data;
 
-    const response = await fetch('https://triplan-backend-qwrs.onrender.com/auth/google', {
+    const response = await fetch('[https://triplan-backend-qwrs.onrender.com/auth/google](https://triplan-backend-qwrs.onrender.com/auth/google)', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
@@ -132,6 +142,51 @@ const handleLogout = async () => {
 
 ---
 
+### 여행 성향 테스트
+
+**TravelStyleGame.tsx**
+
+총 20문항의 질문을 통해 사용자의 여행 스타일을 16가지(예: TUAJ, CURP 등)로 분류하는 MBTI 기반 성향 테스트 기능이다. UX를 고려하여 `Animated.timing`을 활용한 슬라이드 애니메이션을 적용했다.
+
+**성향 판별 및 화면 전환 로직**
+```javascript
+const handleSelect = (type: string) => {
+  const newScores = { ...scores, [type]: scores[type] + 1 };
+  setScores(newScores);
+
+  Animated.timing(slideAnim, { toValue: -width, duration: 300, useNativeDriver: true }).start(() => {
+    if (step < questions.length - 1) {
+      setStep(step + 1);
+      slideAnim.setValue(width);
+      Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+    } else {
+      const r1 = newScores.T >= newScores.C ? 'T' : 'C';
+      const r2 = newScores.U >= newScores.N ? 'U' : 'N';
+      const r3 = newScores.A >= newScores.R ? 'A' : 'R';
+      const r4 = newScores.J >= newScores.P ? 'J' : 'P';
+      saveResult(`${r1}${r2}${r3}${r4}`);
+    }
+  });
+};
+```
+
+테스트 완료 후 도출된 최종 결과 코드는 백엔드 API를 통해 DB의 `travel_type` 컬럼에 저장되며, 이후 유저 매칭 필터링에 활용된다.
+
+**결과 서버 전송**
+```javascript
+const saveResult = async (finalType: string) => {
+  const token = await AsyncStorage.getItem('token');
+  await fetch('[https://triplan-backend-qwrs.onrender.com/users/travel-type](https://triplan-backend-qwrs.onrender.com/users/travel-type)', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ travelType: finalType }),
+  });
+  navigation.replace('Result', { result: finalType });
+};
+```
+
+---
+
 ### SNS 피드 (SearchScreen)
 
 **SearchScreen.js**
@@ -146,7 +201,7 @@ const handleLogout = async () => {
 const fetchPosts = useCallback(async () => {
   setLoading(true);
   try {
-    const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts');
+    const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts](https://triplan-backend-qwrs.onrender.com/posts)');
     const result = await response.json();
     if (result.success) {
       setPosts(result.posts);
@@ -228,7 +283,7 @@ SearchScreen에서 FAB 버튼을 누르면 Modal(`animationType: 'slide'`)로 �
 const handleSubmit = async () => {
   const token = await AsyncStorage.getItem('token');
 
-  const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts', {
+  const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts](https://triplan-backend-qwrs.onrender.com/posts)', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -315,7 +370,7 @@ const handleSubmit = async () => {
 const fetchFriends = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('https://triplan-backend-qwrs.onrender.com/users/friends', {
+      const response = await fetch('[https://triplan-backend-qwrs.onrender.com/users/friends](https://triplan-backend-qwrs.onrender.com/users/friends)', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -328,8 +383,7 @@ const fetchFriends = async () => {
         let request = [];
         let sent = [];
         let userId = result.userId;
-        console.log("user id : "+ userId);
-        console.log("data : "+ JSON.stringify(result.friends))
+        
         for (let i = 0; i < result.friends.length; i++) {
           if (result.friends[i].status === 'accept' && result.friends[i].user_id == userId) {
             friends.push(result.friends[i]);
@@ -363,7 +417,7 @@ const friendAdd = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(
-        'https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=' + friendCode.trim(),
+        '[https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=](https://triplan-backend-qwrs.onrender.com/users/friendsAdd?friendCode=)' + friendCode.trim(),
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -405,7 +459,7 @@ const friendAdd = async () => {
  try {
       const token = await AsyncStorage.getItem('token');
 
-      const res = await fetch('https://triplan-backend-qwrs.onrender.com/users/me', {
+      const res = await fetch('[https://triplan-backend-qwrs.onrender.com/users/me](https://triplan-backend-qwrs.onrender.com/users/me)', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -459,7 +513,7 @@ const fetchChats = useCallback(async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('https://triplan-backend-qwrs.onrender.com/posts/my-chats', {
+      const response = await fetch('[https://triplan-backend-qwrs.onrender.com/posts/my-chats](https://triplan-backend-qwrs.onrender.com/posts/my-chats)', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await response.json();
@@ -472,8 +526,6 @@ const fetchChats = useCallback(async () => {
       setLoading(false);
     }
   }, []);
-
-
 ```
 
 
@@ -612,19 +664,6 @@ router.get('/', async (req, res) => {
   res.json({ success: true, posts: data });
 });
 ```
----
-
-### 알람 firebase API
-
-**POST /auth/google**
-
-
-
-```javascript
-
-
-```
-
 
 ---
 
@@ -735,7 +774,7 @@ create table public.friends (
 | id         | SERIAL PK  | 친구 고유 번호              |
 | user_id    | INT FK     | 사용자 ID (users.id 참조)  |
 | friend_id  | INT FK     | 친구 ID (user.id 참조)    |
-| status     | VARCHAR(50) | 관계 (acceopt, request) |
+| status     | VARCHAR(50) | 관계 (accept, request) |
 
 ---
 
@@ -764,14 +803,14 @@ create table public.messages (
 | 컬럼              | 타입          | 설명                      |
 |-----------------|-------------|-------------------------|
 | id              | SERIAL PK   | 메세지 고유 번호               |
-| chat_room_id    | INT FK      | 채팅 룸 ID (chat_room_id 참조) |
-| user_id         | INT FK      | 사용자 ID (user.id 참조)     |
-| content         | VARCHAR(50) | 메세지 내용                  |
+| chat_room_id    | INT FK      | 채팅 룸 ID (chat_rooms.id 참조) |
+| user_id         | INT FK      | 사용자 ID (users.id 참조)     |
+| content         | TEXT        | 메세지 내용                  |
 | type            | VARCHAR(30) | 메세지 타입                  |
-| created_at      | INT FK      | 사용자 ID (users.id 참조)    |
-| vate_closed     | BOOLEAN     |                         |
-| vate_closed_at  | VARCHAR(50) |     |
-| vate_expires_at | VARCHAR(50) |     |
+| created_at      | TIMESTAMP   | 생성 시간                    |
+| vote_closed     | BOOLEAN     | 투표 마감 여부                |
+| vote_closed_at  | TIMESTAMP   | 투표 마감 시간                |
+| vote_expires_at | TIMESTAMP   | 투표 만료 시간                |
 
 ---
 
@@ -795,9 +834,10 @@ create table public.chat_rooms (
 |-----------------|-----------|-----------------------|
 | id              | SERIAL PK | 채팅 룸 고유 번호            |
 | post_id         | INT FK    | post ID (posts.id 참조) |
-| created_at      | INT FK    | 생성 날짜                 |
+| created_at      | TIMESTAMP | 생성 날짜                 |
 | ai_preferences  | jsonb     | ai 전달 인자 값            |
 
+---
 
 ### chat_members 테이블
 
@@ -821,31 +861,5 @@ create table public.chat_members (
 |--------------|-----------|---------------------------------|
 | id           | SERIAL PK | 채팅 멤버 고유 번호                     |
 | chat_room_id | INT FK    | chat_room_id (chat_rooms.id 참조) |
-| user_id      | INT FK    | user_id(user.id 참조)             |
-| joined_at    | jsonb     | ai 전달 인자 값                      |
-
-
-### chat_members 테이블
-
-chat_room_id 와 user_id 값을 통해 채팅룸 과 포함된 유저의 id값을 저장한다.
-
-
-```sql
-create table public.chat_members (
-         id serial not null,
-         chat_room_id integer not null,
-         user_id integer not null,
-         joined_at timestamp without time zone null default now(),
-         constraint chat_members_pkey primary key (id),
-         constraint chat_members_chat_room_id_user_id_key unique (chat_room_id, user_id),
-         constraint chat_members_chat_room_id_fkey foreign KEY (chat_room_id) references chat_rooms (id),
-         constraint chat_members_user_id_fkey foreign KEY (user_id) references users (id)
-) TABLESPACE pg_default;
-```
-
-| 컬럼           | 타입        | 설명                              |
-|--------------|-----------|---------------------------------|
-| id           | SERIAL PK | 채팅 멤버 고유 번호                     |
-| chat_room_id | INT FK    | chat_room_id (chat_rooms.id 참조) |
-| user_id      | INT FK    | user_id(user.id 참조)             |
-| joined_at    | jsonb     | ai 전달 인자 값                      |
+| user_id      | INT FK    | user_id(users.id 참조)             |
+| joined_at    | TIMESTAMP | 멤버 합류 시간                        |
