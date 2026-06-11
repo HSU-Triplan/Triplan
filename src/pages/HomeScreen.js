@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { calcDDay, getGreeting } from '../constants/utils';
 
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
 
@@ -83,18 +84,6 @@ export default function HomeScreen() {
       return new Date(a.departure_date) - new Date(b.departure_date);
     });
 
-  const calcDDay = (dateStr) => {
-    if (!dateStr) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr);
-    target.setHours(0, 0, 0, 0);
-    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return 'D-Day';
-    if (diff > 0) return `D-${diff}`;
-    return `D+${Math.abs(diff)}`;
-  };
-
   const nextTrip = allTrips.find(t => {
     if (!t.departure_date) return false;
     const today = new Date();
@@ -104,14 +93,6 @@ export default function HomeScreen() {
     return target >= today;
   });
 
-  // 시간대별 인사말
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 6)  return '좋은 새벽이에요 🌙';
-    if (hour < 12) return '좋은 아침이에요 ☀️';
-    if (hour < 18) return '좋은 오후예요 🌤';
-    return '좋은 저녁이에요 🌆';
-  };
 
   return (
     <ImageBackground source={{ uri: BACKGROUND_IMAGE_URI }} style={styles.backgroundImage} blurRadius={4}>

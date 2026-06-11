@@ -12,25 +12,12 @@ import { io } from 'socket.io-client';
 import SummaryModal from '../components/SummaryModal';
 import AISummaryCard from '../components/AISummaryCard';
 import AIItineraryCard from '../components/AIItineraryCard';
+import { formatTime } from '../constants/utils';
+import UserProfileModal from '../components/UserProfileModal';
+import TravelInfoModal from '../components/TravelInfoModal';
 
 // 🌟 고급스러운 세계 여행 랜드마크 배경 (경복궁 & 여행 무드)
 const BACKGROUND_IMAGE_URI = 'https://images.unsplash.com/photo-1546436836-07a91091f160?q=80&w=800&auto=format&fit=crop';
-
-const formatTime = (isoString) => {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-
-  // 한국 시간 (UTC+9) 강제 적용
-  const koreaOffset = 9 * 60; // 분 단위
-  const localOffset = date.getTimezoneOffset(); // 에뮬레이터 로컬 오프셋 (분)
-  const koreaTime = new Date(date.getTime() + (koreaOffset + localOffset) * 60 * 1000);
-
-  const h = koreaTime.getHours();
-  const m = String(koreaTime.getMinutes()).padStart(2, '0');
-  const ampm = h < 12 ? '오전' : '오후';
-  const hour = h % 12 || 12;
-  return `${ampm} ${hour}:${m}`;
-};
 
 export default function ChatRoomScreen({ route, navigation }) {
   const { roomId, title, destination, days, departure_date, bio, max_people } = route.params;
@@ -991,60 +978,12 @@ export default function ChatRoomScreen({ route, navigation }) {
                 </TouchableOpacity>
               </TouchableOpacity>
             </Modal>
-
-             <Modal visible={profileVisible} animationType="slide" transparent onRequestClose={() => setProfileVisible(false)}>
-                             <TouchableOpacity style={styles.detailOverlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
-                               <View style={styles.profileModalBox}>
-                                  <View style={styles.profileModalHeader}>
-                                    <Image source={{ uri: otherUser?.profile_image || 'https://via.placeholder.com/100' }} style={styles.profileImageLarge} />
-                                    <Text style={styles.profileModalName}>{otherUser?.name || otherUser?.nickname}</Text>
-                                    {otherUser?.bio ? <Text style={styles.bioPreview}>{otherUser?.bio}</Text> : null}
-                                  </View>
-
-                                  <View style={styles.profileCard}>
-                                    <Text style={styles.cardTitle}>프로필 정보</Text>
-                                    <View style={styles.infoRow}>
-                                      <Text style={styles.infoLabel}>닉네임</Text>
-                                      <Text style={styles.infoValue}>{otherUser?.name || otherUser?.nickname}</Text>
-                                    </View>
-                                    <View style={styles.infoRow}>
-                                      <Text style={styles.infoLabel}>여행 타입</Text>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <View style={[styles.badge, { backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 1, borderColor: '#FF6B6B' }]}>
-                                          <Text style={[styles.badgeText, { color: '#FF6B6B' }]}>{otherUser?.travel_type ?? '성향 미설정'}</Text>
-                                        </View>
-                                        {otherUser?.travel_type && (
-                                          <TouchableOpacity onPress={() => setInfoVisible(true)}>
-                                            <Text style={{ fontSize: 16 }}>❔</Text>
-                                          </TouchableOpacity>
-                                        )}
-                                      </View>
-                                    </View>
-                                    <View style={styles.infoRow}>
-                                      <Text style={styles.infoLabel}>친구 코드</Text>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Text style={styles.infoValue}>{otherUser?.friend_code}</Text>
-                                        <TouchableOpacity style={styles.copyButton} onPress={handleCopyFriendCode}>
-                                          <Text style={styles.copyButtonText}>복사</Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    </View>
-                                    <View style={styles.infoRow}>
-                                      <Text style={styles.infoLabel}>생년월일</Text>
-                                      <Text style={styles.infoValue}>{otherUser?.birth_year || '미설정'}</Text>
-                                    </View>
-                                    <View style={styles.infoRow}>
-                                      <Text style={styles.infoLabel}>성별</Text>
-                                      <Text style={styles.infoValue}>{otherUser?.gender || '미설정'}</Text>
-                                    </View>
-                                    <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                                      <Text style={styles.infoLabel}>소개</Text>
-                                      <Text style={[styles.infoValue, { flex: 1, textAlign: 'right', color: '#666' }]}>{otherUser?.bio || '미설정'}</Text>
-                                    </View>
-                                  </View>
-                               </View>
-                            </TouchableOpacity>
-                       </Modal>
+            <UserProfileModal
+              visible={profileVisible}
+              user={otherUser}
+              onClose={() => setProfileVisible(false)}
+              onInfoPress={() => setInfoVisible(true)}
+            />
          </KeyboardAvoidingView>
         </ImageBackground>
 
